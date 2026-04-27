@@ -20,7 +20,7 @@
   align-items: center;
   gap: 14px;
 
-  .brand-dot { font-size: 36px; color: var(--secondary); }
+  .display-brand-logo { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
   .brand-name { font-size: 20px; font-weight: 800; }
   .brand-tagline { font-size: 13px; opacity: 0.7; }
 }

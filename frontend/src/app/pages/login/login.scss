@@ -22,10 +22,14 @@
   text-align: center;
   color: white;
 
-  .logo-icon {
-    font-size: 40px;
-    color: var(--secondary);
+  .login-logo-img {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
     margin-bottom: 10px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   h1 {

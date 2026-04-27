@@ -23,7 +23,7 @@
   padding: 20px 16px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
 
-  .brand-icon { font-size: 28px; color: var(--secondary); }
+  .brand-logo { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; }
 
   .brand-text {
     flex: 1;
@@ -144,6 +144,8 @@
     cursor: pointer;
     padding: 6px;
   }
+
+  .topbar-logo { width: 28px; height: 28px; object-fit: contain; margin-right: 4px; }
 
   .topbar-title {
     font-weight: 800;
