@@ -43,9 +43,6 @@ jobs:
       - name: Build Angular
         run: cd frontend && npx ng build --configuration production
 
-      - name: Add Android platform
-        run: npx cap add android
-
       - name: Sync Capacitor
         run: npx cap sync android
 
