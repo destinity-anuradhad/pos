@@ -1,14 +1,21 @@
 <app-layout>
   <div class="page-header">
     <h1 class="page-title">Orders</h1>
-    <div class="summary-badges">
-      <span class="badge badge-success">{{ orders.length }} Total</span>
+    <div class="page-header-right">
+      <span class="badge badge-info">{{ filteredOrders.length }} shown</span>
+      <button class="btn btn-outline btn-sm" (click)="load()">↻ Refresh</button>
     </div>
   </div>
 
-  <div class="card">
+  <!-- Error -->
+  <div class="offline-notice" *ngIf="error">⚠️ {{ error }}</div>
+
+  <app-loading [loading]="loading" message="Loading orders..."></app-loading>
+
+  <div class="card" *ngIf="!loading">
     <div class="orders-toolbar">
-      <input class="form-control search-input" type="text" placeholder="Search by table or order #..."
+      <input class="form-control search-input" type="text"
+             placeholder="Search by table or order #..."
              [(ngModel)]="searchTerm" (input)="applyFilter()" />
       <select class="form-control status-filter" [(ngModel)]="filterStatus" (change)="applyFilter()">
         <option value="all">All Status</option>
@@ -22,20 +29,19 @@
       <thead>
         <tr>
           <th>Order #</th>
-          <th>Table</th>
+          <th>Table / Source</th>
           <th>Items</th>
           <th>Total</th>
           <th>Status</th>
-          <th>Date</th>
-          <th>Actions</th>
+          <th>Time</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let o of filteredOrders">
           <td><strong>#{{ o.id }}</strong></td>
-          <td>{{ o.table }}</td>
-          <td>{{ o.items }} items</td>
-          <td>{{ o.currency }} {{ o.total | number:'1.2-2' }}</td>
+          <td>{{ o.table_name }}</td>
+          <td>{{ o.item_count }}</td>
+          <td>{{ o.currency }} {{ o.total_amount | number:'1.2-2' }}</td>
           <td>
             <span class="badge"
               [class.badge-success]="o.status === 'completed'"
@@ -44,10 +50,7 @@
               {{ o.status }}
             </span>
           </td>
-          <td class="date-cell">{{ o.date }}</td>
-          <td>
-            <button class="btn btn-outline btn-sm">🖨️ Print</button>
-          </td>
+          <td class="date-cell">{{ timeAgo(o.created_at) }}</td>
         </tr>
       </tbody>
     </table>

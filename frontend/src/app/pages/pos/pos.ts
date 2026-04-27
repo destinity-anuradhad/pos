@@ -1,13 +1,13 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { AppModeService } from '../../services/app-mode';
 import { ScannerService } from '../../services/scanner';
 import { CustomerDisplayService } from '../../services/customer-display';
 import { KeyboardShortcutsService } from '../../services/keyboard-shortcuts';
+import { ApiProduct, ApiTable } from '../../services/api';
+import { DatabaseService } from '../../services/database';
 
-interface Product { id: number; name: string; category: string; price_lkr: number; price_usd: number; barcode: string; }
-interface CartItem extends Product { quantity: number; }
-interface Table { id: number; name: string; status: string; }
+interface CartItem extends ApiProduct { quantity: number; }
 
 @Component({
   selector: 'app-pos',
@@ -19,31 +19,11 @@ export class Pos implements OnInit, OnDestroy {
   isRestaurant = false;
   isMobile = typeof (window as any).Capacitor !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.();
 
-  tables: Table[] = [
-    { id: 1, name: 'Table 1', status: 'available' },
-    { id: 2, name: 'Table 2', status: 'occupied' },
-    { id: 3, name: 'Table 3', status: 'available' },
-    { id: 4, name: 'Table 4', status: 'billed' },
-    { id: 5, name: 'Table 5', status: 'available' },
-    { id: 6, name: 'Table 6', status: 'occupied' },
-    { id: 7, name: 'Table 7', status: 'available' },
-    { id: 8, name: 'Table 8', status: 'available' },
-  ];
-
-  products: Product[] = [
-    { id: 1, name: 'Grilled Chicken', category: 'Main Course', price_lkr: 1800, price_usd: 6.00, barcode: '1001' },
-    { id: 2, name: 'Fried Rice', category: 'Main Course', price_lkr: 1200, price_usd: 4.00, barcode: '1002' },
-    { id: 3, name: 'Caesar Salad', category: 'Salads', price_lkr: 900, price_usd: 3.00, barcode: '1003' },
-    { id: 4, name: 'Coca Cola', category: 'Beverages', price_lkr: 300, price_usd: 1.00, barcode: '1004' },
-    { id: 5, name: 'Chocolate Cake', category: 'Desserts', price_lkr: 750, price_usd: 2.50, barcode: '1005' },
-    { id: 6, name: 'Garlic Bread', category: 'Starters', price_lkr: 450, price_usd: 1.50, barcode: '1006' },
-    { id: 7, name: 'Mango Juice', category: 'Beverages', price_lkr: 400, price_usd: 1.25, barcode: '1007' },
-    { id: 8, name: 'Pasta', category: 'Main Course', price_lkr: 1500, price_usd: 5.00, barcode: '1008' },
-  ];
-
-  filteredProducts: Product[] = [];
+  tables: ApiTable[] = [];
+  products: ApiProduct[] = [];
+  filteredProducts: ApiProduct[] = [];
   cart: CartItem[] = [];
-  selectedTable: Table | null = null;
+  selectedTable: ApiTable | null = null;
   currency: 'LKR' | 'USD' = 'LKR';
   searchTerm = '';
   step: 'tables' | 'order' | 'receipt' = 'tables';
@@ -53,8 +33,14 @@ export class Pos implements OnInit, OnDestroy {
   categories: string[] = [];
   selectedCategory = 'All';
 
+  loadingProducts = true;
+  loadingTables = true;
+  checkingOut = false;
+  error = '';
+
   private scanSub!: Subscription;
   private shortcutSub!: Subscription;
+  private unsubPing?: () => void;
   scanMessage = '';
   manualBarcode = '';
 
@@ -62,29 +48,36 @@ export class Pos implements OnInit, OnDestroy {
     private modeService: AppModeService,
     private scanner: ScannerService,
     private displayService: CustomerDisplayService,
-    private shortcuts: KeyboardShortcutsService
+    private shortcuts: KeyboardShortcutsService,
+    private db: DatabaseService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.isRestaurant = this.modeService.isRestaurant();
-    this.filteredProducts = [...this.products];
-    this.categories = ['All', ...new Set(this.products.map(p => p.category))];
-    // Retail: skip table selection
+
     if (!this.isRestaurant) {
       this.step = 'order';
       this.selectedTable = null;
     }
 
+    this.loadProducts();
+    if (this.isRestaurant) this.loadTables();
+
+    this.sendToDisplay();
+    this.unsubPing = this.displayService.onPing(() => this.sendToDisplay());
+
     this.scanner.startKeyboardListener();
     this.scanSub = this.scanner.scanResult.subscribe(code => {
       const product = this.products.find(p => p.barcode && String(p.barcode) === code);
       if (product) {
-        this.addToCart(product as any);
+        this.addToCart(product);
         this.scanMessage = `✓ Added: ${product.name}`;
       } else {
         this.scanMessage = `✗ Product not found: ${code}`;
       }
-      setTimeout(() => this.scanMessage = '', 2500);
+      this.cdr.detectChanges();
+      setTimeout(() => { this.scanMessage = ''; this.cdr.detectChanges(); }, 2500);
     });
 
     this.shortcutSub = this.shortcuts.action.subscribe(action => {
@@ -100,13 +93,42 @@ export class Pos implements OnInit, OnDestroy {
     this.scanner.stopKeyboardListener();
     this.scanSub?.unsubscribe();
     this.shortcutSub?.unsubscribe();
+    this.unsubPing?.();
+    this.displayService.send({ items: [], total: 0, currency: this.currency, status: 'idle' });
   }
 
-  manualScan(): void {
-    if (this.manualBarcode) {
-      this.scanner.emitScan(this.manualBarcode);
-      this.manualBarcode = '';
+  async loadProducts(): Promise<void> {
+    this.loadingProducts = true;
+    this.error = '';
+    try {
+      this.products = await this.db.getProducts();
+      this.categories = ['All', ...new Set(this.products.map(p => p.category))];
+      this.filterProducts();
+    } catch {
+      this.error = 'Cannot reach server (localhost:8000). Start the backend: cd backend && python main.py';
+    } finally {
+      this.loadingProducts = false;
+      this.cdr.detectChanges();
     }
+  }
+
+  async loadTables(): Promise<void> {
+    this.loadingTables = true;
+    try {
+      this.tables = await this.db.getTables();
+    } catch {
+      // silent — table grid will just be empty
+    } finally {
+      this.loadingTables = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  manualScan(input?: HTMLInputElement): void {
+    const code = (input?.value ?? this.manualBarcode).trim();
+    this.manualBarcode = '';
+    if (input) input.value = '';
+    if (code) this.scanner.emitScan(code);
   }
 
   async openCamera(): Promise<void> {
@@ -122,11 +144,26 @@ export class Pos implements OnInit, OnDestroy {
     });
   }
 
-  selectTable(table: Table): void {
+  goToTables(): void {
+    if (this.selectedTable) {
+      this.db.updateTableStatus(this.selectedTable.id, 'available').catch(() => {});
+      const t = this.tables.find(t => t.id === this.selectedTable!.id);
+      if (t) t.status = 'available';
+    }
+    this.step = 'tables';
+    this.selectedTable = null;
+    this.cart = [];
+    this.displayService.send({ items: [], total: 0, currency: this.currency, status: 'idle' });
+  }
+
+  selectTable(table: ApiTable): void {
     if (table.status === 'billed') return;
     this.selectedTable = table;
     this.cart = [];
     this.step = 'order';
+    this.db.updateTableStatus(table.id, 'occupied').then(() => {
+      table.status = 'occupied';
+    }).catch(() => {});
   }
 
   filterCategory(cat: string): void {
@@ -141,7 +178,7 @@ export class Pos implements OnInit, OnDestroy {
     this.filteredProducts = list;
   }
 
-  addToCart(product: Product): void {
+  addToCart(product: ApiProduct): void {
     const existing = this.cart.find(i => i.id === product.id);
     if (existing) existing.quantity++;
     else this.cart.push({ ...product, quantity: 1 });
@@ -159,7 +196,7 @@ export class Pos implements OnInit, OnDestroy {
     else this.sendToDisplay();
   }
 
-  getPrice(p: Product): number {
+  getPrice(p: ApiProduct): number {
     return this.currency === 'LKR' ? p.price_lkr : p.price_usd;
   }
 
@@ -167,10 +204,35 @@ export class Pos implements OnInit, OnDestroy {
     return this.cart.reduce((sum, i) => sum + this.getPrice(i) * i.quantity, 0);
   }
 
-  checkout(): void {
-    if (this.cart.length === 0) return;
-    this.lastOrderId = Math.floor(1000 + Math.random() * 9000);
-    if (this.selectedTable) this.selectedTable.status = 'occupied';
+  async checkout(): Promise<void> {
+    if (this.cart.length === 0 || this.checkingOut) return;
+    this.checkingOut = true;
+    this.today = new Date().toLocaleString();
+    try {
+      const order = await this.db.createOrder({
+        table_id: this.selectedTable?.id ?? null,
+        currency: this.currency,
+        total_amount: this.getTotal(),
+        items: this.cart.map(i => ({
+          product_id: i.id,
+          quantity: i.quantity,
+          unit_price: this.getPrice(i),
+          subtotal: this.getPrice(i) * i.quantity,
+        }))
+      });
+      this.lastOrderId = order.id;
+      if (this.selectedTable) {
+        const t = this.tables.find(t => t.id === this.selectedTable!.id);
+        if (t) t.status = 'billed';
+        this.selectedTable.status = 'billed';
+      }
+    } catch {
+      // Offline fallback: still show receipt with a local ID
+      this.lastOrderId = Math.floor(1000 + Math.random() * 9000);
+      if (this.selectedTable) this.selectedTable.status = 'billed';
+    } finally {
+      this.checkingOut = false;
+    }
     this.step = 'receipt';
     this.sendToDisplay();
   }
@@ -178,6 +240,7 @@ export class Pos implements OnInit, OnDestroy {
   newOrder(): void {
     this.cart = [];
     if (this.isRestaurant) {
+      this.loadTables();
       this.step = 'tables';
       this.selectedTable = null;
     } else {

@@ -4,7 +4,9 @@
     <button class="btn btn-secondary" (click)="openAdd()">+ Add Product</button>
   </div>
 
-  <div class="card">
+  <app-loading [loading]="loading" message="Loading products..."></app-loading>
+
+  <div class="card" *ngIf="!loading">
     <div class="toolbar">
       <input class="form-control search-input" type="text" placeholder="Search products..."
              [(ngModel)]="searchTerm" (input)="search()" />
@@ -47,7 +49,7 @@
   <div class="modal-overlay" *ngIf="showForm" (click)="showForm=false">
     <div class="modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>{{ editingProduct ? 'Edit Product' : 'Add Product' }}</h3>
+        <h3>{{ editingId ? 'Edit Product' : 'Add Product' }}</h3>
         <button class="close-btn" (click)="showForm=false">&#10005;</button>
       </div>
       <div class="modal-body">
@@ -74,7 +76,23 @@
         </div>
         <div class="form-group">
           <label class="form-label">Barcode</label>
-          <input class="form-control" [(ngModel)]="form.barcode" placeholder="Scan or enter barcode" />
+          <div class="barcode-input-row">
+            <input class="form-control" [(ngModel)]="form.barcode"
+                   placeholder="Scan or type barcode..."
+                   (input)="onBarcodeInput()" />
+            <button type="button" class="btn btn-primary btn-sm scan-fill-btn"
+                    (click)="scanBarcodeForForm()"
+                    [disabled]="scanningBarcode"
+                    title="Scan product barcode">
+              {{ scanningBarcode ? '⏳' : '📷' }}
+            </button>
+          </div>
+          <div class="lookup-status" *ngIf="lookupStatus !== 'idle'"
+               [class.status-loading]="lookupStatus === 'loading'"
+               [class.status-found]="lookupStatus === 'found'"
+               [class.status-miss]="lookupStatus === 'not-found' || lookupStatus === 'error'">
+            {{ lookupMessage }}
+          </div>
         </div>
       </div>
       <div class="modal-footer">

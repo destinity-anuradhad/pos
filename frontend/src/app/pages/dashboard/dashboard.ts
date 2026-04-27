@@ -1,20 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-
-interface StatCard {
-  label: string;
-  value: string;
-  icon: string;
-  color: string;
-}
-
-interface RecentOrder {
-  id: number;
-  table: string;
-  amount: string;
-  currency: string;
-  status: string;
-  time: string;
-}
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { ApiOrder } from '../../services/api';
+import { DatabaseService } from '../../services/database';
+import { AppModeService } from '../../services/app-mode';
 
 @Component({
   selector: 'app-dashboard',
@@ -24,21 +11,53 @@ interface RecentOrder {
 })
 export class Dashboard implements OnInit {
   today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  isRestaurant = false;
+  loading = true;
+  isOnline = navigator.onLine;
 
-  stats: StatCard[] = [
-    { label: 'Today\'s Sales', value: 'LKR 48,500', icon: '💰', color: '#094f70' },
-    { label: 'Orders Today', value: '24', icon: '📋', color: '#e67e22' },
-    { label: 'Active Tables', value: '7', icon: '🪑', color: '#27ae60' },
-    { label: 'Avg. Order', value: 'LKR 2,020', icon: '📊', color: '#8e44ad' }
-  ];
+  salesLkr = 0;
+  salesUsd = 0;
+  orderCount = 0;
+  activeTables = 0;
+  avgOrderLkr = 0;
 
-  recentOrders: RecentOrder[] = [
-    { id: 1024, table: 'Table 3', amount: '3,450', currency: 'LKR', status: 'completed', time: '2 min ago' },
-    { id: 1023, table: 'Table 7', amount: '12.50', currency: 'USD', status: 'completed', time: '8 min ago' },
-    { id: 1022, table: 'Table 1', amount: '2,100', currency: 'LKR', status: 'pending', time: '12 min ago' },
-    { id: 1021, table: 'Table 5', amount: '5,800', currency: 'LKR', status: 'completed', time: '25 min ago' },
-    { id: 1020, table: 'Table 2', amount: '8.00', currency: 'USD', status: 'completed', time: '31 min ago' },
-  ];
+  recentOrders: ApiOrder[] = [];
 
-  ngOnInit(): void {}
+  constructor(private db: DatabaseService, private modeService: AppModeService, private cdr: ChangeDetectorRef) {}
+
+  ngOnInit(): void {
+    this.isRestaurant = this.modeService.isRestaurant();
+    window.addEventListener('online',  () => { this.isOnline = true;  this.load(); });
+    window.addEventListener('offline', () => { this.isOnline = false; });
+    this.load();
+  }
+
+  async load(): Promise<void> {
+    this.loading = true;
+    try {
+      const [stats, orders] = await Promise.all([
+        this.db.getOrderStats(),
+        this.db.getOrders(0, 5),
+      ]);
+      this.salesLkr     = stats.sales_lkr;
+      this.salesUsd     = stats.sales_usd;
+      this.orderCount   = stats.order_count;
+      this.activeTables = stats.active_tables;
+      this.avgOrderLkr  = stats.avg_order_lkr;
+      this.recentOrders = orders;
+    } catch {
+      // Backend offline — show zeros, not fake data
+    } finally {
+      this.loading = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  timeAgo(iso: string): string {
+    if (!iso) return '';
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60)   return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    return `${Math.floor(diff / 3600)}h ago`;
+  }
 }

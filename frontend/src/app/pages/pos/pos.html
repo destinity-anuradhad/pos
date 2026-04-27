@@ -1,17 +1,26 @@
 <app-layout>
 
+  <!-- Error notice -->
+  <div class="offline-notice" *ngIf="error">⚠️ {{ error }}</div>
+
   <!-- STEP 1: Table Selection -->
   <ng-container *ngIf="step === 'tables'">
     <div class="page-header">
       <h1 class="page-title">Select Table</h1>
+      <button class="btn btn-outline btn-sm" (click)="loadTables()">↻ Refresh</button>
     </div>
-    <div class="tables-grid">
+    <app-loading [loading]="loadingTables" message="Loading tables..."></app-loading>
+    <div class="tables-grid" *ngIf="!loadingTables">
       <div class="table-card" *ngFor="let t of tables"
            [class]="'table-card--' + t.status"
            (click)="selectTable(t)">
         <div class="table-icon">🪑</div>
         <div class="table-name">{{ t.name }}</div>
         <div class="table-status">{{ t.status }}</div>
+      </div>
+      <div class="empty-state" *ngIf="tables.length === 0">
+        <div class="empty-icon">🪑</div>
+        <p>No tables found. Make sure the backend is running.</p>
       </div>
     </div>
   </ng-container>
@@ -23,7 +32,7 @@
         <h1 class="page-title">{{ orderTitle }}</h1>
       </div>
       <div class="order-actions">
-        <button class="btn btn-outline btn-sm" *ngIf="isRestaurant" (click)="step='tables'">← Tables</button>
+        <button class="btn btn-outline btn-sm" *ngIf="isRestaurant" (click)="goToTables()">← Tables</button>
         <button class="currency-toggle" (click)="currency = currency === 'LKR' ? 'USD' : 'LKR'">
           {{ currency }}
         </button>
@@ -31,13 +40,13 @@
     </div>
 
     <!-- Scan bar -->
-    <div class="scan-bar" *ngIf="step === 'order'">
+    <div class="scan-bar">
       <div class="scan-icon">📷</div>
-      <input class="form-control scan-input" type="text"
+      <input #scanInput class="form-control scan-input" type="text"
              placeholder="Scan barcode or enter manually..."
              [(ngModel)]="manualBarcode"
-             (keyup.enter)="manualScan()" />
-      <button class="btn btn-primary btn-sm" (click)="manualScan()">Scan</button>
+             (keydown.enter)="manualScan(scanInput)" />
+      <button class="btn btn-primary btn-sm" (click)="manualScan(scanInput)">Scan</button>
       <button class="btn btn-secondary btn-sm" *ngIf="isMobile" (click)="openCamera()">
         📷 Camera
       </button>
@@ -50,21 +59,27 @@
     <div class="order-layout">
       <!-- Product Panel -->
       <div class="products-panel card">
-        <div class="products-toolbar">
-          <input class="form-control" type="text" placeholder="Search..." [(ngModel)]="searchTerm" (input)="filterProducts()" />
-        </div>
-        <div class="categories-bar">
-          <button class="cat-btn" *ngFor="let c of categories"
-                  [class.active]="selectedCategory === c"
-                  (click)="filterCategory(c)">{{ c }}</button>
-        </div>
-        <div class="products-grid">
-          <div class="product-tile" *ngFor="let p of filteredProducts" (click)="addToCart(p)">
-            <div class="product-emoji">🍽️</div>
-            <div class="product-tile-name">{{ p.name }}</div>
-            <div class="product-tile-price">{{ currency }} {{ getPrice(p) | number:'1.2-2' }}</div>
+        <app-loading [loading]="loadingProducts" message="Loading products..."></app-loading>
+        <ng-container *ngIf="!loadingProducts">
+          <div class="products-toolbar">
+            <input class="form-control" type="text" placeholder="Search..." [(ngModel)]="searchTerm" (input)="filterProducts()" />
           </div>
-        </div>
+          <div class="categories-bar">
+            <button class="cat-btn" *ngFor="let c of categories"
+                    [class.active]="selectedCategory === c"
+                    (click)="filterCategory(c)">{{ c }}</button>
+          </div>
+          <div class="products-grid">
+            <div class="product-tile" *ngFor="let p of filteredProducts" (click)="addToCart(p)">
+              <div class="product-emoji">{{ isRestaurant ? '🍽️' : '🛍️' }}</div>
+              <div class="product-tile-name">{{ p.name }}</div>
+              <div class="product-tile-price">{{ currency }} {{ getPrice(p) | number:'1.2-2' }}</div>
+            </div>
+          </div>
+          <div class="empty-state" *ngIf="filteredProducts.length === 0 && products.length > 0">
+            <p>No products match your search.</p>
+          </div>
+        </ng-container>
       </div>
 
       <!-- Cart Panel -->
@@ -92,8 +107,9 @@
             <span>Total</span>
             <strong>{{ currency }} {{ getTotal() | number:'1.2-2' }}</strong>
           </div>
-          <button class="btn btn-secondary btn-lg checkout-btn" (click)="checkout()">
-            Checkout
+          <button class="btn btn-secondary btn-lg checkout-btn"
+                  (click)="checkout()" [disabled]="checkingOut">
+            {{ checkingOut ? 'Saving...' : 'Checkout' }}
           </button>
         </div>
       </div>

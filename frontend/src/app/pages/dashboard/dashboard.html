@@ -4,44 +4,90 @@
     <span class="date-badge">{{ today }}</span>
   </div>
 
+  <app-loading [loading]="loading" message="Loading dashboard..."></app-loading>
+
+  <!-- Offline notice -->
+  <div class="offline-notice" *ngIf="!isOnline">
+    ⚠️ Offline — stats not available. Connect to the backend to see live data.
+  </div>
+
+  <!-- Stats -->
   <div class="stats-grid">
-    <div class="stat-card" *ngFor="let stat of stats">
-      <div class="stat-icon" [style.background]="stat.color + '20'" [style.color]="stat.color">
-        {{ stat.icon }}
-      </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(9,79,112,0.12);color:#094f70">💰</div>
       <div class="stat-info">
-        <div class="stat-value">{{ stat.value }}</div>
-        <div class="stat-label">{{ stat.label }}</div>
+        <div class="stat-value">LKR {{ salesLkr | number:'1.0-0' }}</div>
+        <div class="stat-label">Today's Sales (LKR)</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(230,126,34,0.12);color:#e67e22">💵</div>
+      <div class="stat-info">
+        <div class="stat-value">$ {{ salesUsd | number:'1.2-2' }}</div>
+        <div class="stat-label">Today's Sales (USD)</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(22,163,74,0.12);color:#16a34a">📋</div>
+      <div class="stat-info">
+        <div class="stat-value">{{ orderCount }}</div>
+        <div class="stat-label">Orders Today</div>
+      </div>
+    </div>
+    <div class="stat-card" *ngIf="isRestaurant">
+      <div class="stat-icon" style="background:rgba(142,68,173,0.12);color:#8e44ad">🪑</div>
+      <div class="stat-info">
+        <div class="stat-value">{{ activeTables }}</div>
+        <div class="stat-label">Active Tables</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(20,184,166,0.12);color:#0d9488">📊</div>
+      <div class="stat-info">
+        <div class="stat-value">LKR {{ avgOrderLkr | number:'1.0-0' }}</div>
+        <div class="stat-label">Avg. Order</div>
       </div>
     </div>
   </div>
 
+  <!-- Recent orders -->
   <div class="card">
     <div class="section-header">
       <h2 class="section-title">Recent Orders</h2>
       <a routerLink="/orders" class="btn btn-outline btn-sm">View All</a>
     </div>
-    <table class="table">
+
+    <div class="empty-state" *ngIf="!loading && recentOrders.length === 0">
+      <div class="empty-icon">📋</div>
+      <p>No orders yet today</p>
+    </div>
+
+    <table class="table" *ngIf="recentOrders.length > 0">
       <thead>
         <tr>
           <th>Order #</th>
-          <th>Table</th>
+          <th>{{ isRestaurant ? 'Table' : 'Type' }}</th>
+          <th>Items</th>
           <th>Amount</th>
           <th>Status</th>
           <th>Time</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let order of recentOrders">
-          <td><strong>#{{ order.id }}</strong></td>
-          <td>{{ order.table }}</td>
-          <td>{{ order.currency }} {{ order.amount }}</td>
+        <tr *ngFor="let o of recentOrders">
+          <td><strong>#{{ o.id }}</strong></td>
+          <td>{{ o.table_name }}</td>
+          <td>{{ o.item_count }}</td>
+          <td>{{ o.currency }} {{ o.total_amount | number:'1.2-2' }}</td>
           <td>
-            <span class="badge" [class.badge-success]="order.status === 'completed'" [class.badge-warning]="order.status === 'pending'">
-              {{ order.status }}
+            <span class="badge"
+              [class.badge-success]="o.status === 'completed'"
+              [class.badge-warning]="o.status === 'pending'"
+              [class.badge-danger]="o.status === 'cancelled'">
+              {{ o.status }}
             </span>
           </td>
-          <td class="time-cell">{{ order.time }}</td>
+          <td class="time-cell">{{ timeAgo(o.created_at) }}</td>
         </tr>
       </tbody>
     </table>

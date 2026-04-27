@@ -1,14 +1,6 @@
-import { Component, OnInit } from '@angular/core';
-
-interface Order {
-  id: number;
-  table: string;
-  items: number;
-  currency: string;
-  total: number;
-  status: string;
-  date: string;
-}
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { ApiOrder } from '../../services/api';
+import { DatabaseService } from '../../services/database';
 
 @Component({
   selector: 'app-orders',
@@ -17,29 +9,48 @@ interface Order {
   styleUrls: ['./orders.scss']
 })
 export class Orders implements OnInit {
-  orders: Order[] = [
-    { id: 1024, table: 'Table 3', items: 4, currency: 'LKR', total: 3450, status: 'completed', date: '2026-04-27 14:32' },
-    { id: 1023, table: 'Table 7', items: 2, currency: 'USD', total: 12.50, status: 'completed', date: '2026-04-27 14:25' },
-    { id: 1022, table: 'Table 1', items: 3, currency: 'LKR', total: 2100, status: 'pending', date: '2026-04-27 14:18' },
-    { id: 1021, table: 'Table 5', items: 5, currency: 'LKR', total: 5800, status: 'completed', date: '2026-04-27 14:05' },
-    { id: 1020, table: 'Table 2', items: 2, currency: 'USD', total: 8.00, status: 'completed', date: '2026-04-27 13:59' },
-    { id: 1019, table: 'Table 4', items: 6, currency: 'LKR', total: 7200, status: 'cancelled', date: '2026-04-27 13:45' },
-    { id: 1018, table: 'Table 6', items: 3, currency: 'LKR', total: 4100, status: 'completed', date: '2026-04-27 13:30' },
-  ];
-
-  filteredOrders: Order[] = [];
+  allOrders: ApiOrder[] = [];
+  filteredOrders: ApiOrder[] = [];
   filterStatus = 'all';
   searchTerm = '';
+  loading = true;
+  error = '';
 
-  ngOnInit(): void {
-    this.filteredOrders = [...this.orders];
+  constructor(private db: DatabaseService, private cdr: ChangeDetectorRef) {}
+
+  ngOnInit(): void { this.load(); }
+
+  async load(): Promise<void> {
+    this.loading = true;
+    this.error = '';
+    try {
+      this.allOrders = await this.db.getOrders(0, 100);
+      this.applyFilter();
+    } catch {
+      this.error = 'Cannot reach server (localhost:8000). Start the backend: cd backend && python main.py';
+    } finally {
+      this.loading = false;
+      this.cdr.detectChanges();
+    }
   }
 
   applyFilter(): void {
-    this.filteredOrders = this.orders.filter(o => {
+    const term = this.searchTerm.toLowerCase();
+    this.filteredOrders = this.allOrders.filter(o => {
       const matchStatus = this.filterStatus === 'all' || o.status === this.filterStatus;
-      const matchSearch = !this.searchTerm || o.table.toLowerCase().includes(this.searchTerm.toLowerCase()) || String(o.id).includes(this.searchTerm);
+      const matchSearch = !term ||
+        o.table_name.toLowerCase().includes(term) ||
+        String(o.id).includes(term);
       return matchStatus && matchSearch;
     });
+  }
+
+  timeAgo(iso: string): string {
+    if (!iso) return '';
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60)    return `${diff}s ago`;
+    if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return new Date(iso).toLocaleDateString();
   }
 }

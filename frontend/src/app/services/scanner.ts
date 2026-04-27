@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { Subject } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
@@ -10,6 +10,9 @@ export class ScannerService {
   private bufferTimeout: any;
   private listening = false;
   private scannerElementId = 'qr-scanner-container';
+  private boundHandleKey = this.handleKey.bind(this); // saved reference for proper removeEventListener
+
+  constructor(private zone: NgZone) {}
 
   get isNative(): boolean {
     return typeof (window as any).Capacitor !== 'undefined' &&
@@ -20,19 +23,22 @@ export class ScannerService {
   startKeyboardListener(): void {
     if (this.listening) return;
     this.listening = true;
-    document.addEventListener('keydown', this.handleKey.bind(this));
+    document.addEventListener('keydown', this.boundHandleKey);
   }
 
   stopKeyboardListener(): void {
     this.listening = false;
-    document.removeEventListener('keydown', this.handleKey.bind(this));
+    document.removeEventListener('keydown', this.boundHandleKey);
   }
 
   private handleKey(e: KeyboardEvent): void {
     const tag = (e.target as HTMLElement).tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     if (e.key === 'Enter') {
-      if (this.buffer.length > 2) this.scanResult$.next(this.buffer);
+      if (this.buffer.length > 2) {
+        const code = this.buffer;
+        this.zone.run(() => this.scanResult$.next(code));
+      }
       this.buffer = '';
       clearTimeout(this.bufferTimeout);
     } else if (e.key.length === 1) {
@@ -133,7 +139,7 @@ export class ScannerService {
         { facingMode },
         { fps: 15, qrbox: qrboxFn },
         (decodedText: string) => {
-          this.scanResult$.next(decodedText);
+          this.zone.run(() => this.scanResult$.next(decodedText));
           closeScanner();
         },
         () => {} // per-frame failure is normal — ignore
@@ -160,6 +166,6 @@ export class ScannerService {
   }
 
   emitScan(code: string): void {
-    this.scanResult$.next(code);
+    this.zone.run(() => this.scanResult$.next(code));
   }
 }
