@@ -1,52 +1,96 @@
-<div class="display-page">
-  <div class="display-header">
-    <div class="display-brand">
-      <img src="/logo.svg" class="display-brand-logo" alt="Destinity Inspire" />
-      <div>
-        <div class="brand-name">Destinity Inspire POS</div>
-        <div class="brand-tagline">Thank you for your visit!</div>
+<div class="cd-page">
+
+  <!-- ── IDLE / WELCOME ───────────────────────────────────────── -->
+  <div class="cd-idle" *ngIf="data.status === 'idle' || data.items.length === 0">
+
+    <!-- top-right clock -->
+    <div class="cd-clock-corner">
+      <div class="cd-clock-time">{{ time }}</div>
+      <div class="cd-clock-date">{{ date }}</div>
+    </div>
+
+    <!-- centre content -->
+    <div class="cd-idle-centre">
+      <div class="cd-logo-ring">
+        <img src="/logo.svg" class="cd-logo" alt="Logo" />
+      </div>
+
+      <div class="cd-welcome-msg" [class.fade-in]="welcomeVisible" [class.fade-out]="!welcomeVisible">
+        <h1>{{ welcome.main }}</h1>
+        <p>{{ welcome.sub }}</p>
       </div>
     </div>
-    <div class="display-time">{{ time }}</div>
+
+    <!-- bottom brand bar -->
+    <div class="cd-brand-bar">
+      <img src="/logo.svg" class="cd-brand-bar-logo" alt="" />
+      <span class="cd-brand-bar-name">Destinity Inspire POS</span>
+      <span class="cd-brand-bar-sep">·</span>
+      <span class="cd-brand-bar-ready">
+        <span class="cd-pulse-dot"></span>
+        Ready to serve you
+      </span>
+    </div>
+
   </div>
 
-  <!-- Idle screen -->
-  <div class="idle-screen" *ngIf="data.status === 'idle' || data.items.length === 0">
-    <div class="idle-icon">🛍️</div>
-    <h2>Welcome!</h2>
-    <p>Your order will appear here</p>
-  </div>
+  <!-- ── ORDERING / CHECKOUT ──────────────────────────────────── -->
+  <div class="cd-order" *ngIf="data.status !== 'idle' && data.items.length > 0">
 
-  <!-- Order screen -->
-  <div class="order-screen" *ngIf="data.status !== 'idle' && data.items.length > 0">
-    <div class="display-items">
-      <table class="display-table">
+    <!-- header -->
+    <div class="cd-order-header">
+      <div class="cd-order-brand">
+        <img src="/logo.svg" class="cd-order-logo" alt="" />
+        <span>Destinity Inspire POS</span>
+      </div>
+      <div class="cd-order-clock">{{ time }}</div>
+    </div>
+
+    <!-- items table -->
+    <div class="cd-items-wrap">
+      <table class="cd-table">
         <thead>
           <tr>
             <th>Item</th>
             <th>Qty</th>
             <th>Price</th>
-            <th>Sub</th>
+            <th>Subtotal</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let item of data.items">
-            <td>{{ item.name }}</td>
-            <td>{{ item.qty }}</td>
-            <td>{{ item.price | number:'1.2-2' }}</td>
-            <td>{{ (item.price * item.qty) | number:'1.2-2' }}</td>
+          <tr *ngFor="let item of data.items" class="cd-item-row">
+            <td class="cd-item-name">{{ item.name }}</td>
+            <td class="cd-item-qty">
+              <span class="qty-badge">{{ item.qty }}</span>
+            </td>
+            <td class="cd-item-price">{{ item.price | number:'1.2-2' }}</td>
+            <td class="cd-item-sub">{{ (item.price * item.qty) | number:'1.2-2' }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div class="display-total">
-      <span>Total</span>
-      <strong>{{ data.currency }} {{ data.total | number:'1.2-2' }}</strong>
+    <!-- total -->
+    <div class="cd-total-bar">
+      <div class="cd-total-label">
+        <span class="cd-total-items">{{ data.items.length }} item{{ data.items.length !== 1 ? 's' : '' }}</span>
+        <span class="cd-total-text">Total</span>
+      </div>
+      <div class="cd-total-amount">
+        <span class="cd-total-currency">{{ data.currency }}</span>
+        <span class="cd-total-number">{{ data.total | number:'1.2-2' }}</span>
+      </div>
     </div>
 
-    <div class="thank-you" *ngIf="data.status === 'checkout'">
-      ✅ Thank you! Have a great day!
+    <!-- thank you overlay -->
+    <div class="cd-thankyou" *ngIf="data.status === 'checkout'">
+      <div class="cd-thankyou-inner">
+        <div class="cd-thankyou-icon">✓</div>
+        <h2>Thank you!</h2>
+        <p>Have a wonderful day</p>
+      </div>
     </div>
+
   </div>
+
 </div>

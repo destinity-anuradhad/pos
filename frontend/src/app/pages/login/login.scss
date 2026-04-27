@@ -3,80 +3,130 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   padding: 20px;
+  background: #0b1120;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% -20%, rgba(9,79,112,0.6) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 90% 100%,  rgba(230,126,34,0.2) 0%, transparent 55%);
+  position: relative;
+  overflow: hidden;
+
+  /* subtle grid */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+  }
 }
 
 .login-card {
-  background: white;
-  border-radius: 20px;
+  background: rgba(17,24,39,0.85);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
   width: 100%;
   max-width: 380px;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  box-shadow: 0 32px 64px rgba(0,0,0,0.5);
+  position: relative;
+  z-index: 1;
 }
 
 .login-logo {
-  background: var(--primary);
-  padding: 36px 32px 28px;
+  padding: 40px 32px 28px;
   text-align: center;
   color: white;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 60%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  }
 
   .login-logo-img {
-    width: 72px;
-    height: 72px;
+    width: 80px; height: 80px;
     object-fit: contain;
-    margin-bottom: 10px;
+    margin: 0 auto 14px;
     display: block;
-    margin-left: auto;
-    margin-right: auto;
+    filter: drop-shadow(0 4px 20px rgba(9,79,112,0.6));
+    animation: logoPop 0.5s cubic-bezier(0.34,1.56,0.64,1);
   }
 
   h1 {
     font-size: 22px;
     font-weight: 800;
     letter-spacing: -0.5px;
+    color: white;
   }
 
   .logo-sub {
-    font-size: 12px;
-    opacity: 0.7;
-    letter-spacing: 2px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 3px;
     text-transform: uppercase;
-    margin-top: 4px;
+    margin-top: 5px;
     display: block;
   }
 }
 
+@keyframes logoPop {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
 .login-body {
-  padding: 32px;
+  padding: 28px 32px 32px;
 
   h2 {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
-    color: var(--text);
+    color: white;
     margin-bottom: 4px;
   }
 
   .login-hint {
-    color: var(--text-muted);
+    color: rgba(255,255,255,0.4);
     font-size: 13px;
     margin-bottom: 24px;
+  }
+
+  .form-label { color: rgba(255,255,255,0.5); }
+
+  .form-control {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.1);
+    color: white;
+    &:focus {
+      border-color: rgba(9,79,112,0.8);
+      box-shadow: 0 0 0 3px rgba(9,79,112,0.25);
+      background: rgba(255,255,255,0.09);
+    }
+    &::placeholder { color: rgba(255,255,255,0.2); }
   }
 }
 
 .pin-input {
-  font-size: 24px;
-  letter-spacing: 8px;
+  font-size: 28px;
+  letter-spacing: 10px;
   text-align: center;
-  padding: 14px;
+  padding: 16px;
+  font-weight: 700;
 }
 
 .error-msg {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: var(--danger);
-  border-radius: 8px;
+  background: rgba(220,38,38,0.12);
+  border: 1px solid rgba(220,38,38,0.3);
+  color: #fca5a5;
+  border-radius: 10px;
   padding: 10px 14px;
   font-size: 13px;
   margin-bottom: 16px;
@@ -86,11 +136,19 @@
   width: 100%;
   justify-content: center;
   margin-top: 8px;
+  padding: 14px;
+  font-size: 15px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  box-shadow: 0 8px 20px rgba(9,79,112,0.4);
+  letter-spacing: 0.3px;
+  &:hover { box-shadow: 0 10px 24px rgba(9,79,112,0.5); }
 }
 
 .default-hint {
   text-align: center;
   font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 16px;
+  color: rgba(255,255,255,0.25);
+  margin-top: 18px;
+  strong { color: rgba(255,255,255,0.5); }
 }
