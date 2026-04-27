@@ -1,0 +1,31 @@
+{
+  "name": "destinity-inspire-pos",
+  "version": "1.0.0",
+  "description": "Destinity Inspire POS - Desktop",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build-win": "electron-builder --win",
+    "build-linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.destinityinspire.pos",
+    "productName": "Destinity Inspire POS",
+    "directories": {
+      "buildResources": "assets"
+    },
+    "files": ["main.js", "preload.js", "../frontend/dist/frontend/**/*"],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    }
+  },
+  "devDependencies": {
+    "electron": "^36.0.0",
+    "electron-builder": "^26.0.0"
+  }
+}

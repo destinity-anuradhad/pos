@@ -1,0 +1,40 @@
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon">&#9673;</div>
+      <h1>Destinity Inspire</h1>
+      <span class="logo-sub">Point of Sale</span>
+    </div>
+
+    <div class="login-body">
+      <h2>Welcome Back</h2>
+      <p class="login-hint">Enter your PIN to continue</p>
+
+      <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+        <div class="form-group">
+          <label class="form-label">PIN</label>
+          <input
+            class="form-control pin-input"
+            type="password"
+            inputmode="numeric"
+            maxlength="6"
+            placeholder="&#9679;&#9679;&#9679;&#9679;"
+            [ngModel]="pin"
+            (ngModelChange)="onPinInput($event)"
+            name="pin"
+            autofocus
+          />
+        </div>
+
+        <div class="error-msg" *ngIf="error">{{ error }}</div>
+
+        <button type="submit" class="btn btn-secondary btn-lg login-btn" [disabled]="loading">
+          <span *ngIf="!loading">Login</span>
+          <span *ngIf="loading">Verifying...</span>
+        </button>
+      </form>
+
+      <p class="default-hint">Default PIN: <strong>1234</strong></p>
+    </div>
+  </div>
+</div>

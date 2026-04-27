@@ -1,0 +1,49 @@
+<app-layout>
+  <div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <span class="date-badge">{{ today }}</span>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card" *ngFor="let stat of stats">
+      <div class="stat-icon" [style.background]="stat.color + '20'" [style.color]="stat.color">
+        {{ stat.icon }}
+      </div>
+      <div class="stat-info">
+        <div class="stat-value">{{ stat.value }}</div>
+        <div class="stat-label">{{ stat.label }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-header">
+      <h2 class="section-title">Recent Orders</h2>
+      <a routerLink="/orders" class="btn btn-outline btn-sm">View All</a>
+    </div>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Order #</th>
+          <th>Table</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of recentOrders">
+          <td><strong>#{{ order.id }}</strong></td>
+          <td>{{ order.table }}</td>
+          <td>{{ order.currency }} {{ order.amount }}</td>
+          <td>
+            <span class="badge" [class.badge-success]="order.status === 'completed'" [class.badge-warning]="order.status === 'pending'">
+              {{ order.status }}
+            </span>
+          </td>
+          <td class="time-cell">{{ order.time }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</app-layout>

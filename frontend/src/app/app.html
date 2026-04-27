@@ -1,0 +1,21 @@
+<router-outlet />
+
+<div class="shortcuts-overlay" *ngIf="showShortcuts" (click)="showShortcuts=false">
+  <div class="shortcuts-panel" (click)="$event.stopPropagation()">
+    <div class="shortcuts-header">
+      <h3>⌨️ Keyboard Shortcuts</h3>
+      <button (click)="showShortcuts=false">✕</button>
+    </div>
+    <div class="shortcuts-list">
+      <div class="shortcut-row"><kbd>/</kbd> Focus search</div>
+      <div class="shortcut-row"><kbd>F2</kbd> Checkout</div>
+      <div class="shortcut-row"><kbd>F3</kbd> New order</div>
+      <div class="shortcut-row"><kbd>Alt+1</kbd> Dashboard</div>
+      <div class="shortcut-row"><kbd>Alt+2</kbd> POS</div>
+      <div class="shortcut-row"><kbd>Alt+3</kbd> Products</div>
+      <div class="shortcut-row"><kbd>Alt+4</kbd> Orders</div>
+      <div class="shortcut-row"><kbd>Alt+D</kbd> Toggle dark mode</div>
+      <div class="shortcut-row"><kbd>?</kbd> This help</div>
+    </div>
+  </div>
+</div>

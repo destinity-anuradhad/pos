@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PRD – Destinity Inspire POS</title>
+  <style>
+    :root {
+      --primary: #094f70;
+      --secondary: #e67e22;
+      --light: #f4f8fb;
+      --text: #1a1a2e;
+      --muted: #6b7280;
+      --border: #d1dde6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f4f8;
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 48px 40px 36px;
+    }
+
+    header .badge {
+      display: inline-block;
+      background: var(--secondary);
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
+
+    header h1 {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    header h1 span { color: var(--secondary); }
+
+    header p {
+      margin-top: 8px;
+      font-size: 15px;
+      opacity: 0.8;
+    }
+
+    header .meta {
+      margin-top: 20px;
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      opacity: 0.75;
+    }
+
+    header .meta span strong { color: white; opacity: 1; }
+
+    nav {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      padding: 0 40px;
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    nav a {
+      display: block;
+      padding: 14px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 3px solid transparent;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    nav a:hover {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    section {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 36px;
+      margin-bottom: 28px;
+    }
+
+    section h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--light);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    section h2 .num {
+      background: var(--primary);
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    section h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 20px 0 10px;
+    }
+
+    p { margin-bottom: 12px; font-size: 14.5px; color: #374151; }
+
+    ul, ol {
+      padding-left: 20px;
+      margin-bottom: 12px;
+    }
+
+    ul li, ol li {
+      font-size: 14.5px;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+
+    th {
+      background: var(--primary);
+      color: white;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) td { background: var(--light); }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .tag-yes  { background: #d1fae5; color: #065f46; }
+    .tag-no   { background: #fee2e2; color: #991b1b; }
+    .tag-v2   { background: #fef3c7; color: #92400e; }
+
+    .platform-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .platform-card {
+      background: var(--light);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .platform-card .icon { font-size: 28px; margin-bottom: 8px; }
+    .platform-card .label { font-size: 13px; font-weight: 700; color: var(--primary); }
+    .platform-card .output { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    .page-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .page-card {
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .page-card .page-header {
+      background: var(--primary);
+      color: white;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .page-card ul {
+      padding: 12px 14px 12px 28px;
+      margin: 0;
+    }
+
+    .page-card ul li {
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .color-swatch {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .swatch {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--light);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .swatch-box {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .swatch-info .name { font-size: 13px; font-weight: 700; }
+    .swatch-info .hex  { font-size: 12px; color: var(--muted); }
+
+    .arch-diagram {
+      background: var(--light);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      margin-top: 16px;
+      font-size: 13px;
+      text-align: center;
+      line-height: 2;
+    }
+
+    .arch-layer {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 8px 0;
+    }
+
+    .arch-box {
+      background: var(--primary);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .arch-box.sec {
+      background: var(--secondary);
+    }
+
+    .arch-box.gray {
+      background: #6b7280;
+    }
+
+    .arch-arrow { color: var(--muted); font-size: 20px; margin: 4px 0; }
+
+    footer {
+      text-align: center;
+      padding: 32px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    footer strong { color: var(--primary); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="badge">Product Requirements Document</div>
+  <h1>Destinity Inspire <span>POS</span></h1>
+  <p>A cross-platform Point of Sale system for restaurants</p>
+  <div class="meta">
+    <span><strong>Version:</strong> 1.0</span>
+    <span><strong>Date:</strong> April 27, 2026</span>
+    <span><strong>Industry:</strong> Restaurant</span>
+    <span><strong>Currencies:</strong> LKR &amp; USD</span>
+    <span><strong>Language:</strong> English</span>
+  </div>
+</header>
+
+<nav>
+  <a href="#overview">Overview</a>
+  <a href="#platforms">Platforms</a>
+  <a href="#stack">Tech Stack</a>
+  <a href="#pages">Pages</a>
+  <a href="#features">Features</a>
+  <a href="#database">Database</a>
+  <a href="#branding">Branding</a>
+  <a href="#architecture">Architecture</a>
+</nav>
+
+<div class="container">
+
+  <!-- 1. Overview -->
+  <section id="overview">
+    <h2><span class="num">1</span> Project Overview</h2>
+    <p>
+      <strong>Destinity Inspire POS</strong> is a guided, cross-platform Point of Sale application
+      designed specifically for restaurants. It is built from a single shared codebase and deployable
+      across Web, Windows, Linux, Android, and iOS. The app supports offline-first operation with
+      automatic background sync to a central backend when connectivity is available.
+    </p>
+    <h3>Goals</h3>
+    <ul>
+      <li>Provide a simple, guided 4-page POS experience for restaurant staff.</li>
+      <li>Work seamlessly online and offline on all platforms.</li>
+      <li>Enable fast order entry with barcode and QR code scanning on mobile.</li>
+      <li>Support table management for dine-in orders.</li>
+      <li>Generate receipts via print, email/SMS, and in-app view.</li>
+      <li>Support dual-currency billing (LKR and USD).</li>
+    </ul>
+    <h3>Out of Scope (v1)</h3>
+    <ul>
+      <li>Multi-user / role-based access (planned for v2)</li>
+      <li>Kitchen display system (KDS)</li>
+      <li>Loyalty / rewards program</li>
+      <li>Advanced inventory management</li>
+    </ul>
+  </section>
+
+  <!-- 2. Platforms -->
+  <section id="platforms">
+    <h2><span class="num">2</span> Target Platforms</h2>
+    <p>The application is built once and deployed to all five platforms:</p>
+    <div class="platform-grid">
+      <div class="platform-card">
+        <div class="icon">🌐</div>
+        <div class="label">Web</div>
+        <div class="output">Hosted app</div>
+      </div>
+      <div class="platform-card">
+        <div class="icon">🪟</div>
+        <div class="label">Windows</div>
+        <div class="output">.exe installer</div>
+      </div>
+      <div class="platform-card">
+        <div class="icon">🐧</div>
+        <div class="label">Linux</div>
+        <div class="output">.AppImage / .deb</div>
+      </div>
+      <div class="platform-card">
+        <div class="icon">🤖</div>
+        <div class="label">Android</div>
+        <div class="output">.apk / .aab</div>
+      </div>
+      <div class="platform-card">
+        <div class="icon">🍎</div>
+        <div class="label">iOS</div>
+        <div class="output">.ipa</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Tech Stack -->
+  <section id="stack">
+    <h2><span class="num">3</span> Technology Stack</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Layer</th>
+          <th>Technology</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Frontend UI</td>
+          <td>Angular</td>
+          <td>Single shared UI codebase for all platforms</td>
+        </tr>
+        <tr>
+          <td>Desktop Wrapper</td>
+          <td>Electron.js</td>
+          <td>Packages Angular as Windows / Linux desktop app</td>
+        </tr>
+        <tr>
+          <td>Mobile Wrapper</td>
+          <td>Capacitor</td>
+          <td>Packages Angular as Android / iOS mobile app</td>
+        </tr>
+        <tr>
+          <td>Backend API</td>
+          <td>Python FastAPI</td>
+          <td>REST API for data sync and business logic</td>
+        </tr>
+        <tr>
+          <td>Local Database</td>
+          <td>SQLite</td>
+          <td>On-device storage for offline-first operation</td>
+        </tr>
+        <tr>
+          <td>Server Database</td>
+          <td>SQLite</td>
+          <td>Central database on backend server</td>
+        </tr>
+        <tr>
+          <td>Barcode / QR</td>
+          <td>Capacitor Barcode Scanner</td>
+          <td>Native camera scanning on mobile</td>
+        </tr>
+        <tr>
+          <td>Web Scanner</td>
+          <td>ZXing / Webcam fallback</td>
+          <td>Barcode/QR scan via webcam on web &amp; desktop</td>
+        </tr>
+        <tr>
+          <td>Sync Strategy</td>
+          <td>Offline-first + Auto Sync</td>
+          <td>Works offline; syncs automatically when online</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 4. Pages -->
+  <section id="pages">
+    <h2><span class="num">4</span> Application Pages</h2>
+    <p>The app consists of <strong>4 core pages</strong>:</p>
+    <div class="page-grid">
+      <div class="page-card">
+        <div class="page-header">1. Dashboard</div>
+        <ul>
+          <li>Daily sales total (LKR &amp; USD)</li>
+          <li>Total orders today</li>
+          <li>Quick stats cards</li>
+          <li>Recent orders list</li>
+          <li>Online/offline status</li>
+        </ul>
+      </div>
+      <div class="page-card">
+        <div class="page-header">2. Products</div>
+        <ul>
+          <li>Product list with categories</li>
+          <li>Add / edit / delete product</li>
+          <li>Product name, price, barcode</li>
+          <li>Category management</li>
+          <li>Search products</li>
+        </ul>
+      </div>
+      <div class="page-card">
+        <div class="page-header">3. POS / Cashier</div>
+        <ul>
+          <li>Table selection</li>
+          <li>Product grid / search</li>
+          <li>Barcode &amp; QR scan</li>
+          <li>Cart management</li>
+          <li>Currency toggle (LKR/USD)</li>
+          <li>Checkout &amp; receipt</li>
+        </ul>
+      </div>
+      <div class="page-card">
+        <div class="page-header">4. Orders</div>
+        <ul>
+          <li>Sales history list</li>
+          <li>Filter by date</li>
+          <li>Order detail view</li>
+          <li>Re-print / resend receipt</li>
+          <li>Sync status indicator</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Features -->
+  <section id="features">
+    <h2><span class="num">5</span> Feature Requirements</h2>
+
+    <h3>5.1 Table Management</h3>
+    <ul>
+      <li>Restaurant floor view with numbered tables.</li>
+      <li>Each table shows status: Available, Occupied, or Billed.</li>
+      <li>Orders are assigned to a specific table.</li>
+      <li>Multiple orders per table session supported.</li>
+    </ul>
+
+    <h3>5.2 Barcode &amp; QR Code Scanning</h3>
+    <ul>
+      <li>On Android/iOS: native camera via Capacitor Barcode Scanner plugin.</li>
+      <li>On Web/Desktop: webcam-based scanning as fallback.</li>
+      <li>Manual barcode entry always available as a fallback.</li>
+      <li>Supports both product barcodes and QR codes (e.g. QR payment).</li>
+    </ul>
+
+    <h3>5.3 Receipt Generation</h3>
+    <table>
+      <thead>
+        <tr><th>Method</th><th>Supported</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Print (thermal)</td><td><span class="tag tag-yes">Yes</span></td><td>Browser/Electron print dialog</td></tr>
+        <tr><td>Email</td><td><span class="tag tag-yes">Yes</span></td><td>Send via backend email service</td></tr>
+        <tr><td>SMS</td><td><span class="tag tag-yes">Yes</span></td><td>Send via SMS gateway</td></tr>
+        <tr><td>In-app view</td><td><span class="tag tag-yes">Yes</span></td><td>Displayed after checkout</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5.4 Currency Support</h3>
+    <ul>
+      <li>Supports <strong>LKR (Sri Lankan Rupee)</strong> and <strong>USD (US Dollar)</strong>.</li>
+      <li>Cashier can toggle currency at checkout.</li>
+      <li>Exchange rate can be set manually in settings.</li>
+      <li>Receipts display the selected currency.</li>
+    </ul>
+
+    <h3>5.5 Offline-First &amp; Auto Sync</h3>
+    <ul>
+      <li>All transactions saved locally to SQLite first.</li>
+      <li>App fully functional without internet connection.</li>
+      <li>When connectivity is detected, pending data auto-syncs to backend.</li>
+      <li>Sync status indicator shown on Dashboard and Orders pages.</li>
+      <li>Conflict resolution: last-write-wins for product updates.</li>
+    </ul>
+
+    <h3>5.6 User Management (v1)</h3>
+    <ul>
+      <li>Single user — no login required in v1.</li>
+      <li>Multi-user with roles (Admin / Cashier) planned for v2.</li>
+    </ul>
+  </section>
+
+  <!-- 6. Database -->
+  <section id="database">
+    <h2><span class="num">6</span> Database Design (High Level)</h2>
+    <p>SQLite is used both locally on the device and on the backend server.</p>
+    <table>
+      <thead>
+        <tr><th>Table</th><th>Key Fields</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>products</strong></td>
+          <td>id, name, category_id, price_lkr, price_usd, barcode, image_url, created_at, updated_at</td>
+        </tr>
+        <tr>
+          <td><strong>categories</strong></td>
+          <td>id, name, color, created_at</td>
+        </tr>
+        <tr>
+          <td><strong>tables</strong></td>
+          <td>id, name, status (available/occupied/billed), capacity</td>
+        </tr>
+        <tr>
+          <td><strong>orders</strong></td>
+          <td>id, table_id, currency, total_amount, status, receipt_sent, created_at, synced_at</td>
+        </tr>
+        <tr>
+          <td><strong>order_items</strong></td>
+          <td>id, order_id, product_id, quantity, unit_price, subtotal</td>
+        </tr>
+        <tr>
+          <td><strong>sync_queue</strong></td>
+          <td>id, entity_type, entity_id, action, payload, created_at, synced</td>
+        </tr>
+        <tr>
+          <td><strong>settings</strong></td>
+          <td>key, value (exchange_rate, restaurant_name, etc.)</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 7. Branding -->
+  <section id="branding">
+    <h2><span class="num">7</span> Branding &amp; Design</h2>
+    <h3>Color Palette</h3>
+    <div class="color-swatch">
+      <div class="swatch">
+        <div class="swatch-box" style="background:#094f70;"></div>
+        <div class="swatch-info">
+          <div class="name">Primary</div>
+          <div class="hex">#094f70</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-box" style="background:#e67e22;"></div>
+        <div class="swatch-info">
+          <div class="name">Secondary</div>
+          <div class="hex">#e67e22</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-box" style="background:#f4f8fb; border:1px solid #d1dde6;"></div>
+        <div class="swatch-info">
+          <div class="name">Background</div>
+          <div class="hex">#f4f8fb</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-box" style="background:#ffffff; border:1px solid #d1dde6;"></div>
+        <div class="swatch-info">
+          <div class="name">Surface</div>
+          <div class="hex">#ffffff</div>
+        </div>
+      </div>
+    </div>
+    <h3>Design Principles</h3>
+    <ul>
+      <li>Clean, minimal UI suitable for fast-paced restaurant environments.</li>
+      <li>Large touch targets for mobile and tablet use.</li>
+      <li>High contrast for readability in bright restaurant environments.</li>
+      <li>Consistent use of primary color for navigation and actions.</li>
+      <li>Secondary color for call-to-action buttons (checkout, confirm).</li>
+    </ul>
+  </section>
+
+  <!-- 8. Architecture -->
+  <section id="architecture">
+    <h2><span class="num">8</span> System Architecture</h2>
+    <div class="arch-diagram">
+      <div style="font-weight:700; color:var(--primary); margin-bottom:12px;">Destinity Inspire POS — Architecture Overview</div>
+
+      <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">PRESENTATION LAYER</div>
+      <div class="arch-layer">
+        <div class="arch-box">Angular UI (Shared)</div>
+      </div>
+
+      <div class="arch-arrow">↓</div>
+
+      <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">PLATFORM WRAPPERS</div>
+      <div class="arch-layer">
+        <div class="arch-box">Electron (Win/Linux)</div>
+        <div class="arch-box">Capacitor (Android/iOS)</div>
+        <div class="arch-box gray">Web Browser</div>
+      </div>
+
+      <div class="arch-arrow">↓</div>
+
+      <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">LOCAL DATA LAYER</div>
+      <div class="arch-layer">
+        <div class="arch-box sec">SQLite (Device)</div>
+        <div class="arch-box sec">Sync Queue</div>
+      </div>
+
+      <div class="arch-arrow">↓ Auto Sync (when online) ↓</div>
+
+      <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">BACKEND LAYER</div>
+      <div class="arch-layer">
+        <div class="arch-box">Python FastAPI</div>
+        <div class="arch-box">SQLite (Server)</div>
+      </div>
+    </div>
+
+    <h3>Project Folder Structure</h3>
+    <pre style="background:var(--light);border:1px solid var(--border);border-radius:8px;padding:20px;font-size:13px;line-height:1.8;overflow-x:auto;">
+destinity-inspire-pos/
+├── frontend/              # Angular app (shared UI)
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── pages/
+│   │   │   │   ├── dashboard/
+│   │   │   │   ├── products/
+│   │   │   │   ├── pos/
+│   │   │   │   └── orders/
+│   │   │   ├── services/  # API, sync, scanner services
+│   │   │   └── shared/    # components, models
+│   │   └── ...
+├── electron/              # Electron desktop wrapper
+│   ├── main.js
+│   └── package.json
+├── capacitor.config.ts    # Capacitor mobile config
+├── backend/               # Python FastAPI backend
+│   ├── main.py
+│   ├── models/
+│   ├── routes/
+│   └── database.py
+└── docs/
+    └── prd.html           # This document
+    </pre>
+  </section>
+
+</div>
+
+<footer>
+  <p><strong>Destinity Inspire POS</strong> &mdash; Product Requirements Document v1.0 &mdash; April 2026</p>
+  <p style="margin-top:6px;">Confidential &mdash; For internal development use only</p>
+</footer>
+
+</body>
+</html>

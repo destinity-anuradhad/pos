@@ -1,0 +1,86 @@
+<app-layout>
+  <div class="page-header">
+    <h1 class="page-title">Products</h1>
+    <button class="btn btn-secondary" (click)="openAdd()">+ Add Product</button>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <input class="form-control search-input" type="text" placeholder="Search products..."
+             [(ngModel)]="searchTerm" (input)="search()" />
+    </div>
+
+    <table class="table" *ngIf="filteredProducts.length > 0">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Price (LKR)</th>
+          <th>Price (USD)</th>
+          <th>Barcode</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of filteredProducts">
+          <td><strong>{{ p.name }}</strong></td>
+          <td><span class="badge badge-info">{{ p.category }}</span></td>
+          <td>LKR {{ p.price_lkr | number }}</td>
+          <td>$ {{ p.price_usd | number:'1.2-2' }}</td>
+          <td><code>{{ p.barcode }}</code></td>
+          <td>
+            <button class="btn btn-outline btn-sm" (click)="openEdit(p)">Edit</button>
+            <button class="btn btn-danger btn-sm" style="margin-left:6px" (click)="deleteProduct(p.id)">Delete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="empty-state" *ngIf="filteredProducts.length === 0">
+      <div class="empty-icon">🍽️</div>
+      <p>No products found.</p>
+      <button class="btn btn-secondary" (click)="openAdd()">Add First Product</button>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" *ngIf="showForm" (click)="showForm=false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ editingProduct ? 'Edit Product' : 'Add Product' }}</h3>
+        <button class="close-btn" (click)="showForm=false">&#10005;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Name</label>
+          <input class="form-control" [(ngModel)]="form.name" placeholder="Product name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-control" [(ngModel)]="form.category">
+            <option value="">Select category</option>
+            <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Price (LKR)</label>
+            <input class="form-control" type="number" [(ngModel)]="form.price_lkr" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Price (USD)</label>
+            <input class="form-control" type="number" step="0.01" [(ngModel)]="form.price_usd" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Barcode</label>
+          <input class="form-control" [(ngModel)]="form.barcode" placeholder="Scan or enter barcode" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" (click)="showForm=false">Cancel</button>
+        <button class="btn btn-secondary" (click)="saveProduct()">Save</button>
+      </div>
+    </div>
+  </div>
+</app-layout>

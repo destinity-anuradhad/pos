@@ -1,0 +1,33 @@
+{
+  "name": "destinity-inspire-pos",
+  "version": "1.0.0",
+  "description": "Destinity Inspire POS - Cross Platform",
+  "scripts": {
+    "frontend": "cd frontend && ng serve",
+    "electron": "cd electron && electron .",
+    "backend": "cd backend && python -m uvicorn main:app --reload --port 8000",
+    "build:web": "cd frontend && ng build --configuration production",
+    "build:win": "npm run build:web && cd electron && npm run build-win",
+    "build:linux": "npm run build:web && cd electron && npm run build-linux",
+    "android": "npm run build:web && npx cap sync android && npx cap open android",
+    "ios": "npm run build:web && npx cap sync ios && npx cap open ios"
+  },
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@capacitor-mlkit/barcode-scanning": "^8.0.1",
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/cli": "^8.3.1",
+    "@capacitor/core": "^8.3.1",
+    "@capacitor/ios": "^8.3.1"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

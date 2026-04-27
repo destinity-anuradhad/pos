@@ -1,0 +1,47 @@
+<div class="mode-page">
+  <div class="mode-header">
+    <div class="brand">
+      <span class="brand-icon">&#9673;</span>
+      <div>
+        <div class="brand-name">Destinity Inspire</div>
+        <div class="brand-sub">Point of Sale</div>
+      </div>
+    </div>
+    <button class="logout-link" (click)="logout()">Logout</button>
+  </div>
+
+  <div class="mode-body">
+    <h1 class="mode-title">Choose Your Business Type</h1>
+    <p class="mode-subtitle">Select how you want to use the POS system today</p>
+
+    <div class="mode-grid">
+
+      <div class="mode-card" (click)="select('restaurant')">
+        <div class="mode-icon restaurant-icon">🍽️</div>
+        <h2>Restaurant</h2>
+        <p>Table management, dine-in orders, and kitchen workflow.</p>
+        <ul class="mode-features">
+          <li>✓ Table selection</li>
+          <li>✓ Dine-in &amp; takeaway</li>
+          <li>✓ Table status tracking</li>
+          <li>✓ Order per table</li>
+        </ul>
+        <div class="mode-select-btn">Select Restaurant</div>
+      </div>
+
+      <div class="mode-card" (click)="select('retail')">
+        <div class="mode-icon retail-icon">🛍️</div>
+        <h2>Retail Shop</h2>
+        <p>Quick sales, barcode scanning, and inventory for shops.</p>
+        <ul class="mode-features">
+          <li>✓ Barcode / QR scan</li>
+          <li>✓ Quick checkout</li>
+          <li>✓ Product categories</li>
+          <li>✓ Receipt printing</li>
+        </ul>
+        <div class="mode-select-btn">Select Retail</div>
+      </div>
+
+    </div>
+  </div>
+</div>

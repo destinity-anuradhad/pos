@@ -1,0 +1,130 @@
+<app-layout>
+
+  <!-- STEP 1: Table Selection -->
+  <ng-container *ngIf="step === 'tables'">
+    <div class="page-header">
+      <h1 class="page-title">Select Table</h1>
+    </div>
+    <div class="tables-grid">
+      <div class="table-card" *ngFor="let t of tables"
+           [class]="'table-card--' + t.status"
+           (click)="selectTable(t)">
+        <div class="table-icon">🪑</div>
+        <div class="table-name">{{ t.name }}</div>
+        <div class="table-status">{{ t.status }}</div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- STEP 2: Order -->
+  <ng-container *ngIf="step === 'order'">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{ orderTitle }}</h1>
+      </div>
+      <div class="order-actions">
+        <button class="btn btn-outline btn-sm" *ngIf="isRestaurant" (click)="step='tables'">← Tables</button>
+        <button class="currency-toggle" (click)="currency = currency === 'LKR' ? 'USD' : 'LKR'">
+          {{ currency }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Scan bar -->
+    <div class="scan-bar">
+      <div class="scan-icon">📷</div>
+      <input class="form-control scan-input" type="text" placeholder="Scan barcode or enter manually..."
+             [(ngModel)]="manualBarcode" (keyup.enter)="manualScan()" />
+      <button class="btn btn-primary btn-sm" (click)="manualScan()">Scan</button>
+      <div class="scan-msg" *ngIf="scanMessage" [class.scan-error]="scanMessage.startsWith('✗')">
+        {{ scanMessage }}
+      </div>
+    </div>
+
+    <div class="order-layout">
+      <!-- Product Panel -->
+      <div class="products-panel card">
+        <div class="products-toolbar">
+          <input class="form-control" type="text" placeholder="Search..." [(ngModel)]="searchTerm" (input)="filterProducts()" />
+        </div>
+        <div class="categories-bar">
+          <button class="cat-btn" *ngFor="let c of categories"
+                  [class.active]="selectedCategory === c"
+                  (click)="filterCategory(c)">{{ c }}</button>
+        </div>
+        <div class="products-grid">
+          <div class="product-tile" *ngFor="let p of filteredProducts" (click)="addToCart(p)">
+            <div class="product-emoji">🍽️</div>
+            <div class="product-tile-name">{{ p.name }}</div>
+            <div class="product-tile-price">{{ currency }} {{ getPrice(p) | number:'1.2-2' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cart Panel -->
+      <div class="cart-panel card">
+        <h3 class="cart-title">Cart</h3>
+        <div class="empty-state" *ngIf="cart.length === 0">
+          <div class="empty-icon">🛒</div>
+          <p>Cart is empty</p>
+        </div>
+        <div class="cart-items" *ngIf="cart.length > 0">
+          <div class="cart-item" *ngFor="let item of cart">
+            <div class="cart-item-info">
+              <div class="cart-item-name">{{ item.name }}</div>
+              <div class="cart-item-price">{{ currency }} {{ getPrice(item) | number:'1.2-2' }}</div>
+            </div>
+            <div class="cart-item-qty">
+              <button (click)="changeQty(item, -1)">&#8722;</button>
+              <span>{{ item.quantity }}</span>
+              <button (click)="changeQty(item, 1)">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="cart-footer" *ngIf="cart.length > 0">
+          <div class="cart-total">
+            <span>Total</span>
+            <strong>{{ currency }} {{ getTotal() | number:'1.2-2' }}</strong>
+          </div>
+          <button class="btn btn-secondary btn-lg checkout-btn" (click)="checkout()">
+            Checkout
+          </button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- STEP 3: Receipt -->
+  <ng-container *ngIf="step === 'receipt'">
+    <div class="receipt-wrap">
+      <div class="receipt card">
+        <div class="receipt-header">
+          <div class="receipt-logo">Destinity Inspire POS</div>
+          <div class="receipt-sub">{{ selectedTable?.name }} &middot; Order #{{ lastOrderId }}</div>
+          <div class="receipt-date">{{ today }}</div>
+        </div>
+        <table class="receipt-table">
+          <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Sub</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let item of cart">
+              <td>{{ item.name }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>{{ getPrice(item) | number:'1.2-2' }}</td>
+              <td>{{ (getPrice(item) * item.quantity) | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="receipt-total">
+          <span>Total ({{ currency }})</span>
+          <strong>{{ getTotal() | number:'1.2-2' }}</strong>
+        </div>
+        <div class="receipt-actions">
+          <button class="btn btn-outline print-btn" onclick="window.print()">🖨️ Print</button>
+          <button class="btn btn-outline">📧 Email</button>
+          <button class="btn btn-secondary" (click)="newOrder()">New Order</button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+</app-layout>
