@@ -25,9 +25,21 @@ export interface DashboardStats {
   active_tables: number; avg_order_lkr: number;
 }
 
+// When running as a Capacitor Android app, the backend is on the laptop
+// that shares its hotspot. Windows hotspot always uses 192.168.137.1.
+// Override by setting localStorage key 'api_host' (e.g. '192.168.1.100:8000').
+function resolveApiBase(): string {
+  const isCapacitor = typeof (window as any).Capacitor !== 'undefined' &&
+                      (window as any).Capacitor?.isNativePlatform?.();
+  if (!isCapacitor) return 'http://localhost:8000/api';
+  const override = localStorage.getItem('api_host');
+  if (override) return `http://${override}/api`;
+  return 'http://192.168.137.1:8000/api';  // Windows hotspot default IP
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  readonly base = 'http://localhost:8000/api';
+  readonly base = resolveApiBase();
 
   constructor(private modeService: AppModeService) {}
 
