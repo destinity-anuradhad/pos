@@ -1,30 +1,36 @@
 <div class="shell">
-  <aside class="sidebar">
+
+  <!-- Sidebar overlay (mobile) -->
+  <div class="sidebar-overlay" *ngIf="menuOpen" (click)="closeMenu()"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" [class.open]="menuOpen">
     <div class="sidebar-brand">
       <div class="brand-icon">&#9673;</div>
       <div class="brand-text">
         <span class="brand-name">Destinity</span>
         <span class="brand-sub">POS</span>
       </div>
+      <button class="sidebar-close" (click)="closeMenu()">✕</button>
     </div>
 
     <div class="mode-badge">{{ modeLabel }}</div>
 
     <nav class="sidebar-nav">
-      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">&#9783;</span>
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
+        <span class="nav-icon">🏠</span>
         <span>Dashboard</span>
       </a>
-      <a routerLink="/pos" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">&#128722;</span>
+      <a routerLink="/pos" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
+        <span class="nav-icon">🛒</span>
         <span>POS</span>
       </a>
-      <a routerLink="/products" routerLinkActive="active" class="nav-item">
+      <a routerLink="/products" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
         <span class="nav-icon">{{ isRestaurant ? '🍽️' : '📦' }}</span>
         <span>Products</span>
       </a>
-      <a routerLink="/orders" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">&#128203;</span>
+      <a routerLink="/orders" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
+        <span class="nav-icon">📋</span>
         <span>Orders</span>
       </a>
     </nav>
@@ -34,26 +40,60 @@
         <span class="sync-dot"></span>
         <span>{{ isOnline ? 'Online' : 'Offline' }}</span>
       </div>
-      <button class="nav-item dark-toggle" (click)="toggleDark()">
-        <span class="nav-icon">{{ isDark ? '☀️' : '🌙' }}</span>
-        <span>{{ isDark ? 'Light Mode' : 'Dark Mode' }}</span>
-      </button>
       <a class="nav-item" href="/customer-display" target="_blank">
         <span class="nav-icon">🖥️</span>
         <span>Customer Display</span>
       </a>
+      <button class="nav-item dark-toggle" (click)="toggleDark()">
+        <span class="nav-icon">{{ isDark ? '☀️' : '🌙' }}</span>
+        <span>{{ isDark ? 'Light Mode' : 'Dark Mode' }}</span>
+      </button>
       <button class="nav-item switch-btn" (click)="switchMode()">
-        <span class="nav-icon">&#8635;</span>
+        <span class="nav-icon">🔄</span>
         <span>Switch Mode</span>
       </button>
       <button class="nav-item logout-btn" (click)="logout()">
-        <span class="nav-icon">&#10148;</span>
+        <span class="nav-icon">➤</span>
         <span>Logout</span>
       </button>
     </div>
   </aside>
 
-  <main class="main-content">
-    <ng-content></ng-content>
-  </main>
+  <!-- Main content -->
+  <div class="content-wrap">
+
+    <!-- Mobile top bar -->
+    <header class="mobile-topbar">
+      <button class="hamburger" (click)="toggleMenu()">☰</button>
+      <span class="topbar-title">Destinity POS</span>
+      <div class="topbar-right">
+        <span class="sync-dot-small" [class.online]="isOnline"></span>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <ng-content></ng-content>
+    </main>
+
+    <!-- Bottom navigation (mobile) -->
+    <nav class="bottom-nav">
+      <a routerLink="/dashboard" routerLinkActive="active" class="bottom-nav-item">
+        <span>🏠</span>
+        <span>Home</span>
+      </a>
+      <a routerLink="/pos" routerLinkActive="active" class="bottom-nav-item">
+        <span>🛒</span>
+        <span>POS</span>
+      </a>
+      <a routerLink="/products" routerLinkActive="active" class="bottom-nav-item">
+        <span>📦</span>
+        <span>Products</span>
+      </a>
+      <a routerLink="/orders" routerLinkActive="active" class="bottom-nav-item">
+        <span>📋</span>
+        <span>Orders</span>
+      </a>
+    </nav>
+
+  </div>
 </div>

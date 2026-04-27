@@ -17,6 +17,7 @@ interface Table { id: number; name: string; status: string; }
 })
 export class Pos implements OnInit, OnDestroy {
   isRestaurant = false;
+  isMobile = typeof (window as any).Capacitor !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.();
 
   tables: Table[] = [
     { id: 1, name: 'Table 1', status: 'available' },
@@ -106,6 +107,10 @@ export class Pos implements OnInit, OnDestroy {
       this.scanner.emitScan(this.manualBarcode);
       this.manualBarcode = '';
     }
+  }
+
+  async openCamera(): Promise<void> {
+    await this.scanner.scanWithCamera();
   }
 
   private sendToDisplay(): void {

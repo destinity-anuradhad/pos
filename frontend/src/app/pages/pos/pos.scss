@@ -211,3 +211,33 @@
   border-radius: 6px;
   &.scan-error { color: var(--danger); background: #f8d7da; }
 }
+
+@media (max-width: 768px) {
+  .order-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .cart-panel {
+    order: -1; /* cart on top on mobile */
+  }
+
+  .tables-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .table-card {
+    padding: 14px 8px !important;
+    .table-icon { font-size: 24px !important; }
+    .table-name { font-size: 13px !important; }
+  }
+
+  .products-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .receipt-wrap { padding: 0 !important; }
+  .receipt { max-width: 100% !important; }
+
+  .order-actions { flex-wrap: wrap; gap: 8px; }
+}

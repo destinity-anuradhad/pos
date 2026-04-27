@@ -31,12 +31,18 @@
     </div>
 
     <!-- Scan bar -->
-    <div class="scan-bar">
+    <div class="scan-bar" *ngIf="step === 'order'">
       <div class="scan-icon">📷</div>
-      <input class="form-control scan-input" type="text" placeholder="Scan barcode or enter manually..."
-             [(ngModel)]="manualBarcode" (keyup.enter)="manualScan()" />
+      <input class="form-control scan-input" type="text"
+             placeholder="Scan barcode or enter manually..."
+             [(ngModel)]="manualBarcode"
+             (keyup.enter)="manualScan()" />
       <button class="btn btn-primary btn-sm" (click)="manualScan()">Scan</button>
-      <div class="scan-msg" *ngIf="scanMessage" [class.scan-error]="scanMessage.startsWith('✗')">
+      <button class="btn btn-secondary btn-sm" *ngIf="isMobile" (click)="openCamera()">
+        📷 Camera
+      </button>
+      <div class="scan-msg" *ngIf="scanMessage"
+           [class.scan-error]="scanMessage.startsWith('✗')">
         {{ scanMessage }}
       </div>
     </div>
