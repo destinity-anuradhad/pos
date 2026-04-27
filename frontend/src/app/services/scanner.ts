@@ -9,6 +9,8 @@ export class ScannerService {
   private buffer = '';
   private bufferTimeout: any;
   private listening = false;
+  private html5Scanner: any = null;
+  private scannerElementId = 'qr-scanner-container';
 
   get isNative(): boolean {
     return typeof (window as any).Capacitor !== 'undefined' &&
@@ -17,7 +19,7 @@ export class ScannerService {
 
   // Web/Desktop: USB barcode scanner keyboard wedge
   startKeyboardListener(): void {
-    if (this.listening || this.isNative) return;
+    if (this.listening) return;
     this.listening = true;
     document.addEventListener('keydown', this.handleKey.bind(this));
   }
@@ -41,56 +43,89 @@ export class ScannerService {
     }
   }
 
-  // Native mobile: open camera with Capacitor MLKit
+  // Camera scan using html5-qrcode (works on mobile WebView + desktop webcam)
   async scanWithCamera(): Promise<void> {
-    if (!this.isNative) {
-      console.warn('Camera scan only available on native mobile');
-      return;
+    const { Html5Qrcode } = await import('html5-qrcode');
+
+    // Create overlay container
+    let overlay = document.getElementById('scanner-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'scanner-overlay';
+      overlay.innerHTML = `
+        <div id="scanner-modal">
+          <div id="scanner-header">
+            <span>📷 Scan Barcode / QR Code</span>
+            <button id="scanner-close">✕</button>
+          </div>
+          <div id="${this.scannerElementId}"></div>
+          <p id="scanner-hint">Point camera at barcode or QR code</p>
+        </div>
+      `;
+      overlay.style.cssText = `
+        position:fixed; inset:0; background:rgba(0,0,0,0.85);
+        display:flex; align-items:center; justify-content:center;
+        z-index:9999; padding:16px;
+      `;
+      const modal = overlay.querySelector('#scanner-modal') as HTMLElement;
+      modal.style.cssText = `
+        background:#1a1a1a; border-radius:16px; overflow:hidden;
+        width:100%; max-width:400px;
+      `;
+      const header = overlay.querySelector('#scanner-header') as HTMLElement;
+      header.style.cssText = `
+        display:flex; align-items:center; justify-content:space-between;
+        padding:14px 18px; background:#094f70; color:white; font-weight:700;
+      `;
+      const closeBtn = overlay.querySelector('#scanner-close') as HTMLElement;
+      closeBtn.style.cssText = `
+        background:none; border:none; color:white; font-size:20px;
+        cursor:pointer; padding:4px 8px;
+      `;
+      const hint = overlay.querySelector('#scanner-hint') as HTMLElement;
+      hint.style.cssText = `
+        text-align:center; color:rgba(255,255,255,0.6);
+        font-size:12px; padding:10px;
+      `;
+      document.body.appendChild(overlay);
+    }
+
+    overlay.style.display = 'flex';
+
+    const html5Qrcode = new Html5Qrcode(this.scannerElementId);
+    this.html5Scanner = html5Qrcode;
+
+    const closeScanner = async () => {
+      try {
+        if (html5Qrcode.isScanning) {
+          await html5Qrcode.stop();
+        }
+      } catch (_) {}
+      if (overlay) overlay.style.display = 'none';
+    };
+
+    const closeBtn = document.getElementById('scanner-close');
+    if (closeBtn) {
+      closeBtn.onclick = () => closeScanner();
     }
 
     try {
-      const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning');
-
-      // Step 1: Check if Google ML Kit module is installed (Android requirement)
-      const { supported } = await BarcodeScanner.isSupported();
-      if (!supported) {
-        alert('Barcode scanning is not supported on this device.');
-        return;
-      }
-
-      // Step 2: Install Google Barcode Scanner module if not present
-      const { available } = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
-      if (!available) {
-        await BarcodeScanner.installGoogleBarcodeScannerModule();
-        alert('Barcode scanner module is installing. Please try again in a moment.');
-        return;
-      }
-
-      // Step 3: Check permission
-      const { camera } = await BarcodeScanner.checkPermissions();
-
-      // Step 4: Request permission if not granted
-      if (camera === 'prompt' || camera === 'prompt-with-rationale') {
-        const result = await BarcodeScanner.requestPermissions();
-        if (result.camera !== 'granted' && result.camera !== 'limited') {
-          alert('Camera permission denied. Please allow camera access in Settings.');
-          return;
-        }
-      } else if (camera === 'denied') {
-        alert('Camera permission denied. Please allow camera access in device Settings.');
-        return;
-      }
-
-      // Step 5: Open scanner
-      const { barcodes } = await BarcodeScanner.scan();
-      if (barcodes.length > 0 && barcodes[0].rawValue) {
-        this.scanResult$.next(barcodes[0].rawValue);
-      }
-
+      await html5Qrcode.start(
+        { facingMode: 'environment' }, // rear camera
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText: string) => {
+          this.scanResult$.next(decodedText);
+          closeScanner();
+        },
+        () => {} // ignore scan failures (happens every frame until success)
+      );
     } catch (err: any) {
-      if (err?.message?.includes('cancel')) return; // user cancelled — no error
-      console.error('Barcode scan failed:', err);
-      alert('Scanner error: ' + (err?.message || 'Unknown error'));
+      closeScanner();
+      if (err?.toString()?.includes('Permission')) {
+        alert('Camera permission denied. Please allow camera access and try again.');
+      } else {
+        alert('Could not start camera: ' + (err?.message || err));
+      }
     }
   }
 
