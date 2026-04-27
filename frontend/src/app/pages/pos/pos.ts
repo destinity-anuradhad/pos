@@ -37,6 +37,7 @@ export class Pos implements OnInit, OnDestroy {
   loadingTables = true;
   checkingOut = false;
   error = '';
+  mobileTab: 'products' | 'cart' = 'products';
 
   private scanSub!: Subscription;
   private shortcutSub!: Subscription;
@@ -182,6 +183,7 @@ export class Pos implements OnInit, OnDestroy {
     const existing = this.cart.find(i => i.id === product.id);
     if (existing) existing.quantity++;
     else this.cart.push({ ...product, quantity: 1 });
+    this.mobileTab = 'cart';
     this.sendToDisplay();
   }
 

@@ -56,9 +56,20 @@
       </div>
     </div>
 
+    <!-- Mobile tab toggle -->
+    <div class="mobile-tab-bar">
+      <button class="mobile-tab" [class.active]="mobileTab==='products'" (click)="mobileTab='products'">
+        {{ isRestaurant ? '🍽️' : '🛍️' }} Products
+      </button>
+      <button class="mobile-tab" [class.active]="mobileTab==='cart'" (click)="mobileTab='cart'">
+        🛒 Cart
+        <span class="tab-badge" *ngIf="cart.length > 0">{{ cart.length }}</span>
+      </button>
+    </div>
+
     <div class="order-layout">
       <!-- Product Panel -->
-      <div class="products-panel card">
+      <div class="products-panel card" [class.mobile-hidden]="mobileTab !== 'products'">
         <app-loading [loading]="loadingProducts" message="Loading products..."></app-loading>
         <ng-container *ngIf="!loadingProducts">
           <div class="products-toolbar">
@@ -83,7 +94,7 @@
       </div>
 
       <!-- Cart Panel -->
-      <div class="cart-panel card">
+      <div class="cart-panel card" [class.mobile-hidden]="mobileTab !== 'cart'">
         <h3 class="cart-title">Cart</h3>
         <div class="empty-state" *ngIf="cart.length === 0">
           <div class="empty-icon">🛒</div>

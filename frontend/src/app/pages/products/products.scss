@@ -1,55 +1,47 @@
-.toolbar {
-  margin-bottom: 16px;
-}
-
-.search-input {
-  max-width: 320px;
-}
+.toolbar { margin-bottom: 16px; }
+.search-input { max-width: 320px; }
 
 code {
   background: var(--primary-light);
   color: var(--primary);
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
   font-size: 12px;
+  font-weight: 600;
 }
 
 .modal-overlay {
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 20px;
+  backdrop-filter: blur(4px);
 }
 
 .modal {
-  background: white;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 480px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  background: var(--surface);
+  border-radius: 20px;
+  width: 100%; max-width: 480px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
 }
 
 .modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between;
   padding: 20px 24px 16px;
   border-bottom: 1px solid var(--border);
-
-  h3 { font-size: 18px; font-weight: 700; color: var(--primary); }
+  h3 { font-size: 17px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
 }
 
 .close-btn {
-  background: none;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   color: var(--text-muted);
-  font-size: 18px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  &:hover { background: var(--bg); }
+  font-size: 16px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: all 0.15s;
+  &:hover { background: var(--bg); color: var(--text); }
 }
 
 .modal-body { padding: 20px 24px; }
@@ -63,7 +55,73 @@ code {
 .modal-footer {
   padding: 16px 24px;
   border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+
+.barcode-input-row {
+  display: flex; gap: 8px; align-items: center;
+  .form-control { flex: 1; }
+  .scan-fill-btn {
+    flex-shrink: 0; padding: 0 14px;
+    font-size: 18px; height: 42px;
+    border-radius: 10px;
+  }
+}
+
+.lookup-status {
+  margin-top: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 8px;
+
+  &.status-loading { background: var(--primary-light); color: var(--primary); }
+  &.status-found   { background: #dcfce7; color: #15803d; }
+  &.status-miss    { background: #fef3c7; color: #b45309; }
+}
+
+/* ── Mobile card table ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .toolbar { flex-direction: column; }
+  .search-input { max-width: 100% !important; }
+
+  .table thead { display: none; }
+
+  .table tbody tr {
+    display: block;
+    border-radius: 14px;
+    margin-bottom: 10px;
+    padding: 4px 14px 10px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    gap: 12px;
+
+    &:last-child { border-bottom: none; }
+
+    &::before {
+      content: attr(data-label);
+      font-weight: 700;
+      color: var(--text-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+  }
+
+  .td-actions {
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    .btn { flex: 1; justify-content: center; }
+  }
 }

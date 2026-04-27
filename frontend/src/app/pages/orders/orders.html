@@ -38,11 +38,11 @@
       </thead>
       <tbody>
         <tr *ngFor="let o of filteredOrders">
-          <td><strong>#{{ o.id }}</strong></td>
-          <td>{{ o.table_name }}</td>
-          <td>{{ o.item_count }}</td>
-          <td>{{ o.currency }} {{ o.total_amount | number:'1.2-2' }}</td>
-          <td>
+          <td data-label="Order #"><strong>#{{ o.id }}</strong></td>
+          <td data-label="Table">{{ o.table_name }}</td>
+          <td data-label="Items">{{ o.item_count }}</td>
+          <td data-label="Total">{{ o.currency }} {{ o.total_amount | number:'1.2-2' }}</td>
+          <td data-label="Status">
             <span class="badge"
               [class.badge-success]="o.status === 'completed'"
               [class.badge-warning]="o.status === 'pending'"
@@ -50,7 +50,7 @@
               {{ o.status }}
             </span>
           </td>
-          <td class="date-cell">{{ timeAgo(o.created_at) }}</td>
+          <td data-label="Time" class="date-cell">{{ timeAgo(o.created_at) }}</td>
         </tr>
       </tbody>
     </table>
