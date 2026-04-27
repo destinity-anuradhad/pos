@@ -52,6 +52,21 @@
         <span class="nav-icon">🔄</span>
         <span>Switch Mode</span>
       </button>
+      <button class="nav-item server-btn" (click)="showServerInput = !showServerInput">
+        <span class="nav-icon">🌐</span>
+        <span>API Server</span>
+        <span class="server-host">{{ apiHost }}</span>
+      </button>
+      <div class="server-input-wrap" *ngIf="showServerInput">
+        <input class="server-input" [(ngModel)]="serverUrl"
+               placeholder="https://your-api.railway.app"
+               (keydown.enter)="saveServerUrl()" />
+        <div class="server-input-hint">Leave blank to use default (localhost)</div>
+        <div class="server-btns">
+          <button class="server-save-btn" (click)="saveServerUrl()">Save & Reload</button>
+          <button class="server-cancel-btn" (click)="showServerInput = false">Cancel</button>
+        </div>
+      </div>
       <button class="nav-item logout-btn" (click)="logout()">
         <span class="nav-icon">➤</span>
         <span>Logout</span>

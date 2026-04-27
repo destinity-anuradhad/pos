@@ -25,16 +25,21 @@ export interface DashboardStats {
   active_tables: number; avg_order_lkr: number;
 }
 
-// When running as a Capacitor Android app, the backend is on the laptop
-// that shares its hotspot. Windows hotspot always uses 192.168.137.1.
-// Override by setting localStorage key 'api_host' (e.g. '192.168.1.100:8000').
+// Priority order for API base URL:
+//  1. localStorage 'api_url'  — full URL override, e.g. https://pos-api.railway.app/api
+//  2. Electron desktop        — always localhost
+//  3. Capacitor (Android)     — Windows hotspot default 192.168.137.1
 function resolveApiBase(): string {
+  const stored = localStorage.getItem('api_url');
+  if (stored) return stored;
+
+  const isElectron  = !!(window as any).electronAPI?.isElectron;
   const isCapacitor = typeof (window as any).Capacitor !== 'undefined' &&
                       (window as any).Capacitor?.isNativePlatform?.();
-  if (!isCapacitor) return 'http://localhost:8000/api';
-  const override = localStorage.getItem('api_host');
-  if (override) return `http://${override}/api`;
-  return 'http://192.168.137.1:8000/api';  // Windows hotspot default IP
+
+  if (isElectron)  return 'http://localhost:8000/api';
+  if (isCapacitor) return 'http://192.168.137.1:8000/api';
+  return 'http://localhost:8000/api';
 }
 
 @Injectable({ providedIn: 'root' })

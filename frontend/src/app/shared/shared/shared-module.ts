@@ -7,7 +7,7 @@ import { Loading } from '../loading/loading';
 
 @NgModule({
   declarations: [Layout, Loading],
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   exports: [Layout, Loading, CommonModule, RouterModule, FormsModule]
 })
 export class SharedModule { }
