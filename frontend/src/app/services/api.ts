@@ -25,21 +25,15 @@ export interface DashboardStats {
   active_tables: number; avg_order_lkr: number;
 }
 
+const RAILWAY_API = 'https://pos-production-23e2.up.railway.app/api';
+
 // Priority order for API base URL:
-//  1. localStorage 'api_url'  — full URL override, e.g. https://pos-api.railway.app/api
-//  2. Electron desktop        — always localhost
-//  3. Capacitor (Android)     — Windows hotspot default 192.168.137.1
+//  1. localStorage 'api_url'  — override for local dev: localStorage.setItem('api_url','http://localhost:8000/api')
+//  2. All platforms default to the published Railway API
 function resolveApiBase(): string {
   const stored = localStorage.getItem('api_url');
   if (stored) return stored;
-
-  const isElectron  = !!(window as any).electronAPI?.isElectron;
-  const isCapacitor = typeof (window as any).Capacitor !== 'undefined' &&
-                      (window as any).Capacitor?.isNativePlatform?.();
-
-  if (isElectron)  return 'http://localhost:8000/api';
-  if (isCapacitor) return 'http://192.168.137.1:8000/api';
-  return 'http://localhost:8000/api';
+  return RAILWAY_API;
 }
 
 @Injectable({ providedIn: 'root' })
