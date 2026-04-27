@@ -109,7 +109,7 @@ export class ScannerService {
       Html5QrcodeSupportedFormats.CODABAR,
     ];
 
-    const html5Qrcode = new Html5Qrcode(this.scannerElementId, { formatsToSupport: formats });
+    const html5Qrcode = new Html5Qrcode(this.scannerElementId, { formatsToSupport: formats, verbose: false });
 
     const closeScanner = async () => {
       try {
