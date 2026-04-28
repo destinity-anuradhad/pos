@@ -36,16 +36,44 @@ jobs:
         run: cd frontend && npx ng build --configuration production
 
       - name: Add iOS platform
-        run: npx cap add ios
+        run: |
+          echo "Running cap add ios..."
+          npx cap add ios
+          echo "cap add ios exit code: $?"
+          echo "--- ios/ contents ---"
+          ls -la ios/ 2>/dev/null || echo "ios/ does not exist"
+          echo "--- ios/App/ contents ---"
+          ls -la ios/App/ 2>/dev/null || echo "ios/App/ does not exist"
+
+      - name: Ensure Podfile exists
+        run: |
+          if [ ! -f "ios/App/Podfile" ]; then
+            echo "ERROR: Podfile not found. Copying from @capacitor/ios template..."
+            # Manually set up ios project from the @capacitor/ios package template
+            node -e "
+              const fs = require('fs');
+              const path = require('path');
+              const pkg = path.dirname(require.resolve('@capacitor/ios/package.json'));
+              const template = path.join(pkg, 'ios-template');
+              console.log('Template path:', template);
+              console.log('Template exists:', fs.existsSync(template));
+              if (fs.existsSync(template)) {
+                const { execSync } = require('child_process');
+                execSync('cp -r ' + template + ' ios', { stdio: 'inherit' });
+              }
+            "
+            echo "--- ios/ after copy ---"
+            ls -la ios/ 2>/dev/null || echo "still no ios/"
+            ls -la ios/App/ 2>/dev/null || echo "still no ios/App/"
+          else
+            echo "Podfile found at ios/App/Podfile"
+          fi
 
       - name: Install CocoaPods dependencies
         run: cd ios/App && pod install --repo-update
 
       - name: Sync Capacitor iOS
         run: npx cap sync ios
-
-      - name: Verify workspace exists
-        run: ls -la ios/App/
 
       - name: Build iOS app (unsigned)
         run: |
