@@ -69,7 +69,7 @@ export interface SyncSettings {
 
 // ── URL resolution ────────────────────────────────────────────────────────────
 
-const RAILWAY_API = 'https://destinity-inspire-pos.up.railway.app/api';
+const RAILWAY_API = 'https://destinityinspire-pos.up.railway.app/api';
 const LOCAL_API   = 'http://localhost:8000/api';
 
 function isElectron(): boolean {
@@ -82,7 +82,7 @@ function resolveLocalBase(): string {
   if (isElectron()) {
     // Clear any stale Railway URL that old builds may have stored
     const stored = localStorage.getItem('api_url');
-    if (stored && stored.includes('railway.app')) {
+    if (stored && (stored.includes('railway.app') || stored.includes('destinityinspire-pos'))) {
       localStorage.removeItem('api_url');
     }
     return LOCAL_API;
