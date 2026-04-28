@@ -29,6 +29,12 @@ const routes: Routes = [
     loadChildren: () => import('./pages/products/products-module').then(m => m.ProductsModule)
   },
   {
+    path: 'categories',
+    canActivate: [authGuard, roleGuard, modeGuard],
+    data: { roles: ['manager', 'admin'] },
+    loadChildren: () => import('./pages/categories/categories-module').then(m => m.CategoriesModule)
+  },
+  {
     path: 'pos',
     canActivate: [modeGuard],
     loadChildren: () => import('./pages/pos/pos-module').then(m => m.PosModule)

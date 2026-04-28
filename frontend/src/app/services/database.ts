@@ -18,6 +18,12 @@ export class DatabaseService {
   updateTable(id: number, data: any): Promise<ApiTable>                    { return this.api.updateTable(id, data); }
   deleteTable(id: number): Promise<any>                                     { return this.api.deleteTable(id); }
 
+  // ── Categories ───────────────────────────────────────────────────
+  getCategories(): Promise<any[]>                                            { return this.api.getCategories(); }
+  createCategory(data: { name: string; color: string }): Promise<any>       { return this.api.createCategory(data); }
+  updateCategory(id: number, data: { name: string; color: string }): Promise<any> { return this.api.updateCategory(id, data); }
+  deleteCategory(id: number): Promise<any>                                  { return this.api.deleteCategory(id); }
+
   // ── Orders ────────────────────────────────────────────────────────
   createOrder(data: any): Promise<ApiOrder>                                 { return this.api.createOrder(data); }
   getOrders(skip = 0, limit = 50): Promise<ApiOrder[]>                     { return this.api.getOrders(skip, limit); }

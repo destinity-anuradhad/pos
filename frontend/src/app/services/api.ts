@@ -140,7 +140,10 @@ export class ApiService {
   deleteProduct(id: number)                                  { return this.request<any>('DELETE',          `/products/${id}`); }
 
   // Categories
-  getCategories()                                            { return this.request<any[]>('GET',   '/categories/'); }
+  getCategories()                                                { return this.request<any[]>('GET',    '/categories/'); }
+  createCategory(data: { name: string; color: string })         { return this.request<any>('POST',   '/categories/', data); }
+  updateCategory(id: number, data: { name: string; color: string }) { return this.request<any>('PUT', `/categories/${id}`, data); }
+  deleteCategory(id: number)                                    { return this.request<any>('DELETE', `/categories/${id}`); }
 
   // Orders
   getOrderStats()                                            { return this.request<DashboardStats>('GET', '/orders/stats'); }

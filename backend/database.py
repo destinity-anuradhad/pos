@@ -30,13 +30,13 @@ def _migrate_db():
     with _engine.connect() as conn:
         _add_column_if_missing(conn, 'categories', 'sync_status',          "VARCHAR DEFAULT 'pending'")
         _add_column_if_missing(conn, 'categories', 'modified_by_terminal', "VARCHAR")
-        _add_column_if_missing(conn, 'categories', 'created_at',           "DATETIME DEFAULT CURRENT_TIMESTAMP")
+        _add_column_if_missing(conn, 'categories', 'created_at',           "DATETIME")
         _add_column_if_missing(conn, 'products',   'sync_status',          "VARCHAR DEFAULT 'pending'")
         _add_column_if_missing(conn, 'products',   'modified_by_terminal', "VARCHAR")
-        _add_column_if_missing(conn, 'products',   'created_at',           "DATETIME DEFAULT CURRENT_TIMESTAMP")
+        _add_column_if_missing(conn, 'products',   'created_at',           "DATETIME")
         _add_column_if_missing(conn, 'tables',     'sync_status',          "VARCHAR DEFAULT 'pending'")
         _add_column_if_missing(conn, 'tables',     'modified_by_terminal', "VARCHAR")
-        _add_column_if_missing(conn, 'tables',     'created_at',           "DATETIME DEFAULT CURRENT_TIMESTAMP")
+        _add_column_if_missing(conn, 'tables',     'created_at',           "DATETIME")
         conn.commit()
 
 

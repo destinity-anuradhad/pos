@@ -1,4 +1,5 @@
 import os
+import re
 from flask import Flask, jsonify
 from flask_cors import CORS
 from database import init_db
@@ -17,12 +18,8 @@ init_db()
 
 app = Flask(__name__)
 
-# Restrict CORS to known local origins only (Electron + Angular dev server)
-_ALLOWED_ORIGINS = [
-    r'http://localhost(:[0-9]+)?',
-    r'http://127\.0\.0\.1(:[0-9]+)?',
-]
-CORS(app, origins=_ALLOWED_ORIGINS, supports_credentials=False)
+# Allow any localhost / 127.0.0.1 origin (Electron static server uses a random port)
+CORS(app, origins=re.compile(r'http://(localhost|127\.0\.0\.1)(:[0-9]+)?$'), supports_credentials=False)
 
 # Reject requests larger than 2 MB — prevents payload-based DoS
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024

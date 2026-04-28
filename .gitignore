@@ -38,3 +38,6 @@ android/app/build/
 # OS
 .DS_Store
 Thumbs.db
+publish.zip
+test-results/
+docs/er-diagram.html
