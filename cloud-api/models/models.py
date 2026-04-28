@@ -49,6 +49,7 @@ class Category(Base):
     name = Column(String(200), nullable=False)
     color = Column(String(20), default='#6b7280')
     is_active = Column(Boolean, default=True, nullable=False)
+    modified_by_terminal = Column(String(100), nullable=True)   # terminal_code that last modified
     created_at = Column(DateTime, default=_now, nullable=False)
     updated_at = Column(DateTime, default=_now, onupdate=_now, nullable=False)
 
@@ -66,6 +67,7 @@ class Product(Base):
     barcode = Column(String(100), nullable=True)
     stock_quantity = Column(Integer, default=-1, nullable=False)  # -1 = unlimited
     is_active = Column(Boolean, default=True, nullable=False)
+    modified_by_terminal = Column(String(100), nullable=True)   # terminal_code that last modified
     created_at = Column(DateTime, default=_now, nullable=False)
     updated_at = Column(DateTime, default=_now, onupdate=_now, nullable=False)
 
@@ -79,6 +81,7 @@ class RestaurantTable(Base):
     name = Column(String(100), nullable=False)
     capacity = Column(Integer, default=4, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    modified_by_terminal = Column(String(100), nullable=True)   # terminal_code that last modified
     created_at = Column(DateTime, default=_now, nullable=False)
     updated_at = Column(DateTime, default=_now, onupdate=_now, nullable=False)
 

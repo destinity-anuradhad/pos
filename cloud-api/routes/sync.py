@@ -307,27 +307,30 @@ def push_master_data():
         for c in data.get('categories', []):
             existing = db.query(Category).filter(Category.id == c['id']).first()
             if existing:
-                existing.name       = c.get('name', existing.name)
-                existing.color      = c.get('color', existing.color)
-                existing.updated_at = now
+                existing.name                 = c.get('name', existing.name)
+                existing.color                = c.get('color', existing.color)
+                existing.modified_by_terminal = terminal_code
+                existing.updated_at           = now
             else:
                 db.add(Category(
-                    id         = c['id'],
-                    name       = c['name'],
-                    color      = c.get('color', '#6b7280'),
-                    is_active  = c.get('is_active', True),
-                    updated_at = now,
+                    id                   = c['id'],
+                    name                 = c['name'],
+                    color                = c.get('color', '#6b7280'),
+                    is_active            = c.get('is_active', True),
+                    modified_by_terminal = terminal_code,
+                    updated_at           = now,
                 ))
             counts['categories'] += 1
 
         for p in data.get('products', []):
             existing = db.query(Product).filter(Product.id == p['id']).first()
             if existing:
-                existing.name           = p.get('name', existing.name)
-                existing.price_lkr      = p.get('price_lkr', existing.price_lkr)
-                existing.price_usd      = p.get('price_usd', existing.price_usd)
-                existing.stock_quantity = p.get('stock_quantity', existing.stock_quantity)
-                existing.is_active      = p.get('is_active', existing.is_active)
+                existing.name                 = p.get('name', existing.name)
+                existing.price_lkr            = p.get('price_lkr', existing.price_lkr)
+                existing.price_usd            = p.get('price_usd', existing.price_usd)
+                existing.stock_quantity       = p.get('stock_quantity', existing.stock_quantity)
+                existing.is_active            = p.get('is_active', existing.is_active)
+                existing.modified_by_terminal = terminal_code
                 if p.get('barcode'):
                     existing.barcode = p['barcode']
                 if p.get('category_id'):
@@ -335,31 +338,34 @@ def push_master_data():
                 existing.updated_at = now
             else:
                 db.add(Product(
-                    id             = p['id'],
-                    name           = p['name'],
-                    category_id    = p.get('category_id'),
-                    price_lkr      = p.get('price_lkr', 0),
-                    price_usd      = p.get('price_usd', 0),
-                    barcode        = p.get('barcode') or None,
-                    stock_quantity = p.get('stock_quantity', -1),
-                    is_active      = p.get('is_active', True),
-                    updated_at     = now,
+                    id                   = p['id'],
+                    name                 = p['name'],
+                    category_id          = p.get('category_id'),
+                    price_lkr            = p.get('price_lkr', 0),
+                    price_usd            = p.get('price_usd', 0),
+                    barcode              = p.get('barcode') or None,
+                    stock_quantity       = p.get('stock_quantity', -1),
+                    is_active            = p.get('is_active', True),
+                    modified_by_terminal = terminal_code,
+                    updated_at           = now,
                 ))
             counts['products'] += 1
 
         for t in data.get('tables', []):
             existing = db.query(RestaurantTable).filter(RestaurantTable.id == t['id']).first()
             if existing:
-                existing.name       = t.get('name', existing.name)
-                existing.capacity   = t.get('capacity', existing.capacity)
-                existing.updated_at = now
+                existing.name                 = t.get('name', existing.name)
+                existing.capacity             = t.get('capacity', existing.capacity)
+                existing.modified_by_terminal = terminal_code
+                existing.updated_at           = now
             else:
                 db.add(RestaurantTable(
-                    id         = t['id'],
-                    name       = t['name'],
-                    capacity   = t.get('capacity', 4),
-                    is_active  = True,
-                    updated_at = now,
+                    id                   = t['id'],
+                    name                 = t['name'],
+                    capacity             = t.get('capacity', 4),
+                    is_active            = True,
+                    modified_by_terminal = terminal_code,
+                    updated_at           = now,
                 ))
             counts['tables'] += 1
 
