@@ -15,6 +15,15 @@ venv/
 electron/node_modules/
 electron/dist/
 
+# Publish artifacts (build outputs — too large for git)
+publish/
+
+# Test artifacts
+test/node_modules/
+test/test-results/
+test/screenshots/
+test/results.json
+
 # Capacitor
 ios/
 android/build/

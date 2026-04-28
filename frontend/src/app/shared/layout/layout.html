@@ -40,10 +40,10 @@
         <span class="sync-dot"></span>
         <span>{{ isOnline ? 'Online' : 'Offline' }}</span>
       </div>
-      <a class="nav-item" href="/customer-display" target="_blank">
+      <button class="nav-item" (click)="openCustomerDisplay()" *ngIf="!isNativeMobile">
         <span class="nav-icon">🖥️</span>
         <span>Customer Display</span>
-      </a>
+      </button>
       <button class="nav-item dark-toggle" (click)="toggleDark()">
         <span class="nav-icon">{{ isDark ? '☀️' : '🌙' }}</span>
         <span>{{ isDark ? 'Light Mode' : 'Dark Mode' }}</span>
@@ -112,4 +112,9 @@
     </nav>
 
   </div>
+
+  <!-- Modal portal — rendered outside .content-wrap so position:fixed works
+       correctly in Electron (file://) and Capacitor WebView -->
+  <ng-content select="[appModal]"></ng-content>
+
 </div>

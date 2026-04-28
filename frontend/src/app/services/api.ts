@@ -25,7 +25,7 @@ export interface DashboardStats {
   active_tables: number; avg_order_lkr: number;
 }
 
-const RAILWAY_API = 'https://pos-production-23e2.up.railway.app/api';
+const RAILWAY_API = 'https://destinity-inspire-pos.up.railway.app/api';
 
 // Priority order for API base URL:
 //  1. localStorage 'api_url'  — override for local dev: localStorage.setItem('api_url','http://localhost:8000/api')
@@ -50,13 +50,20 @@ export class ApiService {
   }
 
   async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const res = await fetch(`${this.base}${path}`, {
-      method,
-      headers: this.headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-    if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
-    return res.json();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const res = await fetch(`${this.base}${path}`, {
+        method,
+        headers: this.headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
+      return res.json();
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   // Products

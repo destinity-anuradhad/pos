@@ -3,6 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { HashLocationStrategy, LocationStrategy } from '@angular/common';
 import { authGuard } from './guards/auth-guard';
 import { modeGuard } from './guards/mode-guard';
+import { CustomerDisplayModule } from './pages/customer-display/customer-display-module';
 
 const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -37,7 +38,7 @@ const routes: Routes = [
   },
   {
     path: 'customer-display',
-    loadChildren: () => import('./pages/customer-display/customer-display-module').then(m => m.CustomerDisplayModule)
+    loadChildren: () => Promise.resolve(CustomerDisplayModule)  // eager — no separate chunk, safe for file:// in Electron
   },
   { path: '**', redirectTo: 'dashboard' }
 ];

@@ -1,0 +1,21 @@
+{
+  "name": "test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx playwright test --config playwright.config.ts",
+    "test:web": "npx playwright test --config playwright.config.ts -g WEB",
+    "test:electron": "npx playwright test --config playwright.config.ts -g ELECTRON",
+    "test:parity": "npx playwright test --config playwright.config.ts -g PARITY"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "electron": "^41.3.0",
+    "electron-playwright-helpers": "^2.1.0"
+  }
+}

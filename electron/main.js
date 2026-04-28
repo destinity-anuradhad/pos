@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path   = require('path');
 const http   = require('http');
 const { spawn } = require('child_process');
@@ -8,7 +8,10 @@ let mainWindow     = null;
 
 // ── Start Flask backend ───────────────────────────────────────────
 function startBackend() {
-  const backendDir  = path.join(__dirname, '../backend');
+  // In packaged app, backend lives in resources/backend; in dev it's ../backend
+  const backendDir  = app.isPackaged
+    ? path.join(process.resourcesPath, 'backend')
+    : path.join(__dirname, '../backend');
   const backendMain = path.join(backendDir, 'main.py');
 
   // Try 'python' on Windows, 'python3' elsewhere
@@ -115,7 +118,9 @@ async function createWindow() {
     mainWindow.loadURL('http://localhost:4200');
     mainWindow.webContents.openDevTools();
   } else {
-    const distIndex = path.join(__dirname, '../frontend/dist/frontend/browser/index.html');
+    const distIndex = app.isPackaged
+      ? path.join(process.resourcesPath, 'frontend/dist/frontend/browser/index.html')
+      : path.join(__dirname, '../frontend/dist/frontend/browser/index.html');
     const fs = require('fs');
     if (fs.existsSync(distIndex)) {
       const { pathToFileURL } = require('url');
@@ -139,8 +144,41 @@ async function createWindow() {
     }
   }
 
+  // Allow renderer to open popups (e.g. Customer Display window)
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => ({
+    action: 'allow',
+    overrideBrowserWindowOptions: {
+      width: 1280,
+      height: 800,
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    },
+  }));
+
   mainWindow.once('ready-to-show', () => mainWindow.show());
 }
+
+// ── Open secondary windows (e.g. Customer Display) via IPC ───────
+ipcMain.on('open-window', (event, url) => {
+  const win = new BrowserWindow({
+    width: 1280, height: 800,
+    backgroundColor: '#0a0e1a',   // match customer display dark background — no white flash
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+    title: 'Customer Display',
+  });
+  win.loadURL(url);
+  win.webContents.on('did-fail-load', (e, code, desc) =>
+    console.error(`[customer-display] failed to load ${url}: ${code} ${desc}`)
+  );
+});
 
 // ── App lifecycle ─────────────────────────────────────────────────
 app.whenReady().then(async () => {

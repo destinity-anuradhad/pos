@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Customer Display — Destinity Inspire POS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0e1a;
+      color: white;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ════════════════════════════════════════════════
+       IDLE / WELCOME SCREEN
+    ════════════════════════════════════════════════ */
+    #screen-idle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      position: relative;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 0%,  rgba(9,79,112,.55) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 50% at 80% 100%, rgba(218,127,46,.20) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 10% 80%,  rgba(9,79,112,.30) 0%, transparent 60%),
+        #0a0e1a;
+    }
+
+    #screen-idle::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+
+    /* Clock */
+    .clock-corner {
+      position: absolute;
+      top: 36px; right: 48px;
+      text-align: right;
+    }
+    .clock-time {
+      font-size: 42px;
+      font-weight: 200;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 2px;
+      line-height: 1;
+    }
+    .clock-date {
+      font-size: 13px;
+      opacity: .5;
+      margin-top: 6px;
+      letter-spacing: .5px;
+    }
+
+    /* Logo ring */
+    .logo-ring {
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 40px;
+      box-shadow: 0 0 60px rgba(9,79,112,.4), 0 0 120px rgba(9,79,112,.15);
+      animation: float 4s ease-in-out infinite;
+      font-size: 72px;
+      z-index: 1;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-14px); }
+    }
+
+    /* Welcome message */
+    .welcome-wrap { text-align: center; z-index: 1; }
+    .welcome-msg {
+      transition: opacity .5s ease, transform .5s ease;
+    }
+    .welcome-msg.fade-in  { opacity: 1; transform: translateY(0); }
+    .welcome-msg.fade-out { opacity: 0; transform: translateY(8px); }
+    .welcome-msg h1 {
+      font-size: 72px;
+      font-weight: 900;
+      letter-spacing: -3px;
+      line-height: 1;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,.65) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .welcome-msg p {
+      font-size: 22px;
+      font-weight: 300;
+      opacity: .6;
+    }
+
+    /* Brand bar */
+    .brand-bar {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      display: flex; align-items: center; gap: 14px;
+      padding: 20px 48px;
+      background: rgba(255,255,255,.03);
+      border-top: 1px solid rgba(255,255,255,.06);
+      backdrop-filter: blur(10px);
+      font-size: 15px; font-weight: 700;
+    }
+    .brand-bar span.sep { opacity: .3; }
+    .brand-ready {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 400; opacity: .5;
+    }
+    .pulse-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 8px #4ade80;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .3; transform: scale(.7); }
+    }
+
+    /* ════════════════════════════════════════════════
+       ORDER SCREEN
+    ════════════════════════════════════════════════ */
+    #screen-order {
+      display: none;
+      flex-direction: column;
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse 70% 50% at 50% -10%, rgba(9,79,112,.4) 0%, transparent 70%),
+        #0a0e1a;
+      position: relative;
+    }
+
+    .order-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      flex-shrink: 0;
+    }
+    .order-brand {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 16px; font-weight: 700; opacity: .7;
+    }
+    .order-clock {
+      font-size: 28px; font-weight: 200;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 2px; opacity: .6;
+    }
+
+    /* Items */
+    .items-wrap { flex: 1; overflow: auto; padding: 24px 40px 0; }
+    table.items-table { width: 100%; border-collapse: collapse; }
+    table.items-table th {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
+      font-weight: 600; opacity: .4;
+      padding: 0 16px 14px; text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+    table.items-table td {
+      padding: 18px 16px; font-size: 20px; vertical-align: middle;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+    }
+    table.items-table tr:last-child td { border-bottom: none; }
+    .col-name  { font-weight: 600; font-size: 22px; }
+    .col-qty   { text-align: center; width: 80px; }
+    .col-price { text-align: right; width: 160px; opacity: .55; font-size: 18px; }
+    .col-sub   { text-align: right; width: 180px; font-weight: 700; font-size: 22px; }
+    .qty-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; border-radius: 8px;
+      background: rgba(9,79,112,.5);
+      border: 1px solid rgba(9,79,112,.8);
+      font-weight: 700; font-size: 16px;
+    }
+
+    /* Total bar */
+    .total-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin: 24px 40px;
+      padding: 28px 36px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(9,79,112,.7) 0%, rgba(218,127,46,.4) 100%);
+      border: 1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(10px);
+      flex-shrink: 0;
+    }
+    .total-label { display: flex; flex-direction: column; gap: 4px; }
+    .total-items-count {
+      font-size: 13px; opacity: .6;
+      text-transform: uppercase; letter-spacing: 1.5px;
+    }
+    .total-text  { font-size: 20px; font-weight: 700; opacity: .9; }
+    .total-amount { display: flex; align-items: baseline; gap: 10px; }
+    .total-currency { font-size: 24px; font-weight: 400; opacity: .7; }
+    .total-number   {
+      font-size: 64px; font-weight: 900;
+      letter-spacing: -3px; line-height: 1;
+    }
+
+    /* Thank-you overlay */
+    #thankyou {
+      display: none;
+      position: absolute; inset: 0;
+      background: rgba(10,14,26,.88);
+      align-items: center; justify-content: center;
+      backdrop-filter: blur(8px);
+    }
+    #thankyou.show {
+      display: flex;
+      animation: fadeIn .4s ease;
+    }
+    .ty-inner { text-align: center; animation: pop .5s cubic-bezier(.34,1.56,.64,1); }
+    .ty-icon {
+      width: 100px; height: 100px; border-radius: 50%;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px; margin: 0 auto 28px;
+      box-shadow: 0 0 60px rgba(34,197,94,.4);
+    }
+    .ty-inner h2 { font-size: 64px; font-weight: 900; letter-spacing: -2px; margin-bottom: 12px; }
+    .ty-inner p  { font-size: 22px; opacity: .6; font-weight: 300; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes pop    { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  </style>
+</head>
+<body>
+
+  <!-- ── IDLE SCREEN ─────────────────────────────────────────── -->
+  <div id="screen-idle">
+    <div class="clock-corner">
+      <div class="clock-time" id="idle-time"></div>
+      <div class="clock-date" id="idle-date"></div>
+    </div>
+
+    <div class="logo-ring">🛒</div>
+
+    <div class="welcome-wrap">
+      <div class="welcome-msg fade-in" id="welcome">
+        <h1 id="welcome-main">Welcome!</h1>
+        <p  id="welcome-sub">We're happy to serve you today</p>
+      </div>
+    </div>
+
+    <div class="brand-bar">
+      <span>🛒</span>
+      <span>Destinity Inspire POS</span>
+      <span class="sep">·</span>
+      <span class="brand-ready">
+        <span class="pulse-dot"></span>
+        Ready to serve you
+      </span>
+    </div>
+  </div>
+
+  <!-- ── ORDER SCREEN ────────────────────────────────────────── -->
+  <div id="screen-order">
+    <div class="order-header">
+      <div class="order-brand">🛒 Destinity Inspire POS</div>
+      <div class="order-clock" id="order-time"></div>
+    </div>
+
+    <div class="items-wrap">
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th style="text-align:center">Qty</th>
+            <th style="text-align:right">Price</th>
+            <th style="text-align:right">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody id="items-body"></tbody>
+      </table>
+    </div>
+
+    <div class="total-bar">
+      <div class="total-label">
+        <span class="total-items-count" id="items-count"></span>
+        <span class="total-text">Total</span>
+      </div>
+      <div class="total-amount">
+        <span class="total-currency" id="total-currency"></span>
+        <span class="total-number"   id="total-number"></span>
+      </div>
+    </div>
+
+    <div id="thankyou">
+      <div class="ty-inner">
+        <div class="ty-icon">✓</div>
+        <h2>Thank you!</h2>
+        <p>Have a wonderful day</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'pos_display';
+    const MESSAGES = [
+      { main: 'Welcome!',       sub: "We're happy to serve you today" },
+      { main: 'Hello!',         sub: 'Your order will appear here'    },
+      { main: 'Thank you',      sub: 'For choosing us'                },
+      { main: 'Ready for you!', sub: 'Please let us know your order'  },
+    ];
+
+    let welcomeIdx = 0;
+    let lastJson   = '';
+
+    /* ── Formatting ─────────────────────────────────────────── */
+    function fmt(n) {
+      return Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    /* ── Clock ──────────────────────────────────────────────── */
+    function updateClock() {
+      const now  = new Date();
+      const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const date = now.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      document.getElementById('idle-time').textContent  = time;
+      document.getElementById('idle-date').textContent  = date;
+      document.getElementById('order-time').textContent = time;
+    }
+
+    /* ── Render ─────────────────────────────────────────────── */
+    function render(data) {
+      const idle  = document.getElementById('screen-idle');
+      const order = document.getElementById('screen-order');
+      const ty    = document.getElementById('thankyou');
+
+      const showOrder = data && data.items && data.items.length > 0 && data.status !== 'idle';
+
+      idle.style.display  = showOrder ? 'none'  : 'flex';
+      order.style.display = showOrder ? 'flex'  : 'none';
+
+      if (!showOrder) return;
+
+      /* Items table */
+      document.getElementById('items-body').innerHTML = data.items.map(item => `
+        <tr>
+          <td class="col-name">${escHtml(item.name)}</td>
+          <td class="col-qty"><span class="qty-badge">${item.qty}</span></td>
+          <td class="col-price">${fmt(item.price)}</td>
+          <td class="col-sub">${fmt(item.price * item.qty)}</td>
+        </tr>
+      `).join('');
+
+      /* Total */
+      const n = data.items.length;
+      document.getElementById('items-count').textContent   = `${n} item${n !== 1 ? 's' : ''}`;
+      document.getElementById('total-currency').textContent = data.currency || 'LKR';
+      document.getElementById('total-number').textContent   = fmt(data.total);
+
+      /* Thank-you overlay */
+      ty.className = data.status === 'checkout' ? 'show' : '';
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    /* ── Poll localStorage ──────────────────────────────────── */
+    function poll() {
+      updateClock();
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw && raw !== lastJson) {
+          lastJson = raw;
+          render(JSON.parse(raw));
+        }
+      } catch (_) {}
+    }
+
+    /* ── Welcome rotation ───────────────────────────────────── */
+    function rotateWelcome() {
+      const el = document.getElementById('welcome');
+      el.className = 'welcome-msg fade-out';
+      setTimeout(() => {
+        welcomeIdx = (welcomeIdx + 1) % MESSAGES.length;
+        document.getElementById('welcome-main').textContent = MESSAGES[welcomeIdx].main;
+        document.getElementById('welcome-sub').textContent  = MESSAGES[welcomeIdx].sub;
+        el.className = 'welcome-msg fade-in';
+      }, 500);
+    }
+
+    /* ── Boot ───────────────────────────────────────────────── */
+    updateClock();
+    render(null);
+    setInterval(poll, 1000);
+    setInterval(rotateWelcome, 4000);
+  </script>
+</body>
+</html>

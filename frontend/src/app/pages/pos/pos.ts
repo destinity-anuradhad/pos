@@ -9,6 +9,13 @@ import { DatabaseService } from '../../services/database';
 
 interface CartItem extends ApiProduct { quantity: number; }
 
+interface CardDetails {
+  name: string;
+  number: string;
+  expiry: string;
+  cvv: string;
+}
+
 @Component({
   selector: 'app-pos',
   standalone: false,
@@ -38,6 +45,12 @@ export class Pos implements OnInit, OnDestroy {
   checkingOut = false;
   error = '';
   mobileTab: 'products' | 'cart' = 'products';
+
+  // Payment flow
+  paymentModal: 'closed' | 'method' | 'card' = 'closed';
+  paymentMethod: 'cash' | 'card' | null = null;
+  card: CardDetails = { name: '', number: '', expiry: '', cvv: '' };
+  cardError = '';
 
   private scanSub!: Subscription;
   private shortcutSub!: Subscription;
@@ -206,6 +219,65 @@ export class Pos implements OnInit, OnDestroy {
     return this.cart.reduce((sum, i) => sum + this.getPrice(i) * i.quantity, 0);
   }
 
+  // Step 1: open payment method picker
+  openPayment(): void {
+    if (this.cart.length === 0 || this.checkingOut) return;
+    this.paymentModal = 'method';
+    this.paymentMethod = null;
+    this.card = { name: '', number: '', expiry: '', cvv: '' };
+    this.cardError = '';
+    this.cdr.detectChanges();
+  }
+
+  // Step 2a: user chose cash → go straight to checkout
+  selectCash(): void {
+    this.paymentMethod = 'cash';
+    this.paymentModal = 'closed';
+    this.checkout();
+  }
+
+  // Step 2b: user chose card → show card form
+  selectCard(): void {
+    this.paymentMethod = 'card';
+    this.paymentModal = 'card';
+    this.cardError = '';
+    this.cdr.detectChanges();
+  }
+
+  // Step 3: validate card details then checkout
+  submitCard(): void {
+    const num = this.card.number.replace(/\s/g, '');
+    if (!this.card.name.trim()) { this.cardError = 'Cardholder name is required.'; return; }
+    if (num.length < 13 || num.length > 19 || !/^\d+$/.test(num)) { this.cardError = 'Enter a valid card number.'; return; }
+    if (!/^\d{2}\/\d{2}$/.test(this.card.expiry)) { this.cardError = 'Expiry must be MM/YY.'; return; }
+    if (!/^\d{3,4}$/.test(this.card.cvv)) { this.cardError = 'CVV must be 3 or 4 digits.'; return; }
+    this.cardError = '';
+    this.paymentModal = 'closed';
+    this.checkout();
+  }
+
+  closePaymentModal(): void {
+    this.paymentModal = 'closed';
+    this.cdr.detectChanges();
+  }
+
+  // Format card number with spaces every 4 digits
+  formatCardNumber(e: Event): void {
+    const input = e.target as HTMLInputElement;
+    let v = input.value.replace(/\D/g, '').slice(0, 16);
+    input.value = v.replace(/(.{4})/g, '$1 ').trim();
+    this.card.number = input.value;
+  }
+
+  // Format expiry as MM/YY
+  formatExpiry(e: Event): void {
+    const input = e.target as HTMLInputElement;
+    let v = input.value.replace(/\D/g, '').slice(0, 4);
+    if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+    input.value = v;
+    this.card.expiry = v;
+  }
+
   async checkout(): Promise<void> {
     if (this.cart.length === 0 || this.checkingOut) return;
     this.checkingOut = true;
@@ -237,6 +309,7 @@ export class Pos implements OnInit, OnDestroy {
     }
     this.step = 'receipt';
     this.sendToDisplay();
+    this.cdr.detectChanges();
   }
 
   newOrder(): void {

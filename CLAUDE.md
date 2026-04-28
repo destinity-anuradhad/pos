@@ -26,7 +26,13 @@ npm run android      # build:web + cap sync + open Android Studio
 
 ### Tests
 ```bash
-cd frontend && ng test   # Vitest-based Angular unit tests (*.spec.ts)
+cd frontend && ng test   # Angular unit tests (*.spec.ts) — no tests exist yet; skipTests: true is set globally
+```
+
+### Mobile
+```bash
+dev.bat android   # build:web + cap sync + open Android Studio
+dev.bat apk       # build unsigned debug APK via Gradle (no Android Studio needed)
 ```
 
 ## Architecture
@@ -53,14 +59,18 @@ Priority order:
 
 ### Backend Structure (`backend/`)
 - `main.py` — Flask app creation, CORS, blueprint registration, `/health` and `/` endpoints
-- `database.py` — SQLAlchemy setup, dual-DB routing, auto-seed on first run
+- `database.py` — SQLAlchemy setup, dual-DB routing, auto-seed on first run (`_seed_if_empty()`)
 - `models/models.py` — Category, Product, RestaurantTable, Order, OrderItem, Setting
-- `routes/` — One blueprint per resource: products, categories, orders, tables, sync, settings
+- `routes/` — One blueprint per resource; each route file owns a `*_to_dict()` serializer and uses try/finally for `db.close()`
 - `utils.py` — `db_session()` reads `X-POS-Mode` header to pick the right DB session
+
+Schema is auto-created via `Base.metadata.create_all()` on startup — no migrations framework (no Alembic). Status strings: tables use `"available"/"occupied"/"billed"`, orders use `"pending"/"completed"/"cancelled"`.
 
 ### Frontend Structure (`frontend/src/app/`)
 - `pages/` — login, mode-select, dashboard, customer-display
-- `services/` — api.ts (typed HTTP), app-mode.ts (mode state), auth.ts, database.ts, sync.ts, scanner.ts, customer-display.ts, theme.ts
+- `services/api.ts` — typed HTTP with a generic `request<T>()` wrapper and typed interfaces (ApiProduct, ApiOrder, etc.)
+- `services/database.ts` — thin wrapper over ApiService; pages depend on DatabaseService, not ApiService directly
+- `services/` — also: app-mode.ts (mode state), auth.ts, sync.ts, scanner.ts (barcode), customer-display.ts, keyboard-shortcuts.ts, theme.ts
 - `guards/` — auth.ts, mode-guard.ts
 
 ### Electron (`electron/main.js`)
@@ -71,7 +81,7 @@ Spawns `python main.py` as a subprocess, polls `/health` for up to 30 s, then op
 `POST /api/sync/push` accepts an array of orders created while offline.
 
 ### Deployment
-Backend is deployed to Railway (`railway.toml`) with Gunicorn, two workers, and a `/data` volume for persistent SQLite files (`DB_PATH` env var points there).
+Backend is deployed to Railway (`railway.toml`) with Gunicorn, two workers, and a `/data` volume for persistent SQLite files (`DB_PATH` env var points there; `PORT` is injected by Railway into Gunicorn). GitHub Actions (`.github/workflows/build-apk.yml`) builds a debug Android APK on every push to `main`.
 
 ## Key Ports
 

@@ -12,16 +12,35 @@
     "appId": "com.destinityinspire.pos",
     "productName": "Destinity Inspire POS",
     "directories": {
-      "buildResources": "assets"
+      "buildResources": "assets",
+      "output": "dist"
     },
     "files": [
       "main.js",
-      "preload.js",
-      "../frontend/dist/frontend/**/*"
+      "preload.js"
+    ],
+    "extraResources": [
+      {
+        "from": "../frontend/dist/frontend/browser",
+        "to": "frontend/dist/frontend/browser",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": ["**/*", "!__pycache__", "!*.pyc", "!*.db"]
+      }
     ],
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "shortcutName": "Destinity Inspire POS"
     },
     "linux": {
       "target": "AppImage",

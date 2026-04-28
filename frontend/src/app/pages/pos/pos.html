@@ -119,45 +119,186 @@
             <strong>{{ currency }} {{ getTotal() | number:'1.2-2' }}</strong>
           </div>
           <button class="btn btn-secondary btn-lg checkout-btn"
-                  (click)="checkout()" [disabled]="checkingOut">
-            {{ checkingOut ? 'Saving...' : 'Checkout' }}
+                  (click)="openPayment()" [disabled]="checkingOut">
+            {{ checkingOut ? 'Processing...' : 'Checkout' }}
           </button>
         </div>
       </div>
     </div>
   </ng-container>
 
-  <!-- STEP 3: Receipt -->
+  <!-- STEP 3: Invoice -->
   <ng-container *ngIf="step === 'receipt'">
-    <div class="receipt-wrap">
-      <div class="receipt card">
-        <div class="receipt-header">
-          <div class="receipt-logo">Destinity Inspire POS</div>
-          <div class="receipt-sub">{{ selectedTable?.name }} &middot; Order #{{ lastOrderId }}</div>
-          <div class="receipt-date">{{ today }}</div>
+    <div class="invoice-wrap">
+      <div class="invoice card">
+
+        <!-- Success banner -->
+        <div class="invoice-success">
+          <div class="invoice-check">✓</div>
+          <div>
+            <h2>Order Confirmed</h2>
+            <p>Thank you for your purchase</p>
+          </div>
         </div>
-        <table class="receipt-table">
-          <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Sub</th></tr></thead>
-          <tbody>
-            <tr *ngFor="let item of cart">
-              <td>{{ item.name }}</td>
-              <td>{{ item.quantity }}</td>
-              <td>{{ getPrice(item) | number:'1.2-2' }}</td>
-              <td>{{ (getPrice(item) * item.quantity) | number:'1.2-2' }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="receipt-total">
-          <span>Total ({{ currency }})</span>
-          <strong>{{ getTotal() | number:'1.2-2' }}</strong>
+
+        <!-- Meta -->
+        <div class="invoice-meta">
+          <div class="invoice-meta-item">
+            <span class="inv-label">Invoice No.</span>
+            <span class="inv-value">#{{ lastOrderId }}</span>
+          </div>
+          <div class="invoice-meta-item">
+            <span class="inv-label">Date</span>
+            <span class="inv-value">{{ today }}</span>
+          </div>
+          <div class="invoice-meta-item" *ngIf="selectedTable">
+            <span class="inv-label">Table</span>
+            <span class="inv-value">{{ selectedTable.name }}</span>
+          </div>
+          <div class="invoice-meta-item">
+            <span class="inv-label">Currency</span>
+            <span class="inv-value">{{ currency }}</span>
+          </div>
+          <div class="invoice-meta-item">
+            <span class="inv-label">Payment</span>
+            <span class="inv-value">{{ paymentMethod === 'card' ? '💳 Card' : '💵 Cash' }}</span>
+          </div>
         </div>
-        <div class="receipt-actions">
-          <button class="btn btn-outline print-btn" onclick="window.print()">🖨️ Print</button>
-          <button class="btn btn-outline">📧 Email</button>
-          <button class="btn btn-secondary" (click)="newOrder()">New Order</button>
+
+        <!-- Items -->
+        <div class="invoice-items">
+          <div class="invoice-row invoice-row--head">
+            <span class="col-name">Item</span>
+            <span class="col-qty">Qty</span>
+            <span class="col-price">Unit Price</span>
+            <span class="col-sub">Subtotal</span>
+          </div>
+          <div class="invoice-row" *ngFor="let item of cart">
+            <span class="col-name">{{ item.name }}</span>
+            <span class="col-qty">{{ item.quantity }}</span>
+            <span class="col-price">{{ getPrice(item) | number:'1.2-2' }}</span>
+            <span class="col-sub">{{ (getPrice(item) * item.quantity) | number:'1.2-2' }}</span>
+          </div>
         </div>
+
+        <!-- Total -->
+        <div class="invoice-totals">
+          <div class="inv-subtotal-row">
+            <span>{{ cart.length }} item{{ cart.length !== 1 ? 's' : '' }}</span>
+          </div>
+          <div class="inv-grand-total">
+            <span>Total ({{ currency }})</span>
+            <strong>{{ getTotal() | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="invoice-footer">
+          <span class="inv-brand">Destinity Inspire POS</span>
+          <span class="inv-thanks">Thank you for your business!</span>
+        </div>
+
+        <!-- Actions -->
+        <div class="invoice-actions">
+          <button class="btn btn-outline" *ngIf="!isMobile" onclick="window.print()">🖨️ Print</button>
+          <button class="btn btn-secondary inv-new-btn" (click)="newOrder()">+ New Order</button>
+        </div>
+
       </div>
     </div>
   </ng-container>
+
+
+  <!-- ── Payment Method Modal ──────────────────────────────────── -->
+  <div appModal class="pay-overlay" *ngIf="paymentModal === 'method'" (click)="closePaymentModal()">
+    <div class="pay-modal" (click)="$event.stopPropagation()">
+      <div class="pay-modal-header">
+        <h3>Select Payment Method</h3>
+        <button class="pay-close" (click)="closePaymentModal()">✕</button>
+      </div>
+      <div class="pay-total-row">
+        <span>Total</span>
+        <strong>{{ currency }} {{ getTotal() | number:'1.2-2' }}</strong>
+      </div>
+      <div class="pay-methods">
+        <button class="pay-method-btn" (click)="selectCash()">
+          <span class="pay-method-icon">💵</span>
+          <span class="pay-method-label">Cash</span>
+          <span class="pay-method-sub">Pay with cash</span>
+        </button>
+        <button class="pay-method-btn" (click)="selectCard()">
+          <span class="pay-method-icon">💳</span>
+          <span class="pay-method-label">Card</span>
+          <span class="pay-method-sub">Debit / Credit</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Card Details Modal ────────────────────────────────────── -->
+  <div appModal class="pay-overlay" *ngIf="paymentModal === 'card'" (click)="closePaymentModal()">
+    <div class="pay-modal pay-modal--card" (click)="$event.stopPropagation()">
+      <div class="pay-modal-header">
+        <h3>Card Details</h3>
+        <button class="pay-close" (click)="closePaymentModal()">✕</button>
+      </div>
+      <div class="pay-total-row">
+        <span>Total to charge</span>
+        <strong>{{ currency }} {{ getTotal() | number:'1.2-2' }}</strong>
+      </div>
+
+      <div class="card-preview">
+        <div class="card-preview-chip">▮▮</div>
+        <div class="card-preview-number">
+          {{ card.number || '•••• •••• •••• ••••' }}
+        </div>
+        <div class="card-preview-footer">
+          <div>
+            <div class="card-preview-label">Card Holder</div>
+            <div class="card-preview-value">{{ card.name || 'FULL NAME' }}</div>
+          </div>
+          <div>
+            <div class="card-preview-label">Expires</div>
+            <div class="card-preview-value">{{ card.expiry || 'MM/YY' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-form">
+        <div class="form-group">
+          <label class="form-label">Cardholder Name</label>
+          <input class="form-control" type="text" placeholder="Full name on card"
+                 [(ngModel)]="card.name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Card Number</label>
+          <input class="form-control" type="text" placeholder="1234 5678 9012 3456"
+                 maxlength="19"
+                 [value]="card.number"
+                 (input)="formatCardNumber($event)" />
+        </div>
+        <div class="card-form-row">
+          <div class="form-group">
+            <label class="form-label">Expiry Date</label>
+            <input class="form-control" type="text" placeholder="MM/YY"
+                   maxlength="5"
+                   [value]="card.expiry"
+                   (input)="formatExpiry($event)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">CVV</label>
+            <input class="form-control" type="password" placeholder="•••"
+                   maxlength="4"
+                   [(ngModel)]="card.cvv" />
+          </div>
+        </div>
+        <div class="card-error" *ngIf="cardError">⚠ {{ cardError }}</div>
+        <button class="btn btn-secondary card-pay-btn"
+                (click)="submitCard()" [disabled]="checkingOut">
+          {{ checkingOut ? 'Processing...' : 'Pay ' + currency + ' ' + (getTotal() | number:'1.2-2') }}
+        </button>
+      </div>
+    </div>
+  </div>
 
 </app-layout>

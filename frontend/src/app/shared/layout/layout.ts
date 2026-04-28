@@ -34,11 +34,12 @@ export class Layout implements OnInit {
   showServerInput = false;
   serverUrl = localStorage.getItem('api_url') || '';
 
-  get mode()        { return this.modeService.getMode(); }
-  get isRestaurant(){ return this.modeService.isRestaurant(); }
-  get modeLabel()   { return this.isRestaurant ? '🍽️ Restaurant' : '🛍️ Retail Shop'; }
-  get isDark()      { return this.theme.isDark(); }
-  get apiHost()     {
+  get mode()          { return this.modeService.getMode(); }
+  get isRestaurant()  { return this.modeService.isRestaurant(); }
+  get modeLabel()     { return this.isRestaurant ? '🍽️ Restaurant' : '🛍️ Retail Shop'; }
+  get isDark()        { return this.theme.isDark(); }
+  get isNativeMobile(){ return !!(window as any).Capacitor?.isNativePlatform?.(); }
+  get apiHost()       {
     const u = localStorage.getItem('api_url');
     if (u) return u.replace('/api', '');
     return 'localhost:8000';
@@ -59,6 +60,25 @@ export class Layout implements OnInit {
     }
     this.showServerInput = false;
     window.location.reload();
+  }
+
+  openCustomerDisplay(): void {
+    const electronAPI = (window as any).electronAPI;
+    const href = window.location.href.split('#')[0];
+    const dir  = href.endsWith('/') ? href : href.slice(0, href.lastIndexOf('/') + 1);
+    const htmlUrl = dir + 'customer-display.html';
+
+    if (electronAPI?.openWindow) {
+      // New IPC path: main process creates the window with loadURL
+      electronAPI.openWindow(htmlUrl);
+    } else if (electronAPI?.isElectron) {
+      // Old preload (no IPC) but still Electron: window.open with standalone HTML
+      // setWindowOpenHandler will create the window and navigate to this URL
+      window.open(htmlUrl, 'customer_display', 'width=1280,height=800,toolbar=no,menubar=no');
+    } else {
+      // Web / Android: use the Angular route
+      window.open(`${href}#/customer-display`, 'customer_display', 'width=1280,height=800,toolbar=no,menubar=no');
+    }
   }
 
   switchMode(): void {
