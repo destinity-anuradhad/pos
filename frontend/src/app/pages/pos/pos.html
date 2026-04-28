@@ -7,7 +7,10 @@
   <ng-container *ngIf="step === 'tables'">
     <div class="page-header">
       <h1 class="page-title">Select Table</h1>
-      <button class="btn btn-outline btn-sm" (click)="loadTables()">↻ Refresh</button>
+      <div class="header-actions">
+        <button class="btn btn-primary btn-sm" (click)="openAddTable()">+ New Table</button>
+        <button class="btn btn-outline btn-sm" (click)="loadTables()">↻ Refresh</button>
+      </div>
     </div>
     <app-loading [loading]="loadingTables" message="Loading tables..."></app-loading>
     <div class="tables-grid" *ngIf="!loadingTables">
@@ -35,7 +38,33 @@
       </div>
       <div class="empty-state" *ngIf="tables.length === 0">
         <div class="empty-icon">🪑</div>
-        <p>No tables found. Make sure the backend is running.</p>
+        <p>No tables found. Pull master data from the sync page or add a table.</p>
+      </div>
+    </div>
+
+    <!-- Add Table Modal -->
+    <div class="modal-overlay" *ngIf="showAddTable" (click)="showAddTable = false">
+      <div class="modal-box" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>New Table</h2>
+          <button class="modal-close" (click)="showAddTable = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="field-row">
+            <label>Table Name</label>
+            <input type="text" [(ngModel)]="newTableName" placeholder="e.g. Table 13" class="field-input" autofocus />
+          </div>
+          <div class="field-row">
+            <label>Capacity</label>
+            <input type="number" [(ngModel)]="newTableCapacity" min="1" max="50" class="field-input" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" (click)="showAddTable = false">Cancel</button>
+          <button class="btn btn-primary" (click)="saveTable()" [disabled]="savingTable || !newTableName.trim()">
+            {{ savingTable ? 'Saving...' : 'Add Table' }}
+          </button>
+        </div>
       </div>
     </div>
   </ng-container>

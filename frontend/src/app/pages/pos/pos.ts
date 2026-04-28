@@ -128,6 +128,34 @@ export class Pos implements OnInit, OnDestroy {
     }
   }
 
+  // ── Add table modal ────────────────────────────────────────────────────────
+
+  showAddTable = false;
+  newTableName = '';
+  newTableCapacity = 4;
+  savingTable = false;
+
+  openAddTable(): void {
+    this.newTableName     = '';
+    this.newTableCapacity = 4;
+    this.showAddTable     = true;
+  }
+
+  async saveTable(): Promise<void> {
+    if (!this.newTableName.trim()) return;
+    this.savingTable = true;
+    try {
+      await this.db.createTable({ name: this.newTableName.trim(), capacity: this.newTableCapacity });
+      this.showAddTable = false;
+      await this.loadTables();
+    } catch {
+      alert('Failed to create table.');
+    } finally {
+      this.savingTable = false;
+      this.cdr.detectChanges();
+    }
+  }
+
   // ── Table selection ────────────────────────────────────────────────────────
 
   /** Returns true if the table can be selected (not billed or cleaning) */

@@ -5,6 +5,68 @@
 }
 
 
+/* ── Page header actions ──────────────────────────────────────── */
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ── Add Table Modal ──────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+
+.modal-box {
+  background: var(--bg-card);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  h2 { font-size: 1rem; font-weight: 700; margin: 0; }
+}
+
+.modal-close {
+  background: none; border: none; font-size: 1.1rem;
+  color: var(--text-secondary); cursor: pointer; padding: 4px 8px;
+}
+
+.modal-body {
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+.field-row {
+  display: flex; flex-direction: column; gap: 6px;
+  label { font-size: .8rem; font-weight: 600; color: var(--text-secondary); }
+}
+
+.field-input {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: .9rem;
+  &:focus { outline: none; border-color: var(--accent); }
+}
+
+.modal-footer {
+  display: flex; gap: 10px; justify-content: flex-end;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+
 /* ── Table Selection ──────────────────────────────────────────── */
 .tables-grid {
   display: grid;
