@@ -134,9 +134,9 @@ export class ScannerService {
       height: Math.min(Math.round(vh * 0.45), 180),
     });
 
-    const startCamera = async (facingMode: string) => {
+    const startWithConstraint = async (constraint: any) => {
       await html5Qrcode.start(
-        { facingMode },
+        constraint,
         { fps: 15, qrbox: qrboxFn },
         (decodedText: string) => {
           this.zone.run(() => this.scanResult$.next(decodedText));
@@ -147,17 +147,30 @@ export class ScannerService {
     };
 
     try {
-      // Try rear camera first (best for scanning)
-      await startCamera('environment');
+      // On mobile: prefer rear camera. On desktop: use first available camera by deviceId.
+      const devices = await (window as any).Html5Qrcode?.getCameras?.().catch(() => []) || [];
+      if (devices && devices.length > 0) {
+        // Use rear camera if available (mobile), otherwise first camera (desktop webcam)
+        const rear = devices.find((d: any) => /back|rear|environment/i.test(d.label));
+        const chosen = rear || devices[0];
+        await startWithConstraint({ deviceId: chosen.id });
+      } else {
+        // Fallback: try environment (mobile) then plain video:true (desktop)
+        try {
+          await startWithConstraint({ facingMode: 'environment' });
+        } catch {
+          await startWithConstraint({ video: true } as any);
+        }
+      }
     } catch (err: any) {
+      // Last resort: plain video:true
       try {
-        // Fall back to front/any camera
-        await startCamera('user');
+        await startWithConstraint({ video: true } as any);
       } catch (err2: any) {
         closeScanner();
         const msg = (err2?.message || err2 || err?.message || err)?.toString() || '';
-        if (msg.toLowerCase().includes('permission')) {
-          alert('Camera permission denied. Please allow camera access in your device settings and try again.');
+        if (msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('denied')) {
+          alert('Camera permission denied. Please allow camera access and try again.');
         } else {
           alert('Could not start camera: ' + msg);
         }
