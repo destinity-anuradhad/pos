@@ -52,6 +52,12 @@ const routes: Routes = [
     loadChildren: () => import('./pages/sync/sync-module').then(m => m.SyncModule)
   },
   {
+    path: 'tables',
+    canActivate: [authGuard, roleGuard, modeGuard],
+    data: { roles: ['manager', 'admin'] },
+    loadChildren: () => import('./pages/tables/tables-module').then(m => m.TablesModule)
+  },
+  {
     path: 'staff',
     canActivate: [authGuard, roleGuard],
     data: { roles: ['admin'] },

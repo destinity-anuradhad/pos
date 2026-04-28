@@ -1,0 +1,67 @@
+<app-layout>
+  <div class="page-header">
+    <h1 class="page-title">Tables</h1>
+    <div class="header-actions">
+      <button class="btn btn-outline" (click)="bulkAdd()">+ Bulk Add</button>
+      <button class="btn btn-secondary" (click)="openAdd()">+ Add Table</button>
+    </div>
+  </div>
+
+  <app-loading [loading]="loading" message="Loading tables..."></app-loading>
+
+  <div *ngIf="!loading">
+    <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+
+    <div class="tables-grid" *ngIf="tables.length > 0">
+      <div class="table-card" *ngFor="let t of tables">
+        <div class="table-status-bar" [style.background]="t.status_color"></div>
+        <div class="table-body">
+          <div class="table-name">{{ t.name }}</div>
+          <div class="table-meta">
+            <span class="capacity-badge">👥 {{ t.capacity }}</span>
+            <span class="status-pill" [style.background]="t.status_color + '22'" [style.color]="t.status_color">
+              {{ t.status | titlecase }}
+            </span>
+          </div>
+        </div>
+        <div class="table-actions">
+          <button class="btn btn-outline btn-sm" (click)="openEdit(t)">Edit</button>
+          <button class="btn btn-danger btn-sm" (click)="deleteTable(t)">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="tables.length === 0 && !error">
+      <div class="empty-icon">🪑</div>
+      <p>No tables yet.</p>
+      <button class="btn btn-secondary" (click)="openAdd()">Add First Table</button>
+    </div>
+  </div>
+
+  <!-- Add / Edit Modal -->
+  <div class="modal-overlay" *ngIf="showForm" (click)="showForm=false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ editingId ? 'Edit Table' : 'Add Table' }}</h3>
+        <button class="close-btn" (click)="showForm=false">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Table Name</label>
+          <input class="form-control" [(ngModel)]="form.name" placeholder="e.g. Table 1, VIP Room, Bar Counter" maxlength="100" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Capacity (seats)</label>
+          <input class="form-control" type="number" [(ngModel)]="form.capacity" min="1" max="100" />
+        </div>
+        <div class="alert alert-danger" *ngIf="formError">{{ formError }}</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" (click)="showForm=false">Cancel</button>
+        <button class="btn btn-secondary" (click)="save()" [disabled]="saving">
+          {{ saving ? 'Saving...' : 'Save' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</app-layout>

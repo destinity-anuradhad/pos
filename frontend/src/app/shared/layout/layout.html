@@ -33,6 +33,10 @@
         <span class="nav-icon">🏷️</span>
         <span>Categories</span>
       </a>
+      <a routerLink="/tables" routerLinkActive="active" class="nav-item" (click)="closeMenu()" *ngIf="auth.canAccess('tables')">
+        <span class="nav-icon">🪑</span>
+        <span>Tables</span>
+      </a>
       <a routerLink="/orders" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
         <span class="nav-icon">📋</span>
         <span>Orders</span>
