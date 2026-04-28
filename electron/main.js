@@ -1,7 +1,14 @@
-const { app, BrowserWindow, ipcMain, session } = require('electron');
+const { app, BrowserWindow, ipcMain, session, protocol } = require('electron');
 const path   = require('path');
 const http   = require('http');
 const { spawn } = require('child_process');
+
+// ── Register file:// as a secure/privileged scheme ───────────────
+// Required so navigator.mediaDevices / getUserMedia works when the app
+// is loaded from a file:// URL (Chromium blocks camera in insecure origins).
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'file', privileges: { secure: true, standard: true, supportFetchAPI: true } },
+]);
 
 let backendProcess = null;
 let mainWindow     = null;
