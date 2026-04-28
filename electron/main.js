@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path   = require('path');
 const http   = require('http');
 const { spawn } = require('child_process');
@@ -118,6 +118,16 @@ async function createWindow() {
     show: false,
   });
 
+  // Allow camera access for webcam barcode/QR scanning
+  mainWindow.webContents.session.setPermissionRequestHandler((wc, permission, callback) => {
+    const allowed = ['media', 'camera', 'microphone', 'video'];
+    callback(allowed.includes(permission));
+  });
+  mainWindow.webContents.session.setPermissionCheckHandler((wc, permission) => {
+    const allowed = ['media', 'camera', 'microphone', 'video'];
+    return allowed.includes(permission);
+  });
+
   // Use Angular dev server if it becomes ready within 2 min, otherwise load built dist
   const devServerUp = await isReachable('http://localhost:4200');
   if (devServerUp) {
@@ -189,6 +199,17 @@ ipcMain.on('open-window', (event, url) => {
 
 // ── App lifecycle ─────────────────────────────────────────────────
 app.whenReady().then(async () => {
+  // Grant camera (and microphone) permissions so webcam scanning works
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    const allowed = ['media', 'camera', 'microphone', 'video'];
+    callback(allowed.includes(permission));
+  });
+
+  session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+    const allowed = ['media', 'camera', 'microphone', 'video'];
+    return allowed.includes(permission);
+  });
+
   startBackend();
 
   try {
