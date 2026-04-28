@@ -53,7 +53,6 @@ def get_db():
 
 def _seed_if_empty():
     from models.models import (
-        Category, Product, RestaurantTable,
         TableStatus, TableStatusTransition, SyncSettings
     )
 
@@ -103,49 +102,8 @@ def _seed_if_empty():
                 ))
             db.flush()
 
-        # ── Categories & products ─────────────────────────────────
-        if db.query(Product).count() == 0:
-            cats = {}
-            for name in ['Main Course', 'Salads', 'Starters', 'Desserts', 'Beverages']:
-                c = Category(name=name)
-                db.add(c)
-                db.flush()
-                cats[name] = c.id
-
-            menu = [
-                ('Grilled Chicken', 'Main Course', 1800, 6.00, 'R1001', 50),
-                ('Fried Rice',      'Main Course', 1200, 4.00, 'R1002', 50),
-                ('Pasta Carbonara', 'Main Course', 1500, 5.00, 'R1003', 30),
-                ('Beef Burger',     'Main Course', 1650, 5.50, 'R1004', 40),
-                ('Caesar Salad',    'Salads',       900, 3.00, 'R1005', 30),
-                ('Greek Salad',     'Salads',       850, 2.80, 'R1006', 30),
-                ('Garlic Bread',    'Starters',     450, 1.50, 'R1007', 60),
-                ('Chicken Soup',    'Starters',     600, 2.00, 'R1008', 40),
-                ('Spring Rolls',    'Starters',     550, 1.80, 'R1009', 40),
-                ('Chocolate Cake',  'Desserts',     750, 2.50, 'R1010', 20),
-                ('Ice Cream',       'Desserts',     500, 1.60, 'R1011', 25),
-                ('Coca Cola',       'Beverages',    300, 1.00, 'R1012', 100),
-                ('Mango Juice',     'Beverages',    400, 1.25, 'R1013', 80),
-                ('Iced Coffee',     'Beverages',    480, 1.60, 'R1014', 60),
-                ('Mineral Water',   'Beverages',    150, 0.50, 'R1015', 100),
-            ]
-            for name, cat, lkr, usd, bc, stock in menu:
-                db.add(Product(
-                    name=name, category_id=cats[cat],
-                    price_lkr=lkr, price_usd=usd,
-                    barcode=bc, stock_quantity=stock
-                ))
-
-        # ── Tables ───────────────────────────────────────────────
-        if db.query(RestaurantTable).count() == 0:
-            available = db.query(TableStatus).filter(TableStatus.code == 'available').first()
-            for i in range(1, 13):
-                db.add(RestaurantTable(
-                    name=f'Table {i}',
-                    capacity=4,
-                    status_id=available.id if available else None
-                ))
-
+        # Products, categories, and tables are NOT seeded here.
+        # They come from cloud via "Pull Master Data" on the sync page.
         db.commit()
     finally:
         db.close()

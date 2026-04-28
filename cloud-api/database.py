@@ -44,30 +44,11 @@ def init_db():
 def _seed_if_empty():
     db = get_db()
     try:
-        from models.models import Category, Product, Outlet
+        from models.models import Outlet
+        # Only create the default outlet — products/categories/tables come from
+        # the admin reset-and-seed endpoint or are pushed up from terminals.
         if db.query(Outlet).count() == 0:
-            default_outlet = Outlet(name='Main Outlet', code='MAIN-01', address='')
-            db.add(default_outlet)
-            db.commit()
-        if db.query(Category).count() == 0:
-            cats = [
-                Category(name='Food', color='#f97316'),
-                Category(name='Beverages', color='#06b6d4'),
-                Category(name='Desserts', color='#ec4899'),
-            ]
-            for c in cats:
-                db.add(c)
-            db.commit()
-            for c in cats:
-                db.refresh(c)
-            products = [
-                Product(name='Rice & Curry', category_id=cats[0].id, price_lkr=450, price_usd=1.5),
-                Product(name='Kottu', category_id=cats[0].id, price_lkr=550, price_usd=1.8),
-                Product(name='Tea', category_id=cats[1].id, price_lkr=80, price_usd=0.3),
-                Product(name='Coffee', category_id=cats[1].id, price_lkr=150, price_usd=0.5),
-            ]
-            for p in products:
-                db.add(p)
+            db.add(Outlet(name='Main Outlet', code='MAIN-01', address=''))
             db.commit()
     except Exception:
         db.rollback()
