@@ -1,0 +1,73 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install root dependencies
+        run: npm install
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm install
+
+      - name: Build Angular
+        run: cd frontend && npx ng build --configuration production
+
+      - name: Add iOS platform
+        run: npx cap add ios
+
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      - name: Select Xcode version
+        run: sudo xcode-select -switch /Applications/Xcode.app
+
+      - name: Build iOS archive (unsigned)
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath ios/App/App.xcarchive \
+            archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" | xcpretty || true
+
+      - name: Export IPA (unsigned)
+        run: |
+          mkdir -p ios/App/ipa
+          # Package .app into an unsigned IPA
+          cd ios/App/App.xcarchive/Products/Applications
+          mkdir Payload
+          cp -r *.app Payload/
+          zip -r ../../../../../App/ipa/Destinity-Inspire-POS.ipa Payload
+        continue-on-error: true
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: destinity-inspire-pos-ios
+          path: ios/App/ipa/Destinity-Inspire-POS.ipa
+          retention-days: 30

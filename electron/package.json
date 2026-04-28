@@ -42,6 +42,15 @@
       "uninstallerIcon": "assets/icon.ico",
       "shortcutName": "Destinity Inspire POS"
     },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.png",
+      "category": "public.app-category.business"
+    },
+    "dmg": {
+      "title": "Destinity Inspire POS",
+      "icon": "assets/icon.png"
+    },
     "linux": {
       "target": "AppImage",
       "icon": "assets/icon.png"
