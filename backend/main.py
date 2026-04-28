@@ -1,3 +1,4 @@
+import os
 from flask import Flask, jsonify
 from flask_cors import CORS
 from database import init_db
@@ -13,7 +14,16 @@ from routes.table_statuses import table_statuses_bp
 init_db()
 
 app = Flask(__name__)
-CORS(app)
+
+# Restrict CORS to known local origins only (Electron + Angular dev server)
+_ALLOWED_ORIGINS = [
+    r'http://localhost(:[0-9]+)?',
+    r'http://127\.0\.0\.1(:[0-9]+)?',
+]
+CORS(app, origins=_ALLOWED_ORIGINS, supports_credentials=False)
+
+# Reject requests larger than 2 MB — prevents payload-based DoS
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 
 app.register_blueprint(products_bp,       url_prefix='/api/products')
 app.register_blueprint(categories_bp,     url_prefix='/api/categories')
@@ -33,4 +43,5 @@ def health():
     return jsonify({'status': 'ok'})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
+    app.run(host='0.0.0.0', port=8000, debug=debug)

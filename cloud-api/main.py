@@ -13,7 +13,16 @@ from routes.reports import reports_bp
 init_db()
 
 app = Flask(__name__)
-CORS(app)
+
+# Restrict CORS to known local origins — no wildcard in production
+_ALLOWED_ORIGINS = [
+    r'http://localhost(:[0-9]+)?',
+    r'http://127\.0\.0\.1(:[0-9]+)?',
+]
+CORS(app, origins=_ALLOWED_ORIGINS, supports_credentials=False)
+
+# Reject requests larger than 2 MB
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 
 app.register_blueprint(sync_bp,       url_prefix='/api/sync')
 app.register_blueprint(products_bp,   url_prefix='/api/products')
@@ -56,7 +65,8 @@ def reset_and_seed():
     Protected by a simple secret header: X-Reset-Key: destinity-reset-2024
     """
     from flask import request
-    if request.headers.get('X-Reset-Key') != 'destinity-reset-2024':
+    _reset_key = os.environ.get('RESET_KEY', '')
+    if not _reset_key or request.headers.get('X-Reset-Key') != _reset_key:
         return jsonify({'error': 'Unauthorized'}), 403
 
     from database import get_db

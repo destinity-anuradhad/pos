@@ -84,7 +84,7 @@ def register_terminal():
         return jsonify(_terminal_to_dict(terminal)), 201
     except Exception as e:
         db.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
     finally:
         db.close()
 
@@ -118,6 +118,6 @@ def heartbeat(terminal_id):
         }), 200
     except Exception as e:
         db.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
     finally:
         db.close()

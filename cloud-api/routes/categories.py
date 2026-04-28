@@ -65,7 +65,7 @@ def create_category():
         return jsonify(_category_to_dict(cat)), 201
     except Exception as e:
         db.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
     finally:
         db.close()
 
@@ -91,7 +91,7 @@ def update_category(category_id):
         return jsonify(_category_to_dict(cat)), 200
     except Exception as e:
         db.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
     finally:
         db.close()
 
@@ -109,6 +109,6 @@ def delete_category(category_id):
         return jsonify({'message': 'Category deactivated', 'id': category_id}), 200
     except Exception as e:
         db.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
     finally:
         db.close()

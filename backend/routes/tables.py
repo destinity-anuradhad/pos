@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from utils import db_session
 from models.models import RestaurantTable, TableStatus, TableStatusTransition
 from sqlalchemy.sql import func
+from validation import validate_table
 
 tables_bp = Blueprint('tables', __name__)
 
@@ -59,7 +60,10 @@ def get_tables():
 def create_table():
     db = db_session()
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        err, code = validate_table(data)
+        if err:
+            return err, code
         terminal_code = request.headers.get('X-Terminal-Code') or data.get('terminal_code')
         incoming_sync = data.get('sync_status')
         # Default to 'available' status
@@ -87,8 +91,11 @@ def update_table(table_id):
     try:
         t = db.query(RestaurantTable).filter(RestaurantTable.id == table_id).first()
         if not t:
-            return jsonify({'error': 'Table not found'}), 404
-        data = request.get_json()
+            return jsonify({'error': 'Not found'}), 404
+        data = request.get_json(silent=True) or {}
+        err, code = validate_table(data)
+        if err:
+            return err, code
         terminal_code = request.headers.get('X-Terminal-Code') or data.get('terminal_code')
         if 'name'     in data: t.name     = data['name']
         if 'capacity' in data: t.capacity = data['capacity']

@@ -103,7 +103,7 @@ def create_product():
         return jsonify(_product_to_dict(product, include_category=True)), 201
     except Exception as e:
         db.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
     finally:
         db.close()
 
@@ -138,7 +138,7 @@ def update_product(product_id):
         return jsonify(_product_to_dict(product, include_category=True)), 200
     except Exception as e:
         db.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
     finally:
         db.close()
 
@@ -156,6 +156,6 @@ def delete_product(product_id):
         return jsonify({'message': 'Product deactivated', 'id': product_id}), 200
     except Exception as e:
         db.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
     finally:
         db.close()

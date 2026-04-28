@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from utils import db_session
 from models.models import Category
+from validation import validate_category
 
 categories_bp = Blueprint('categories', __name__)
 
@@ -26,7 +27,10 @@ def get_categories():
 def create_category():
     db = db_session()
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        err, code = validate_category(data)
+        if err:
+            return err, code
         terminal_code = request.headers.get('X-Terminal-Code') or data.get('terminal_code')
         incoming_sync = data.get('sync_status')
         cat = Category(
@@ -45,8 +49,11 @@ def update_category(cat_id):
     db = db_session()
     try:
         cat = db.query(Category).filter(Category.id == cat_id).first()
-        if not cat: return jsonify({'error': 'Category not found'}), 404
-        data = request.get_json()
+        if not cat: return jsonify({'error': 'Not found'}), 404
+        data = request.get_json(silent=True) or {}
+        err, code = validate_category(data)
+        if err:
+            return err, code
         terminal_code = request.headers.get('X-Terminal-Code') or data.get('terminal_code')
         if 'name'  in data: cat.name  = data['name']
         if 'color' in data: cat.color = data['color']

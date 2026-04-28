@@ -48,10 +48,8 @@ export class ScannerService {
     }
   }
 
-  // Camera scan using html5-qrcode
+  // Camera scan — uses native BarcodeDetector (Chromium/Electron) with html5-qrcode fallback
   async scanWithCamera(): Promise<void> {
-    const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
-
     // Build / show overlay
     let overlay = document.getElementById('scanner-overlay');
     if (!overlay) {
@@ -63,8 +61,8 @@ export class ScannerService {
             <span>📷 Scan Barcode / QR Code</span>
             <button id="scanner-close">✕</button>
           </div>
-          <div id="${this.scannerElementId}" style="width:100%;min-height:280px;"></div>
-          <p id="scanner-hint">Hold barcode/QR code steady inside the box — keep it close and well-lit</p>
+          <div id="${this.scannerElementId}" style="width:100%;position:relative;background:#000;min-height:280px;"></div>
+          <p id="scanner-hint">Hold barcode/QR code steady in front of the camera</p>
         </div>
       `;
       overlay.style.cssText = `
@@ -94,82 +92,139 @@ export class ScannerService {
       document.body.appendChild(overlay);
     }
 
-    // Always clear the container before creating a new scanner instance
-    // (reusing a dirty div from a previous scan causes silent failure)
-    const container = document.getElementById(this.scannerElementId);
-    if (container) container.innerHTML = '';
-
+    const container = document.getElementById(this.scannerElementId)!;
+    container.innerHTML = '';
     overlay.style.display = 'flex';
 
-    // Support QR codes AND all common 1D retail barcodes
-    const formats = [
-      Html5QrcodeSupportedFormats.QR_CODE,
-      Html5QrcodeSupportedFormats.EAN_13,
-      Html5QrcodeSupportedFormats.EAN_8,
-      Html5QrcodeSupportedFormats.CODE_128,
-      Html5QrcodeSupportedFormats.CODE_39,
-      Html5QrcodeSupportedFormats.CODE_93,
-      Html5QrcodeSupportedFormats.UPC_A,
-      Html5QrcodeSupportedFormats.UPC_E,
-      Html5QrcodeSupportedFormats.ITF,
-      Html5QrcodeSupportedFormats.CODABAR,
-    ];
+    const BarcodeDetectorCtor = (window as any).BarcodeDetector;
+    if (BarcodeDetectorCtor) {
+      await this._scanWithNativeDetector(overlay, container, BarcodeDetectorCtor);
+    } else {
+      await this._scanWithHtml5Qrcode(overlay);
+    }
+  }
 
-    const html5Qrcode = new Html5Qrcode(this.scannerElementId, { formatsToSupport: formats, verbose: false });
+  // ── Native BarcodeDetector (Chromium 83+ / Electron 12+) ─────────
+  private async _scanWithNativeDetector(
+    overlay: HTMLElement, container: HTMLElement, BarcodeDetectorCtor: any
+  ): Promise<void> {
+    let stream: MediaStream | null = null;
+    let rafId: number | null = null;
 
-    const closeScanner = async () => {
-      try {
-        if (html5Qrcode.isScanning) await html5Qrcode.stop();
-      } catch (_) {}
-      try { html5Qrcode.clear(); } catch (_) {}
-      if (overlay) overlay.style.display = 'none';
+    const stop = () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      overlay.style.display = 'none';
     };
 
     const closeBtn = document.getElementById('scanner-close');
-    if (closeBtn) closeBtn.onclick = () => closeScanner();
-
-    // Large square box — covers most of the frame for reliable desktop scanning
-    const qrboxFn = (vw: number, vh: number) => {
-      const size = Math.min(Math.round(Math.min(vw, vh) * 0.8), 400);
-      return { width: size, height: size };
-    };
-
-    const startWithConstraint = async (constraint: any) => {
-      await html5Qrcode.start(
-        constraint,
-        { fps: 25, qrbox: qrboxFn, aspectRatio: 1.0 },
-        (decodedText: string) => {
-          this.zone.run(() => this.scanResult$.next(decodedText));
-          closeScanner();
-        },
-        () => {} // per-frame failure is normal — ignore
-      );
-    };
+    if (closeBtn) closeBtn.onclick = () => stop();
 
     try {
-      // Enumerate cameras using the locally-imported Html5Qrcode (not window.Html5Qrcode)
-      const devices = await Html5Qrcode.getCameras().catch(() => [] as any[]);
-      if (devices && devices.length > 0) {
-        // Prefer rear camera on mobile; fall back to first camera (desktop webcam)
-        const rear = devices.find((d: any) => /back|rear|environment/i.test(d.label));
-        const chosen = rear || devices[0];
-        await startWithConstraint({ deviceId: { exact: chosen.id } });
-      } else {
-        // No devices enumerated — try facingMode (mobile) then plain video (desktop)
-        try {
-          await startWithConstraint({ facingMode: 'environment' });
-        } catch {
-          await startWithConstraint({ facingMode: 'user' });
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
+
+      const video = document.createElement('video');
+      video.style.cssText = 'width:100%;height:auto;display:block;max-height:320px;object-fit:cover;';
+      video.srcObject = stream;
+      video.setAttribute('playsinline', '');
+      video.muted = true;
+      container.appendChild(video);
+
+      // Viewfinder guide box
+      const vf = document.createElement('div');
+      vf.style.cssText = `
+        position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+        width:240px;height:240px;
+        border:3px solid #0af;border-radius:12px;pointer-events:none;
+        box-shadow:0 0 0 9999px rgba(0,0,0,0.35);
+      `;
+      container.appendChild(vf);
+
+      await video.play();
+
+      const formats = ['qr_code','ean_13','ean_8','code_128','code_39','code_93','upc_a','upc_e','itf','codabar'];
+      const detector = new BarcodeDetectorCtor({ formats });
+
+      let lastCheck = 0;
+      const scan = async (ts: number) => {
+        if (ts - lastCheck >= 80) { // ~12 fps is plenty for barcode detection
+          lastCheck = ts;
+          if (video.readyState >= 2) {
+            try {
+              const barcodes: any[] = await detector.detect(video);
+              if (barcodes.length > 0) {
+                const code = barcodes[0].rawValue;
+                stop();
+                this.zone.run(() => this.scanResult$.next(code));
+                return;
+              }
+            } catch (_) {}
+          }
         }
-      }
+        rafId = requestAnimationFrame(scan);
+      };
+      rafId = requestAnimationFrame(scan);
     } catch (err: any) {
-      closeScanner();
-      const msg = (err?.message || String(err));
+      stop();
+      const msg = err?.message || String(err);
       if (msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('denied')) {
         alert('Camera permission denied. Please allow camera access and try again.');
       } else {
         alert('Could not start camera: ' + msg);
       }
+    }
+  }
+
+  // ── html5-qrcode fallback (mobile / older browsers) ──────────────
+  private async _scanWithHtml5Qrcode(overlay: HTMLElement): Promise<void> {
+    const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+
+    const container = document.getElementById(this.scannerElementId);
+    if (container) container.innerHTML = '';
+
+    const formats = [
+      Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,   Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39, Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.UPC_E,   Html5QrcodeSupportedFormats.ITF,
+    ];
+
+    const html5Qrcode = new Html5Qrcode(this.scannerElementId, { formatsToSupport: formats, verbose: false });
+
+    const closeScanner = async () => {
+      try { if (html5Qrcode.isScanning) await html5Qrcode.stop(); } catch (_) {}
+      try { html5Qrcode.clear(); } catch (_) {}
+      overlay.style.display = 'none';
+    };
+
+    const closeBtn = document.getElementById('scanner-close');
+    if (closeBtn) closeBtn.onclick = () => closeScanner();
+
+    const qrboxFn = (vw: number, vh: number) => {
+      const size = Math.min(Math.round(Math.min(vw, vh) * 0.8), 360);
+      return { width: size, height: size };
+    };
+
+    try {
+      const devices = await Html5Qrcode.getCameras().catch(() => [] as any[]);
+      const constraint = devices.length > 0
+        ? { deviceId: { exact: (devices.find((d: any) => /back|rear|environment/i.test(d.label)) || devices[0]).id } }
+        : { facingMode: 'user' };
+
+      await html5Qrcode.start(
+        constraint,
+        { fps: 20, qrbox: qrboxFn, aspectRatio: 1.0 },
+        (decodedText: string) => { this.zone.run(() => this.scanResult$.next(decodedText)); closeScanner(); },
+        () => {}
+      );
+    } catch (err: any) {
+      closeScanner();
+      const msg = err?.message || String(err);
+      alert(msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('denied')
+        ? 'Camera permission denied. Please allow camera access and try again.'
+        : 'Could not start camera: ' + msg);
     }
   }
 

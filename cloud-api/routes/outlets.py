@@ -63,7 +63,7 @@ def create_outlet():
         return jsonify(_outlet_to_dict(outlet)), 201
     except Exception as e:
         db.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
     finally:
         db.close()
 
@@ -101,6 +101,6 @@ def update_outlet(outlet_id):
         return jsonify(_outlet_to_dict(outlet)), 200
     except Exception as e:
         db.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
     finally:
         db.close()

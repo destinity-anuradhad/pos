@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from utils import db_session
 from models.models import Order, OrderItem, Product, RestaurantTable, TableStatus, Terminal
 from datetime import datetime, date
+from validation import validate_order, validate_order_status, safe_pagination
 
 orders_bp = Blueprint('orders', __name__)
 
@@ -81,8 +82,7 @@ def get_stats():
 def get_orders():
     db = db_session()
     try:
-        skip  = int(request.args.get('skip', 0))
-        limit = int(request.args.get('limit', 50))
+        skip, limit = safe_pagination(request.args.get('skip'), request.args.get('limit'))
         orders = (db.query(Order)
                   .order_by(Order.created_at.desc())
                   .offset(skip).limit(limit).all())
@@ -107,7 +107,10 @@ def get_order(order_id):
 def create_order():
     db = db_session()
     try:
-        data        = request.get_json()
+        data = request.get_json(silent=True) or {}
+        err, code = validate_order(data)
+        if err:
+            return err, code
         terminal_id = data.get('terminal_id')
         terminal    = db.query(Terminal).filter(Terminal.id == terminal_id).first() if terminal_id else None
 
@@ -171,7 +174,10 @@ def update_order_status(order_id):
             return jsonify({'error': 'Order not found'}), 404
 
         new_status = request.args.get('status', o.status)
-        o.status   = new_status
+        err, code = validate_order_status(new_status)
+        if err:
+            return err, code
+        o.status = new_status
 
         # When payment confirmed (order completed) → table moves Billed → Cleaning
         if new_status == 'completed' and o.table_id:

@@ -128,7 +128,7 @@ def push_orders():
                     'status':             'synced',
                 })
             except Exception as e:
-                errors.append({'terminal_order_ref': od.get('terminal_order_ref'), 'error': str(e)})
+                errors.append({'terminal_order_ref': od.get('terminal_order_ref'), 'error': 'sync_error'})
 
         db.commit()
 

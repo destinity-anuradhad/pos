@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from utils import db_session
 from models.models import Product, Category
+from validation import validate_product, safe_pagination
 
 products_bp = Blueprint('products', __name__)
 
@@ -39,8 +40,7 @@ def _resolve_category(db, name: str):
 def get_products():
     db = db_session()
     try:
-        skip  = int(request.args.get('skip', 0))
-        limit = int(request.args.get('limit', 200))
+        skip, limit = safe_pagination(request.args.get('skip'), request.args.get('limit'))
         products = (db.query(Product)
                     .filter(Product.is_active == True)
                     .offset(skip).limit(limit).all())
@@ -77,7 +77,10 @@ def get_product(product_id):
 def create_product():
     db = db_session()
     try:
-        data   = request.get_json()
+        data = request.get_json(silent=True) or {}
+        err, code = validate_product(data)
+        if err:
+            return err, code
         cat_id = _resolve_category(db, data.get('category', ''))
         terminal_code = request.headers.get('X-Terminal-Code') or data.get('terminal_code')
         # If syncing from cloud (sync_status provided), preserve it; otherwise mark pending
@@ -108,8 +111,11 @@ def update_product(product_id):
     try:
         p = db.query(Product).filter(Product.id == product_id).first()
         if not p:
-            return jsonify({'error': 'Product not found'}), 404
-        data = request.get_json()
+            return jsonify({'error': 'Not found'}), 404
+        data = request.get_json(silent=True) or {}
+        err, code = validate_product(data)
+        if err:
+            return err, code
         terminal_code = request.headers.get('X-Terminal-Code') or data.get('terminal_code')
         if 'name'           in data: p.name           = data['name']
         if 'price_lkr'      in data: p.price_lkr      = data['price_lkr']

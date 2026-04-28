@@ -195,7 +195,7 @@ def push_orders():
                     'terminal_order_ref': ref,
                     'hq_order_id': None,
                     'status': 'error',
-                    'error': str(e),
+                    'error': 'sync_error',
                 })
 
         # Update terminal last_sync_at
@@ -385,7 +385,7 @@ def push_master_data():
         return jsonify(counts), 200
     except Exception as e:
         db.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
     finally:
         db.close()
 
