@@ -41,29 +41,28 @@ jobs:
       - name: Select Xcode version
         run: sudo xcode-select -switch /Applications/Xcode.app
 
-      - name: Build iOS archive (unsigned)
+      - name: Build iOS app (unsigned)
         run: |
           xcodebuild \
             -workspace ios/App/App.xcworkspace \
             -scheme App \
             -configuration Release \
             -sdk iphoneos \
-            -archivePath ios/App/App.xcarchive \
-            archive \
+            -derivedDataPath ios/App/build \
+            build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            DEVELOPMENT_TEAM="" | xcpretty || true
+            DEVELOPMENT_TEAM=""
 
-      - name: Export IPA (unsigned)
+      - name: Package IPA
         run: |
-          mkdir -p ios/App/ipa
-          # Package .app into an unsigned IPA
-          cd ios/App/App.xcarchive/Products/Applications
-          mkdir Payload
-          cp -r *.app Payload/
-          zip -r ../../../../../App/ipa/Destinity-Inspire-POS.ipa Payload
-        continue-on-error: true
+          mkdir -p ios/App/ipa/Payload
+          APP=$(find ios/App/build -name "*.app" -maxdepth 6 | head -1)
+          echo "Found .app at: $APP"
+          cp -r "$APP" ios/App/ipa/Payload/
+          cd ios/App/ipa
+          zip -r Destinity-Inspire-POS.ipa Payload
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
