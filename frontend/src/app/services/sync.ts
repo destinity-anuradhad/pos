@@ -162,9 +162,12 @@ export class SyncService implements OnDestroy {
       );
       const validOrders = detailed.filter(Boolean);
 
-      const terminalId = this.terminal.getTerminalId();
+      const terminalId      = this.terminal.getTerminalId();
+      const cloudTerminalId = this.terminal.getCloudTerminalId();
+      const terminalCode    = this.terminal.getTerminalCode();
       const payload = {
-        terminal_id: terminalId,
+        terminal_id:   cloudTerminalId ?? terminalId,
+        terminal_code: terminalCode,
         orders: validOrders.map(o => ({
           terminal_order_ref: o!.terminal_order_ref,
           table_id:           o!.table_id,
