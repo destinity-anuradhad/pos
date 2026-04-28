@@ -14,7 +14,7 @@
       <button class="sidebar-close" (click)="closeMenu()">✕</button>
     </div>
 
-    <div class="mode-badge">{{ modeLabel }}</div>
+    <div class="mode-badge" *ngIf="terminalCode">{{ terminalCode }}</div>
 
     <nav class="sidebar-nav">
       <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
@@ -26,12 +26,16 @@
         <span>POS</span>
       </a>
       <a routerLink="/products" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
-        <span class="nav-icon">{{ isRestaurant ? '🍽️' : '📦' }}</span>
+        <span class="nav-icon">🍽️</span>
         <span>Products</span>
       </a>
       <a routerLink="/orders" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
         <span class="nav-icon">📋</span>
         <span>Orders</span>
+      </a>
+      <a routerLink="/sync" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
+        <span class="nav-icon">🔄</span>
+        <span>Sync</span>
       </a>
     </nav>
 
@@ -47,10 +51,6 @@
       <button class="nav-item dark-toggle" (click)="toggleDark()">
         <span class="nav-icon">{{ isDark ? '☀️' : '🌙' }}</span>
         <span>{{ isDark ? 'Light Mode' : 'Dark Mode' }}</span>
-      </button>
-      <button class="nav-item switch-btn" (click)="switchMode()">
-        <span class="nav-icon">🔄</span>
-        <span>Switch Mode</span>
       </button>
       <button class="nav-item server-btn" (click)="showServerInput = !showServerInput">
         <span class="nav-icon">🌐</span>
@@ -108,6 +108,10 @@
       <a routerLink="/orders" routerLinkActive="active" class="bottom-nav-item">
         <span>📋</span>
         <span>Orders</span>
+      </a>
+      <a routerLink="/sync" routerLinkActive="active" class="bottom-nav-item">
+        <span>🔄</span>
+        <span>Sync</span>
       </a>
     </nav>
 

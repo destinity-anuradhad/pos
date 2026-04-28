@@ -1,0 +1,155 @@
+<app-layout>
+
+<div class="sync-page">
+
+  <div class="page-header">
+    <h1>Sync Status</h1>
+    <div class="header-meta">
+      <div class="terminal-chip">
+        <span class="chip-dot" [class.online]="isOnline"></span>
+        {{ terminalCode || 'Unknown Terminal' }}
+      </div>
+      <div class="online-badge" [class.online]="isOnline">
+        {{ isOnline ? 'Online' : 'Offline' }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Status cards -->
+  <div class="status-grid">
+    <div class="status-card">
+      <div class="status-icon">📦</div>
+      <div class="status-body">
+        <div class="status-label">Last Master Data Sync</div>
+        <div class="status-time">{{ formatDate(state?.lastMasterSync || null) }}</div>
+        <div class="status-ago" *ngIf="state?.lastMasterSync">{{ timeSince(state.lastMasterSync || null) }}</div>
+      </div>
+    </div>
+    <div class="status-card">
+      <div class="status-icon">🔄</div>
+      <div class="status-body">
+        <div class="status-label">Last Transaction Sync</div>
+        <div class="status-time">{{ formatDate(state?.lastTransactionSync || null) }}</div>
+        <div class="status-ago" *ngIf="state?.lastTransactionSync">{{ timeSince(state.lastTransactionSync || null) }}</div>
+      </div>
+    </div>
+    <div class="status-card" [class.warn]="(state?.pendingOrderCount || 0) > 0">
+      <div class="status-icon">⏳</div>
+      <div class="status-body">
+        <div class="status-label">Pending Orders</div>
+        <div class="status-time">{{ state?.pendingOrderCount || 0 }} orders</div>
+        <div class="status-ago">waiting to sync to cloud</div>
+      </div>
+    </div>
+    <div class="status-card" *ngIf="settings">
+      <div class="status-icon">⏱️</div>
+      <div class="status-body">
+        <div class="status-label">Auto Sync</div>
+        <div class="status-time">{{ settings.auto_sync_enabled ? 'Every ' + settings.sync_interval_minutes + ' min' : 'Disabled' }}</div>
+        <div class="status-ago">{{ settings.auto_sync_enabled ? 'enabled' : 'manual only' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual sync buttons -->
+  <div class="sync-actions">
+    <div class="actions-title">Manual Sync</div>
+    <div class="actions-row">
+      <button class="sync-btn master" (click)="doMasterSync()" [disabled]="syncingMaster || !isOnline">
+        <span *ngIf="!syncingMaster">📥 Sync Master Data</span>
+        <span *ngIf="syncingMaster">⏳ Syncing...</span>
+      </button>
+      <button class="sync-btn transactions" (click)="doTransactionSync()" [disabled]="syncingTransaction || !isOnline">
+        <span *ngIf="!syncingTransaction">📤 Sync Transactions</span>
+        <span *ngIf="syncingTransaction">⏳ Syncing...</span>
+      </button>
+      <button class="sync-btn full" (click)="doFullSync()" [disabled]="syncingMaster || syncingTransaction || !isOnline">
+        <span *ngIf="!syncingMaster && !syncingTransaction">🔁 Full Sync</span>
+        <span *ngIf="syncingMaster || syncingTransaction">⏳ Syncing...</span>
+      </button>
+    </div>
+
+    <div class="result-msg success" *ngIf="masterResult?.success">
+      Master data synced successfully.
+    </div>
+    <div class="result-msg success" *ngIf="transactionResult?.success">
+      {{ transactionResult!.synced }} transaction(s) synced.
+    </div>
+    <div class="result-msg error" *ngIf="masterResult && !masterResult.success">
+      Master sync failed: {{ masterResult.error }}
+    </div>
+    <div class="result-msg error" *ngIf="transactionResult && !transactionResult.success">
+      Transaction sync failed: {{ transactionResult.error }}
+    </div>
+    <div class="offline-warn" *ngIf="!isOnline">
+      Device is offline. Connect to the internet to sync.
+    </div>
+  </div>
+
+  <!-- Admin settings -->
+  <div class="admin-section">
+    <div class="admin-header">
+      <span class="admin-title">Admin Settings</span>
+      <span class="admin-badge" *ngIf="isAdmin">Unlocked</span>
+    </div>
+
+    <div class="admin-pin-form" *ngIf="!isAdmin">
+      <input type="password" [(ngModel)]="adminPin" placeholder="Admin PIN" class="pin-input"
+             maxlength="8" (keydown.enter)="unlockAdmin()" />
+      <button class="pin-btn" (click)="unlockAdmin()">Unlock</button>
+      <span class="pin-error" *ngIf="adminError">{{ adminError }}</span>
+    </div>
+
+    <div class="admin-form" *ngIf="isAdmin">
+      <div class="admin-row">
+        <label>Sync interval (minutes)</label>
+        <input type="number" [(ngModel)]="editInterval" min="1" max="1440" class="admin-input" />
+      </div>
+      <div class="admin-row">
+        <label>Auto sync enabled</label>
+        <input type="checkbox" [(ngModel)]="editAutoSync" class="admin-checkbox" />
+      </div>
+      <button class="save-settings-btn" (click)="saveSettings()" [disabled]="savingSettings">
+        {{ savingSettings ? 'Saving...' : 'Save Settings' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Sync log -->
+  <div class="log-section">
+    <div class="log-header">
+      <span class="log-title">Sync Log</span>
+      <button class="refresh-btn" (click)="refresh()">↻ Refresh</button>
+    </div>
+
+    <div class="log-empty" *ngIf="logs.length === 0">No sync events recorded.</div>
+
+    <div class="log-table-wrap" *ngIf="logs.length > 0">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Type</th>
+            <th>Direction</th>
+            <th>Status</th>
+            <th>Records</th>
+            <th>Terminal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let log of logs" [class.failed]="log.status === 'failed'">
+            <td>{{ formatDate(log.synced_at) }}</td>
+            <td><span class="type-badge" [class]="log.sync_type">{{ log.sync_type }}</span></td>
+            <td>{{ log.direction === 'pull' ? '↓ Pull' : '↑ Push' }}</td>
+            <td><span class="status-badge" [class]="log.status">{{ log.status }}</span></td>
+            <td>{{ log.records_affected }}</td>
+            <td>{{ log.terminal_code || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+</app-layout>

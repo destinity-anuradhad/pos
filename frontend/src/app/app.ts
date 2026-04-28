@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ThemeService } from './services/theme';
 import { KeyboardShortcutsService } from './services/keyboard-shortcuts';
+import { TerminalService } from './services/terminal';
+import { SyncService } from './services/sync';
 
 @Component({
   selector: 'app-root',
@@ -9,13 +11,15 @@ import { KeyboardShortcutsService } from './services/keyboard-shortcuts';
   standalone: false,
   styleUrl: './app.scss'
 })
-export class App {
+export class App implements OnInit {
   showShortcuts = false;
 
   constructor(
     private theme: ThemeService,
     private shortcuts: KeyboardShortcutsService,
-    private router: Router
+    private router: Router,
+    private terminal: TerminalService,
+    private sync: SyncService,
   ) {
     this.theme.init();
     this.shortcuts.enable();
@@ -29,5 +33,20 @@ export class App {
         case 'help':        this.showShortcuts = !this.showShortcuts; break;
       }
     });
+  }
+
+  async ngOnInit(): Promise<void> {
+    // Verify terminal registration with cloud (non-blocking)
+    if (navigator.onLine) {
+      this.terminal.verifyWithCloud().catch(() => {});
+    }
+
+    // Start auto-sync timer
+    this.sync.startAutoSync().catch(() => {});
+
+    // Initial sync if online
+    if (navigator.onLine && this.terminal.isRegistered()) {
+      setTimeout(() => this.sync.syncAll().catch(() => {}), 3000);
+    }
   }
 }

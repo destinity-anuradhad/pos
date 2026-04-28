@@ -1,8 +1,8 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { AuthService } from '../../services/auth';
-import { AppModeService } from '../../services/app-mode';
 import { ThemeService } from '../../services/theme';
-import { Router } from '@angular/router';
+import { SyncService } from '../../services/sync';
+import { TerminalService } from '../../services/terminal';
 
 @Component({
   selector: 'app-layout',
@@ -11,48 +11,54 @@ import { Router } from '@angular/router';
   styleUrls: ['./layout.scss']
 })
 export class Layout implements OnInit {
-  isOnline = navigator.onLine;
-  menuOpen = false;
+  isOnline  = navigator.onLine;
+  menuOpen  = false;
+  pendingOrders = 0;
 
   constructor(
     private auth: AuthService,
-    private modeService: AppModeService,
     private theme: ThemeService,
-    private router: Router
+    private sync: SyncService,
+    private terminal: TerminalService,
   ) {}
 
   ngOnInit(): void {
-    window.addEventListener('online',  () => this.isOnline = true);
-    window.addEventListener('offline', () => this.isOnline = false);
+    window.addEventListener('online',  () => { this.isOnline = true;  this.onOnline(); });
+    window.addEventListener('offline', () => { this.isOnline = false; });
+    this.refreshPending();
+  }
+
+  private onOnline(): void {
+    this.sync.syncAll();
+    this.terminal.heartbeat();
+  }
+
+  private refreshPending(): void {
+    this.pendingOrders = this.sync.getState().pendingOrderCount;
   }
 
   @HostListener('window:resize')
-  onResize() {
-    if (window.innerWidth > 768) this.menuOpen = false;
-  }
+  onResize() { if (window.innerWidth > 768) this.menuOpen = false; }
 
   showServerInput = false;
-  serverUrl = localStorage.getItem('api_url') || '';
+  serverUrl       = localStorage.getItem('api_url') || '';
 
-  get mode()          { return this.modeService.getMode(); }
-  get isRestaurant()  { return this.modeService.isRestaurant(); }
-  get modeLabel()     { return this.isRestaurant ? '🍽️ Restaurant' : '🛍️ Retail Shop'; }
-  get isDark()        { return this.theme.isDark(); }
-  get isNativeMobile(){ return !!(window as any).Capacitor?.isNativePlatform?.(); }
-  get apiHost()       {
+  get isDark()          { return this.theme.isDark(); }
+  get isNativeMobile()  { return !!(window as any).Capacitor?.isNativePlatform?.(); }
+  get terminalCode()    { return this.terminal.getTerminalCode(); }
+  get apiHost() {
     const u = localStorage.getItem('api_url');
     if (u) return u.replace('/api', '');
     return 'localhost:8000';
   }
 
-  toggleDark()  { this.theme.toggle(); }
-  toggleMenu()  { this.menuOpen = !this.menuOpen; }
-  closeMenu()   { this.menuOpen = false; }
+  toggleDark() { this.theme.toggle(); }
+  toggleMenu() { this.menuOpen = !this.menuOpen; }
+  closeMenu()  { this.menuOpen = false; }
 
   saveServerUrl(): void {
     const url = this.serverUrl.trim();
     if (url) {
-      // Accept either full URL or just host:port
       const base = url.startsWith('http') ? url.replace(/\/api\/?$/, '') : `https://${url}`;
       localStorage.setItem('api_url', `${base}/api`);
     } else {
@@ -69,24 +75,13 @@ export class Layout implements OnInit {
     const htmlUrl = dir + 'customer-display.html';
 
     if (electronAPI?.openWindow) {
-      // New IPC path: main process creates the window with loadURL
       electronAPI.openWindow(htmlUrl);
     } else if (electronAPI?.isElectron) {
-      // Old preload (no IPC) but still Electron: window.open with standalone HTML
-      // setWindowOpenHandler will create the window and navigate to this URL
       window.open(htmlUrl, 'customer_display', 'width=1280,height=800,toolbar=no,menubar=no');
     } else {
-      // Web / Android: use the Angular route
       window.open(`${href}#/customer-display`, 'customer_display', 'width=1280,height=800,toolbar=no,menubar=no');
     }
   }
 
-  switchMode(): void {
-    this.modeService.clearMode();
-    this.router.navigate(['/mode-select']);
-  }
-
-  logout(): void {
-    this.auth.logout();
-  }
+  logout(): void { this.auth.logout(); }
 }

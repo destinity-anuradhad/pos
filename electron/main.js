@@ -17,9 +17,16 @@ function startBackend() {
   // Try 'python' on Windows, 'python3' elsewhere
   const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
 
+  // Store the local SQLite DB in the OS user-data folder so each terminal has
+  // its own isolated database, separate from the cloud (Railway) DB.
+  // e.g. C:\Users\<user>\AppData\Roaming\Destinity Inspire POS\restaurant.db
+  const userDataPath = app.getPath('userData');
+  const fs = require('fs');
+  fs.mkdirSync(userDataPath, { recursive: true });
+
   backendProcess = spawn(pythonCmd, [backendMain], {
     cwd: backendDir,
-    env: { ...process.env },
+    env: { ...process.env, DB_PATH: userDataPath },
     windowsHide: true,    // no console window on Windows
   });
 

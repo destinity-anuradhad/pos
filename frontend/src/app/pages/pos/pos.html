@@ -12,11 +12,26 @@
     <app-loading [loading]="loadingTables" message="Loading tables..."></app-loading>
     <div class="tables-grid" *ngIf="!loadingTables">
       <div class="table-card" *ngFor="let t of tables"
-           [class]="'table-card--' + t.status"
+           [class.table-card--blocked]="!canSelectTable(t)"
+           [style.--status-color]="t.status_color || '#64748b'"
            (click)="selectTable(t)">
+        <div class="table-status-dot"></div>
         <div class="table-icon">🪑</div>
         <div class="table-name">{{ t.name }}</div>
-        <div class="table-status">{{ t.status }}</div>
+        <div class="table-cap">Cap: {{ t.capacity }}</div>
+        <div class="table-status-label" [style.color]="t.status_color">{{ t.status_label }}</div>
+
+        <!-- Manual transition buttons -->
+        <div class="table-transitions" *ngIf="t.allowed_transitions && t.allowed_transitions.length > 0" (click)="$event.stopPropagation()">
+          <button *ngFor="let tr of t.allowed_transitions"
+                  class="transition-btn"
+                  [style.border-color]="tr.to_status_color"
+                  [style.color]="tr.to_status_color"
+                  (click)="changeTableStatus(t, tr.to_status_code, $event)"
+                  [title]="'Change to ' + tr.to_status_label">
+            → {{ tr.to_status_label }}
+          </button>
+        </div>
       </div>
       <div class="empty-state" *ngIf="tables.length === 0">
         <div class="empty-icon">🪑</div>
@@ -32,7 +47,7 @@
         <h1 class="page-title">{{ orderTitle }}</h1>
       </div>
       <div class="order-actions">
-        <button class="btn btn-outline btn-sm" *ngIf="isRestaurant" (click)="goToTables()">← Tables</button>
+        <button class="btn btn-outline btn-sm" (click)="goToTables()">← Tables</button>
         <button class="currency-toggle" (click)="currency = currency === 'LKR' ? 'USD' : 'LKR'">
           {{ currency }}
         </button>
@@ -59,7 +74,7 @@
     <!-- Mobile tab toggle -->
     <div class="mobile-tab-bar">
       <button class="mobile-tab" [class.active]="mobileTab==='products'" (click)="mobileTab='products'">
-        {{ isRestaurant ? '🍽️' : '🛍️' }} Products
+        🍽️ Products
       </button>
       <button class="mobile-tab" [class.active]="mobileTab==='cart'" (click)="mobileTab='cart'">
         🛒 Cart
@@ -81,10 +96,17 @@
                     (click)="filterCategory(c)">{{ c }}</button>
           </div>
           <div class="products-grid">
-            <div class="product-tile" *ngFor="let p of filteredProducts" (click)="addToCart(p)">
-              <div class="product-emoji">{{ isRestaurant ? '🍽️' : '🛍️' }}</div>
+            <div class="product-tile" *ngFor="let p of filteredProducts"
+                 [class.out-of-stock]="isOutOfStock(p)"
+                 (click)="addToCart(p)">
+              <div class="product-emoji">🍽️</div>
               <div class="product-tile-name">{{ p.name }}</div>
               <div class="product-tile-price">{{ currency }} {{ getPrice(p) | number:'1.2-2' }}</div>
+              <div class="stock-tag" *ngIf="p.stock_quantity !== -1 && p.stock_quantity !== undefined"
+                   [class.stock-low]="p.stock_quantity > 0 && p.stock_quantity <= 5"
+                   [class.stock-out]="p.stock_quantity === 0">
+                {{ p.stock_quantity === 0 ? 'Out of Stock' : p.stock_quantity + ' left' }}
+              </div>
             </div>
           </div>
           <div class="empty-state" *ngIf="filteredProducts.length === 0 && products.length > 0">
@@ -144,8 +166,8 @@
         <!-- Meta -->
         <div class="invoice-meta">
           <div class="invoice-meta-item">
-            <span class="inv-label">Invoice No.</span>
-            <span class="inv-value">#{{ lastOrderId }}</span>
+            <span class="inv-label">Order Ref</span>
+            <span class="inv-value">{{ lastOrderRef || '#' + lastOrderId }}</span>
           </div>
           <div class="invoice-meta-item">
             <span class="inv-label">Date</span>

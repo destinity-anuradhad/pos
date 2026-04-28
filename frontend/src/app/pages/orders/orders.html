@@ -33,6 +33,7 @@
           <th>Items</th>
           <th>Total</th>
           <th>Status</th>
+          <th>Storage</th>
           <th>Time</th>
         </tr>
       </thead>
@@ -48,6 +49,22 @@
               [class.badge-warning]="o.status === 'pending'"
               [class.badge-danger]="o.status === 'cancelled'">
               {{ o.status }}
+            </span>
+          </td>
+          <td data-label="Storage">
+            <span class="storage-badge storage-badge--cloud" *ngIf="o.hq_order_id"
+                  [title]="'Cloud ID: #' + o.hq_order_id">
+              ☁ Cloud
+            </span>
+            <span class="storage-badge storage-badge--sent" *ngIf="!o.hq_order_id && o.sync_status === 'synced'"
+                  title="Sent to cloud — awaiting cloud ID">
+              ✓ Sent
+            </span>
+            <span class="storage-badge storage-badge--syncing" *ngIf="!o.hq_order_id && o.sync_status === 'syncing'">
+              ⟳ Syncing
+            </span>
+            <span class="storage-badge storage-badge--local" *ngIf="!o.hq_order_id && o.sync_status !== 'synced' && o.sync_status !== 'syncing'">
+              💾 Local
             </span>
           </td>
           <td data-label="Time" class="date-cell">{{ timeAgo(o.created_at) }}</td>

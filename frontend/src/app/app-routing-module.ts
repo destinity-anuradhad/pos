@@ -12,9 +12,9 @@ const routes: Routes = [
     loadChildren: () => import('./pages/login/login-module').then(m => m.LoginModule)
   },
   {
-    path: 'mode-select',
+    path: 'terminal-setup',
     canActivate: [authGuard],
-    loadChildren: () => import('./pages/mode-select/mode-select-module').then(m => m.ModeSelectModule)
+    loadChildren: () => import('./pages/terminal-setup/terminal-setup-module').then(m => m.TerminalSetupModule)
   },
   {
     path: 'dashboard',
@@ -37,8 +37,13 @@ const routes: Routes = [
     loadChildren: () => import('./pages/orders/orders-module').then(m => m.OrdersModule)
   },
   {
+    path: 'sync',
+    canActivate: [modeGuard],
+    loadChildren: () => import('./pages/sync/sync-module').then(m => m.SyncModule)
+  },
+  {
     path: 'customer-display',
-    loadChildren: () => Promise.resolve(CustomerDisplayModule)  // eager — no separate chunk, safe for file:// in Electron
+    loadChildren: () => Promise.resolve(CustomerDisplayModule)
   },
   { path: '**', redirectTo: 'dashboard' }
 ];

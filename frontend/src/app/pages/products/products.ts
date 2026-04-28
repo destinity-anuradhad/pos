@@ -6,6 +6,7 @@ import { AppModeService } from '../../services/app-mode';
 interface Product {
   id: number; name: string; category: string;
   price_lkr: number; price_usd: number; barcode: string;
+  stock_quantity: number;
 }
 
 @Component({
@@ -24,7 +25,7 @@ export class Products implements OnInit {
 
   showForm = false;
   editingId: number | null = null;
-  form = { name: '', category: '', price_lkr: 0, price_usd: 0, barcode: '' };
+  form = { name: '', category: '', price_lkr: 0, price_usd: 0, barcode: '', stock_quantity: -1 };
 
   scanningBarcode = false;
   lookupStatus: 'idle' | 'loading' | 'found' | 'not-found' | 'error' = 'idle';
@@ -34,9 +35,7 @@ export class Products implements OnInit {
              (window as any).Capacitor?.isNativePlatform?.();
 
   get categories(): string[] {
-    const base = this.isRestaurant
-      ? ['Main Course','Salads','Starters','Desserts','Beverages']
-      : ['Grocery','Dairy','Beverages','Personal Care','Stationery','Snacks'];
+    const base  = ['Main Course','Salads','Starters','Desserts','Beverages'];
     const extra = [...new Set(this.products.map(p => p.category))];
     return [...new Set([...base, ...extra])];
   }
@@ -61,6 +60,7 @@ export class Products implements OnInit {
       this.products = data.map(p => ({
         id: p.id, name: p.name, category: p.category,
         price_lkr: p.price_lkr, price_usd: p.price_usd, barcode: p.barcode,
+        stock_quantity: p.stock_quantity ?? -1,
       }));
       this.filteredProducts = [...this.products];
     } catch {
@@ -82,14 +82,14 @@ export class Products implements OnInit {
 
   openAdd(): void {
     this.editingId = null;
-    this.form = { name: '', category: '', price_lkr: 0, price_usd: 0, barcode: '' };
+    this.form = { name: '', category: '', price_lkr: 0, price_usd: 0, barcode: '', stock_quantity: -1 };
     this.lookupStatus = 'idle'; this.lookupMessage = '';
     this.showForm = true;
   }
 
   openEdit(p: Product): void {
     this.editingId = p.id;
-    this.form = { name: p.name, category: p.category, price_lkr: p.price_lkr, price_usd: p.price_usd, barcode: p.barcode };
+    this.form = { name: p.name, category: p.category, price_lkr: p.price_lkr, price_usd: p.price_usd, barcode: p.barcode, stock_quantity: p.stock_quantity };
     this.lookupStatus = 'idle'; this.lookupMessage = '';
     this.showForm = true;
   }

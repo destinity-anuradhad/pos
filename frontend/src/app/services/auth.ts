@@ -1,13 +1,12 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { AppModeService } from './app-mode';
 
-const AUTH_KEY = 'pos_auth';
+const AUTH_KEY   = 'pos_auth';
 const DEFAULT_PIN = '1234';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  constructor(private router: Router, private modeService: AppModeService) {}
+  constructor(private router: Router) {}
 
   login(pin: string): boolean {
     const stored = localStorage.getItem(AUTH_KEY + '_pin') || DEFAULT_PIN;
@@ -19,16 +18,11 @@ export class AuthService {
   }
 
   redirectAfterLogin(): void {
-    if (this.modeService.getMode()) {
-      this.router.navigate(['/dashboard']);
-    } else {
-      this.router.navigate(['/mode-select']);
-    }
+    this.router.navigate(['/dashboard']);
   }
 
   logout(): void {
     localStorage.removeItem(AUTH_KEY);
-    this.modeService.clearMode();
     this.router.navigate(['/login']);
   }
 

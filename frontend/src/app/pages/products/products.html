@@ -20,6 +20,7 @@
           <th>Price (LKR)</th>
           <th>Price (USD)</th>
           <th>Barcode</th>
+          <th>Stock</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -30,6 +31,11 @@
           <td data-label="Price (LKR)">LKR {{ p.price_lkr | number }}</td>
           <td data-label="Price (USD)">$ {{ p.price_usd | number:'1.2-2' }}</td>
           <td data-label="Barcode"><code>{{ p.barcode }}</code></td>
+          <td data-label="Stock">
+            <span class="stock-badge" [class.unlimited]="p.stock_quantity === -1" [class.low]="p.stock_quantity >= 0 && p.stock_quantity <= 5" [class.out]="p.stock_quantity === 0">
+              {{ p.stock_quantity === -1 ? '∞' : p.stock_quantity }}
+            </span>
+          </td>
           <td data-label="Actions" class="td-actions">
             <button class="btn btn-outline btn-sm" (click)="openEdit(p)">Edit</button>
             <button class="btn btn-danger btn-sm" (click)="deleteProduct(p.id)">Delete</button>
@@ -93,6 +99,12 @@
                [class.status-miss]="lookupStatus === 'not-found' || lookupStatus === 'error'">
             {{ lookupMessage }}
           </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Stock Quantity</label>
+          <input class="form-control" type="number" [(ngModel)]="form.stock_quantity" min="-1"
+                 placeholder="-1 = unlimited" />
+          <div class="form-hint-small">Use -1 for unlimited stock (e.g. service items). 0 = out of stock.</div>
         </div>
       </div>
       <div class="modal-footer">
