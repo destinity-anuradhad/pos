@@ -25,7 +25,7 @@
         <span class="nav-icon">🛒</span>
         <span>POS</span>
       </a>
-      <a routerLink="/products" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
+      <a routerLink="/products" routerLinkActive="active" class="nav-item" (click)="closeMenu()" *ngIf="auth.canAccess('products')">
         <span class="nav-icon">🍽️</span>
         <span>Products</span>
       </a>
@@ -33,9 +33,13 @@
         <span class="nav-icon">📋</span>
         <span>Orders</span>
       </a>
-      <a routerLink="/sync" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
+      <a routerLink="/sync" routerLinkActive="active" class="nav-item" (click)="closeMenu()" *ngIf="auth.canAccess('sync')">
         <span class="nav-icon">🔄</span>
         <span>Sync</span>
+      </a>
+      <a routerLink="/staff" routerLinkActive="active" class="nav-item" (click)="closeMenu()" *ngIf="auth.canAccess('staff')">
+        <span class="nav-icon">👥</span>
+        <span>Staff</span>
       </a>
     </nav>
 
@@ -65,6 +69,13 @@
         <div class="server-btns">
           <button class="server-save-btn" (click)="saveServerUrl()">Save & Reload</button>
           <button class="server-cancel-btn" (click)="showServerInput = false">Cancel</button>
+        </div>
+      </div>
+      <div class="staff-identity" *ngIf="auth.session">
+        <div class="staff-identity-avatar">{{ auth.session.name.charAt(0).toUpperCase() }}</div>
+        <div class="staff-identity-info">
+          <span class="staff-identity-name">{{ auth.session.name }}</span>
+          <span class="staff-identity-role">{{ auth.session.role | titlecase }}</span>
         </div>
       </div>
       <button class="nav-item logout-btn" (click)="logout()">

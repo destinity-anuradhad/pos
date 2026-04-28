@@ -4,11 +4,12 @@ import { CommonModule } from '@angular/common';
 
 import { AppRoutingModule } from './app-routing-module';
 import { App } from './app';
+import { LockScreenComponent } from './components/lock-screen/lock-screen';
 import { SharedModule } from './shared/shared/shared-module';
 import { ServiceWorkerModule } from '@angular/service-worker';
 
 @NgModule({
-  declarations: [App],
+  declarations: [App, LockScreenComponent],
   imports: [
     BrowserModule,
     CommonModule,

@@ -10,6 +10,8 @@ from routes.sync           import sync_bp
 from routes.settings       import settings_bp
 from routes.terminals      import terminals_bp
 from routes.table_statuses import table_statuses_bp
+from routes.auth           import auth_bp
+from routes.staff          import staff_bp
 
 init_db()
 
@@ -33,6 +35,8 @@ app.register_blueprint(sync_bp,           url_prefix='/api/sync')
 app.register_blueprint(settings_bp,       url_prefix='/api/settings')
 app.register_blueprint(terminals_bp,      url_prefix='/api/terminals')
 app.register_blueprint(table_statuses_bp, url_prefix='/api/table-statuses')
+app.register_blueprint(auth_bp,           url_prefix='/api/auth')
+app.register_blueprint(staff_bp,          url_prefix='/api/staff')
 
 @app.get('/')
 def root():

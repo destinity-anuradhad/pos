@@ -14,6 +14,7 @@ _engine = create_engine(
 )
 
 _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
+SessionLocal  = _SessionLocal   # public alias used by auth_utils
 
 
 def _add_column_if_missing(conn, table: str, column: str, definition: str):
@@ -39,11 +40,28 @@ def _migrate_db():
         conn.commit()
 
 
+def _seed_default_staff():
+    """Create default admin account if no staff exist."""
+    import bcrypt
+    db = _SessionLocal()
+    try:
+        from models.models import Staff
+        if db.query(Staff).count() == 0:
+            pin_hash = bcrypt.hashpw(b'1234', bcrypt.gensalt()).decode()
+            db.add(Staff(name='Admin', role='admin', pin_hash=pin_hash, is_active=True))
+            db.commit()
+    except Exception:
+        pass
+    finally:
+        db.close()
+
+
 def init_db():
     import models.models  # register all models in Base.metadata before create_all
     Base.metadata.create_all(bind=_engine)
     _migrate_db()
     _seed_if_empty()
+    _seed_default_staff()
 
 
 def get_db():

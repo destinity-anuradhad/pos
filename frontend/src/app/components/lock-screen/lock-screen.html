@@ -1,0 +1,55 @@
+<div class="lock-overlay" *ngIf="visible">
+
+  <!-- Phase: locked (lock icon + clock) -->
+  <div class="lock-idle" *ngIf="phase === 'locked'" (click)="tapLock()">
+    <div class="lock-time">{{ currentTime }}</div>
+    <div class="lock-icon-wrap">
+      <div class="lock-icon">&#x1F512;</div>
+      <div class="lock-ripple"></div>
+    </div>
+    <div class="lock-tap-hint">Tap to unlock</div>
+  </div>
+
+  <!-- Phase: staff selection -->
+  <div class="lock-panel" *ngIf="phase === 'staff'">
+    <h2 class="lock-title">Who are you?</h2>
+    <p class="lock-sub">Select your name to unlock</p>
+    <div class="lock-staff-grid">
+      <button class="staff-card" *ngFor="let s of staffList" (click)="selectStaff(s)">
+        <div class="staff-avatar" [style.background]="getRoleColor(s.role)">
+          {{ s.name.charAt(0).toUpperCase() }}
+        </div>
+        <span class="staff-name">{{ s.name }}</span>
+        <span class="staff-role">{{ getRoleLabel(s.role) }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Phase: PIN entry -->
+  <div class="lock-panel" *ngIf="phase === 'pin'">
+    <button class="back-btn" (click)="backToStaff()">&#x2190; Back</button>
+
+    <div class="pin-header">
+      <div class="staff-avatar lg" [style.background]="getRoleColor(selectedStaff?.role || '')">
+        {{ selectedStaff?.name?.charAt(0)?.toUpperCase() }}
+      </div>
+      <h2>{{ selectedStaff?.name }}</h2>
+    </div>
+
+    <p class="lock-sub">Enter PIN to unlock</p>
+
+    <div class="pin-dots" [class.shake]="shaking">
+      <div class="pin-dot" *ngFor="let filled of pinDots" [class.filled]="filled"></div>
+    </div>
+
+    <div class="error-msg" *ngIf="error">{{ error }}</div>
+
+    <div class="numpad">
+      <button class="num-btn" *ngFor="let d of ['1','2','3','4','5','6','7','8','9']" (click)="pressDigit(d)">{{ d }}</button>
+      <button class="num-btn empty" disabled></button>
+      <button class="num-btn" (click)="pressDigit('0')">0</button>
+      <button class="num-btn del-btn" (click)="pressBack()">&#x232B;</button>
+    </div>
+  </div>
+
+</div>

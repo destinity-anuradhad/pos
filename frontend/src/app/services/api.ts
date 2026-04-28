@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { AuthService } from './auth';
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -103,10 +104,14 @@ export function resolveCloudBase(): string {
 export class ApiService {
   readonly base = resolveLocalBase();
 
+  constructor(private auth: AuthService) {}
+
   private get headers(): HeadersInit {
     const h: Record<string, string> = { 'Content-Type': 'application/json' };
     const code = localStorage.getItem('terminal_code');
     if (code) h['X-Terminal-Code'] = code;
+    const token = this.auth.getToken();
+    if (token) h['Authorization'] = 'Bearer ' + token;
     return h;
   }
 

@@ -138,6 +138,37 @@
   &.online { color: rgba(255,255,255,0.55); }
 }
 
+.staff-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 2px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+}
+
+.staff-identity-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--primary, #094f70);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; color: white; flex-shrink: 0;
+}
+
+.staff-identity-info {
+  display: flex; flex-direction: column; gap: 1px; overflow: hidden;
+}
+
+.staff-identity-name {
+  font-size: 13px; font-weight: 700; color: white;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.staff-identity-role {
+  font-size: 10px; color: rgba(255,255,255,0.4);
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
 .switch-btn, .dark-toggle, .logout-btn {
   color: rgba(255,255,255,0.45);
   font-size: 13px;

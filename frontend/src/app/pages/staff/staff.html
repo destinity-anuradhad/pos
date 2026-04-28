@@ -1,0 +1,91 @@
+<app-layout>
+  <div class="page-content">
+    <div class="toolbar d-flex align-items-center justify-content-between mb-3">
+      <h2 class="page-title">Staff Management</h2>
+      <button class="btn btn-secondary" (click)="openAdd()">+ Add Staff</button>
+    </div>
+
+    <div *ngIf="loading" class="text-center py-4">
+      <div class="spinner-border"></div>
+    </div>
+
+    <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+
+    <div class="table-responsive" *ngIf="!loading">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of staffList">
+            <td data-label="Name">
+              <div class="staff-name-cell">
+                <div class="avatar-sm" [style.background]="ROLE_COLORS[s.role]">{{ s.name.charAt(0) }}</div>
+                {{ s.name }}
+              </div>
+            </td>
+            <td data-label="Role">
+              <span class="role-badge" [style.background]="ROLE_COLORS[s.role] + '22'" [style.color]="ROLE_COLORS[s.role]">
+                {{ ROLE_LABELS[s.role] }}
+              </span>
+            </td>
+            <td data-label="Status">
+              <span class="status-badge" [class.active]="s.is_active">{{ s.is_active ? 'Active' : 'Inactive' }}</span>
+            </td>
+            <td data-label="Created">{{ s.created_at | date:'mediumDate' }}</td>
+            <td data-label="Actions" class="td-actions">
+              <button class="btn btn-sm btn-outline" (click)="openEdit(s)">Edit</button>
+              <button class="btn btn-sm btn-danger" *ngIf="s.is_active" (click)="deactivate(s)">Deactivate</button>
+              <button class="btn btn-sm btn-outline" *ngIf="!s.is_active" (click)="reactivate(s)">Reactivate</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div class="modal-overlay" *ngIf="showForm" (click)="showForm=false" appModal>
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ editingId ? 'Edit Staff' : 'Add Staff' }}</h3>
+        <button class="close-btn" (click)="showForm=false">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group mb-3">
+          <label class="form-label">Name</label>
+          <input class="form-control" [(ngModel)]="form.name" placeholder="e.g. Kasun" maxlength="100" />
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label">Role</label>
+          <select class="form-control" [(ngModel)]="form.role">
+            <option *ngFor="let r of ROLES" [value]="r">{{ ROLE_LABELS[r] }}</option>
+          </select>
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label">PIN {{ editingId ? '(leave blank to keep current)' : '' }}</label>
+          <input class="form-control" [(ngModel)]="form.pin" type="password" inputmode="numeric"
+                 maxlength="8" placeholder="4-8 digits" />
+        </div>
+        <div class="form-group mb-3" *ngIf="form.pin">
+          <label class="form-label">Confirm PIN</label>
+          <input class="form-control" [(ngModel)]="form.confirmPin" type="password" inputmode="numeric"
+                 maxlength="8" placeholder="Re-enter PIN" />
+        </div>
+        <div class="alert alert-danger" *ngIf="formError">{{ formError }}</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" (click)="showForm=false">Cancel</button>
+        <button class="btn btn-secondary" (click)="save()" [disabled]="saving">
+          {{ saving ? 'Saving...' : 'Save' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</app-layout>

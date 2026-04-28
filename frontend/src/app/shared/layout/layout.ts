@@ -16,7 +16,7 @@ export class Layout implements OnInit {
   pendingOrders = 0;
 
   constructor(
-    private auth: AuthService,
+    public auth: AuthService,
     private theme: ThemeService,
     private sync: SyncService,
     private terminal: TerminalService,

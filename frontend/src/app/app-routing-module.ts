@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { HashLocationStrategy, LocationStrategy } from '@angular/common';
 import { authGuard } from './guards/auth-guard';
+import { roleGuard } from './guards/role-guard';
 import { modeGuard } from './guards/mode-guard';
 import { CustomerDisplayModule } from './pages/customer-display/customer-display-module';
 
@@ -23,7 +24,8 @@ const routes: Routes = [
   },
   {
     path: 'products',
-    canActivate: [modeGuard],
+    canActivate: [authGuard, roleGuard, modeGuard],
+    data: { roles: ['manager', 'admin'] },
     loadChildren: () => import('./pages/products/products-module').then(m => m.ProductsModule)
   },
   {
@@ -33,13 +35,21 @@ const routes: Routes = [
   },
   {
     path: 'orders',
-    canActivate: [modeGuard],
+    canActivate: [authGuard, roleGuard, modeGuard],
+    data: { roles: ['manager', 'admin'] },
     loadChildren: () => import('./pages/orders/orders-module').then(m => m.OrdersModule)
   },
   {
     path: 'sync',
-    canActivate: [modeGuard],
+    canActivate: [authGuard, roleGuard, modeGuard],
+    data: { roles: ['manager', 'admin'] },
     loadChildren: () => import('./pages/sync/sync-module').then(m => m.SyncModule)
+  },
+  {
+    path: 'staff',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin'] },
+    loadChildren: () => import('./pages/staff/staff-module').then(m => m.StaffModule)
   },
   {
     path: 'customer-display',
