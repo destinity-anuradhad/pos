@@ -112,6 +112,39 @@ function waitForDevServer(timeoutMs = 120000) {
   });
 }
 
+// ── Serve dist folder via local HTTP so getUserMedia works (file:// blocks camera) ──
+let staticServerPort = 0;
+
+function startStaticServer(distDir) {
+  return new Promise((resolve) => {
+    const fs   = require('fs');
+    const mime = {
+      '.html': 'text/html', '.js': 'application/javascript',
+      '.css': 'text/css', '.json': 'application/json',
+      '.png': 'image/png', '.jpg': 'image/jpeg',
+      '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
+      '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf',
+    };
+    const server = http.createServer((req, res) => {
+      let filePath = path.join(distDir, req.url === '/' ? 'index.html' : req.url.split('?')[0]);
+      if (!fs.existsSync(filePath)) filePath = path.join(distDir, 'index.html'); // SPA fallback
+      const ext  = path.extname(filePath);
+      const type = mime[ext] || 'application/octet-stream';
+      try {
+        res.writeHead(200, { 'Content-Type': type });
+        res.end(fs.readFileSync(filePath));
+      } catch {
+        res.writeHead(404); res.end('Not found');
+      }
+    });
+    server.listen(0, '127.0.0.1', () => {
+      staticServerPort = server.address().port;
+      console.log(`Static file server on http://127.0.0.1:${staticServerPort}`);
+      resolve(staticServerPort);
+    });
+  });
+}
+
 // ── Create browser window ─────────────────────────────────────────
 async function createWindow() {
   mainWindow = new BrowserWindow({
@@ -125,7 +158,7 @@ async function createWindow() {
     show: false,
   });
 
-  // Allow camera access for webcam barcode/QR scanning
+  // Grant camera permission (works for http://localhost too)
   mainWindow.webContents.session.setPermissionRequestHandler((wc, permission, callback) => {
     const allowed = ['media', 'camera', 'microphone', 'video'];
     callback(allowed.includes(permission));
@@ -135,22 +168,24 @@ async function createWindow() {
     return allowed.includes(permission);
   });
 
-  // Use Angular dev server if it becomes ready within 2 min, otherwise load built dist
+  // Use Angular dev server if running, otherwise serve dist via local HTTP server
+  // (file:// blocks getUserMedia — http://localhost is a secure origin)
   const devServerUp = await isReachable('http://localhost:4200');
   if (devServerUp) {
     console.log('Angular dev server already up — loading http://localhost:4200');
     mainWindow.loadURL('http://localhost:4200');
     mainWindow.webContents.openDevTools();
   } else {
-    const distIndex = app.isPackaged
-      ? path.join(process.resourcesPath, 'frontend/dist/frontend/browser/index.html')
-      : path.join(__dirname, '../frontend/dist/frontend/browser/index.html');
+    const distDir = app.isPackaged
+      ? path.join(process.resourcesPath, 'frontend/dist/frontend/browser')
+      : path.join(__dirname, '../frontend/dist/frontend/browser');
+    const distIndex = path.join(distDir, 'index.html');
     const fs = require('fs');
     if (fs.existsSync(distIndex)) {
-      const { pathToFileURL } = require('url');
-      const distURL = pathToFileURL(distIndex).href;
-      console.log('Loading from built dist:', distURL);
-      mainWindow.loadURL(distURL);
+      const port = await startStaticServer(distDir);
+      const url  = `http://127.0.0.1:${port}/index.html`;
+      console.log('Loading from local HTTP server:', url);
+      mainWindow.loadURL(url);
     } else {
       // No dist build — wait for dev server
       console.log('No dist build found — waiting for Angular dev server (up to 2 min)...');
