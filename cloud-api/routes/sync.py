@@ -153,7 +153,9 @@ def push_orders():
                     table_name = f"Table {order_data['table_id']}"
 
                 new_order = Order(
-                    terminal_id=terminal_id,
+                    # Only set terminal_id if it resolves to a known cloud terminal;
+                    # local terminal IDs are not valid FKs in the cloud DB.
+                    terminal_id=terminal_id if terminal_record else None,
                     outlet_id=outlet_id,
                     terminal_order_ref=ref,
                     table_name=table_name,
