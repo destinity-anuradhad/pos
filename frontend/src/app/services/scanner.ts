@@ -147,33 +147,28 @@ export class ScannerService {
     };
 
     try {
-      // On mobile: prefer rear camera. On desktop: use first available camera by deviceId.
-      const devices = await (window as any).Html5Qrcode?.getCameras?.().catch(() => []) || [];
+      // Enumerate cameras using the locally-imported Html5Qrcode (not window.Html5Qrcode)
+      const devices = await Html5Qrcode.getCameras().catch(() => [] as any[]);
       if (devices && devices.length > 0) {
-        // Use rear camera if available (mobile), otherwise first camera (desktop webcam)
+        // Prefer rear camera on mobile; fall back to first camera (desktop webcam)
         const rear = devices.find((d: any) => /back|rear|environment/i.test(d.label));
         const chosen = rear || devices[0];
-        await startWithConstraint({ deviceId: chosen.id });
+        await startWithConstraint({ deviceId: { exact: chosen.id } });
       } else {
-        // Fallback: try environment (mobile) then plain video:true (desktop)
+        // No devices enumerated — try facingMode (mobile) then plain video (desktop)
         try {
           await startWithConstraint({ facingMode: 'environment' });
         } catch {
-          await startWithConstraint({ video: true } as any);
+          await startWithConstraint({ facingMode: 'user' });
         }
       }
     } catch (err: any) {
-      // Last resort: plain video:true
-      try {
-        await startWithConstraint({ video: true } as any);
-      } catch (err2: any) {
-        closeScanner();
-        const msg = (err2?.message || err2 || err?.message || err)?.toString() || '';
-        if (msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('denied')) {
-          alert('Camera permission denied. Please allow camera access and try again.');
-        } else {
-          alert('Could not start camera: ' + msg);
-        }
+      closeScanner();
+      const msg = (err?.message || String(err));
+      if (msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('denied')) {
+        alert('Camera permission denied. Please allow camera access and try again.');
+      } else {
+        alert('Could not start camera: ' + msg);
       }
     }
   }
