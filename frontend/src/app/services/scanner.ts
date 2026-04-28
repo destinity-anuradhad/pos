@@ -64,7 +64,7 @@ export class ScannerService {
             <button id="scanner-close">✕</button>
           </div>
           <div id="${this.scannerElementId}" style="width:100%;min-height:280px;"></div>
-          <p id="scanner-hint">Point camera at barcode or QR code</p>
+          <p id="scanner-hint">Hold barcode/QR code steady inside the box — keep it close and well-lit</p>
         </div>
       `;
       overlay.style.cssText = `
@@ -128,16 +128,16 @@ export class ScannerService {
     const closeBtn = document.getElementById('scanner-close');
     if (closeBtn) closeBtn.onclick = () => closeScanner();
 
-    // qrbox: wide rectangle is better for 1D barcodes; square for QR codes
-    const qrboxFn = (vw: number, vh: number) => ({
-      width:  Math.min(Math.round(vw * 0.85), 360),
-      height: Math.min(Math.round(vh * 0.45), 180),
-    });
+    // Large square box — covers most of the frame for reliable desktop scanning
+    const qrboxFn = (vw: number, vh: number) => {
+      const size = Math.min(Math.round(Math.min(vw, vh) * 0.8), 400);
+      return { width: size, height: size };
+    };
 
     const startWithConstraint = async (constraint: any) => {
       await html5Qrcode.start(
         constraint,
-        { fps: 15, qrbox: qrboxFn },
+        { fps: 25, qrbox: qrboxFn, aspectRatio: 1.0 },
         (decodedText: string) => {
           this.zone.run(() => this.scanResult$.next(decodedText));
           closeScanner();
