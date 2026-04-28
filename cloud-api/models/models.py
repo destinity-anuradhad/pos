@@ -72,6 +72,17 @@ class Product(Base):
     category = relationship('Category', back_populates='products')
 
 
+class RestaurantTable(Base):
+    __tablename__ = 'tables'
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    capacity = Column(Integer, default=4, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=_now, nullable=False)
+    updated_at = Column(DateTime, default=_now, onupdate=_now, nullable=False)
+
+
 class Order(Base):
     __tablename__ = 'orders'
 

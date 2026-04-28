@@ -41,6 +41,14 @@
         <div class="status-ago">waiting to sync to cloud</div>
       </div>
     </div>
+    <div class="status-card" [class.warn]="(state?.pendingMasterCount || 0) > 0">
+      <div class="status-icon">📝</div>
+      <div class="status-body">
+        <div class="status-label">Pending Master Changes</div>
+        <div class="status-time">{{ state?.pendingMasterCount || 0 }} records</div>
+        <div class="status-ago">products / categories / tables not yet pushed</div>
+      </div>
+    </div>
     <div class="status-card" *ngIf="settings">
       <div class="status-icon">⏱️</div>
       <div class="status-body">
@@ -56,27 +64,40 @@
     <div class="actions-title">Manual Sync</div>
     <div class="actions-row">
       <button class="sync-btn master" (click)="doMasterSync()" [disabled]="syncingMaster || !isOnline">
-        <span *ngIf="!syncingMaster">📥 Sync Master Data</span>
+        <span *ngIf="!syncingMaster">📥 Pull Master (Cloud→Local)</span>
         <span *ngIf="syncingMaster">⏳ Syncing...</span>
+      </button>
+      <button class="sync-btn master-up" (click)="doMasterSyncUp()" [disabled]="syncingMasterUp || !isOnline">
+        <span *ngIf="!syncingMasterUp">📤 Push Master (Local→Cloud)</span>
+        <span *ngIf="syncingMasterUp">⏳ Pushing...</span>
       </button>
       <button class="sync-btn transactions" (click)="doTransactionSync()" [disabled]="syncingTransaction || !isOnline">
         <span *ngIf="!syncingTransaction">📤 Sync Transactions</span>
         <span *ngIf="syncingTransaction">⏳ Syncing...</span>
       </button>
-      <button class="sync-btn full" (click)="doFullSync()" [disabled]="syncingMaster || syncingTransaction || !isOnline">
-        <span *ngIf="!syncingMaster && !syncingTransaction">🔁 Full Sync</span>
-        <span *ngIf="syncingMaster || syncingTransaction">⏳ Syncing...</span>
+      <button class="sync-btn full" (click)="doFullSync()" [disabled]="syncingMaster || syncingMasterUp || syncingTransaction || !isOnline">
+        <span *ngIf="!syncingMaster && !syncingMasterUp && !syncingTransaction">🔁 Full Sync</span>
+        <span *ngIf="syncingMaster || syncingMasterUp || syncingTransaction">⏳ Syncing...</span>
       </button>
     </div>
 
     <div class="result-msg success" *ngIf="masterResult?.success">
-      Master data synced successfully.
+      Master data pulled from cloud successfully.
+    </div>
+    <div class="result-msg success" *ngIf="masterUpResult?.success && (masterUpResult?.pushed || 0) > 0">
+      {{ masterUpResult!.pushed }} record(s) pushed to cloud.
+    </div>
+    <div class="result-msg success" *ngIf="masterUpResult?.success && (masterUpResult?.pushed || 0) === 0">
+      No local master changes to push.
     </div>
     <div class="result-msg success" *ngIf="transactionResult?.success">
       {{ transactionResult!.synced }} transaction(s) synced.
     </div>
     <div class="result-msg error" *ngIf="masterResult && !masterResult.success">
-      Master sync failed: {{ masterResult.error }}
+      Master pull failed: {{ masterResult.error }}
+    </div>
+    <div class="result-msg error" *ngIf="masterUpResult && !masterUpResult.success">
+      Master push failed: {{ masterUpResult.error }}
     </div>
     <div class="result-msg error" *ngIf="transactionResult && !transactionResult.success">
       Transaction sync failed: {{ transactionResult.error }}

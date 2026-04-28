@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from database import get_db
 from models.models import (
-    Order, OrderItem, Category, Product, Terminal, SyncLog
+    Order, OrderItem, Category, Product, Terminal, SyncLog, RestaurantTable
 )
 
 sync_bp = Blueprint('sync', __name__)
@@ -232,7 +232,7 @@ def push_orders():
 @sync_bp.get('/pull')
 def pull_master_data():
     """
-    Terminals pull master data (categories + products).
+    Terminals pull master data (categories + products + tables).
 
     Optional query param:
       ?since=2024-01-01T00:00:00Z   — only return records updated after this timestamp
@@ -241,6 +241,7 @@ def pull_master_data():
     {
       "categories": [...],
       "products": [...],
+      "tables": [...],
       "settings": {},
       "timestamp": "2024-01-01T12:00:00Z"
     }
@@ -250,25 +251,135 @@ def pull_master_data():
 
     db = get_db()
     try:
-        cat_query = db.query(Category).filter(Category.is_active == True)  # noqa: E712
-        prod_query = db.query(Product).filter(Product.is_active == True)   # noqa: E712
+        cat_query  = db.query(Category).filter(Category.is_active == True)   # noqa: E712
+        prod_query = db.query(Product).filter(Product.is_active == True)      # noqa: E712
+        tbl_query  = db.query(RestaurantTable).filter(RestaurantTable.is_active == True)  # noqa: E712
 
         if since_dt:
-            cat_query = cat_query.filter(Category.updated_at > since_dt)
+            cat_query  = cat_query.filter(Category.updated_at > since_dt)
             prod_query = prod_query.filter(Product.updated_at > since_dt)
+            tbl_query  = tbl_query.filter(RestaurantTable.updated_at > since_dt)
 
         categories = cat_query.all()
-        products = prod_query.all()
-
-        categories_data = [_category_to_dict(c) for c in categories]
-        products_data = [_product_to_dict(p) for p in products]
+        products   = prod_query.all()
+        tables     = tbl_query.all()
 
         return jsonify({
-            'categories': categories_data,
-            'products': products_data,
-            'settings': {},
-            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'categories': [_category_to_dict(c) for c in categories],
+            'products':   [_product_to_dict(p) for p in products],
+            'tables':     [_table_to_dict(t) for t in tables],
+            'settings':   {},
+            'timestamp':  datetime.now(timezone.utc).isoformat(),
         }), 200
+    finally:
+        db.close()
+
+
+@sync_bp.post('/master/push')
+def push_master_data():
+    """
+    Terminals push local master data changes (categories, products, tables) to cloud HQ.
+    Cloud performs upsert; terminal_code is stored as the source.
+
+    Payload:
+    {
+      "terminal_code": "T-001",
+      "categories": [{"id": 1, "name": "...", "color": "..."}],
+      "products": [{"id": 1, "name": "...", "price_lkr": ..., ...}],
+      "tables": [{"id": 1, "name": "Table 1", "capacity": 4}]
+    }
+
+    Returns:
+    {
+      "categories": 2,
+      "products": 5,
+      "tables": 3
+    }
+    """
+    data = request.get_json(silent=True) or {}
+    terminal_code = data.get('terminal_code', '')
+    now = datetime.now(timezone.utc)
+
+    db = get_db()
+    try:
+        counts = {'categories': 0, 'products': 0, 'tables': 0}
+
+        for c in data.get('categories', []):
+            existing = db.query(Category).filter(Category.id == c['id']).first()
+            if existing:
+                existing.name       = c.get('name', existing.name)
+                existing.color      = c.get('color', existing.color)
+                existing.updated_at = now
+            else:
+                db.add(Category(
+                    id         = c['id'],
+                    name       = c['name'],
+                    color      = c.get('color', '#6b7280'),
+                    is_active  = c.get('is_active', True),
+                    updated_at = now,
+                ))
+            counts['categories'] += 1
+
+        for p in data.get('products', []):
+            existing = db.query(Product).filter(Product.id == p['id']).first()
+            if existing:
+                existing.name           = p.get('name', existing.name)
+                existing.price_lkr      = p.get('price_lkr', existing.price_lkr)
+                existing.price_usd      = p.get('price_usd', existing.price_usd)
+                existing.stock_quantity = p.get('stock_quantity', existing.stock_quantity)
+                existing.is_active      = p.get('is_active', existing.is_active)
+                if p.get('barcode'):
+                    existing.barcode = p['barcode']
+                if p.get('category_id'):
+                    existing.category_id = p['category_id']
+                existing.updated_at = now
+            else:
+                db.add(Product(
+                    id             = p['id'],
+                    name           = p['name'],
+                    category_id    = p.get('category_id'),
+                    price_lkr      = p.get('price_lkr', 0),
+                    price_usd      = p.get('price_usd', 0),
+                    barcode        = p.get('barcode') or None,
+                    stock_quantity = p.get('stock_quantity', -1),
+                    is_active      = p.get('is_active', True),
+                    updated_at     = now,
+                ))
+            counts['products'] += 1
+
+        for t in data.get('tables', []):
+            existing = db.query(RestaurantTable).filter(RestaurantTable.id == t['id']).first()
+            if existing:
+                existing.name       = t.get('name', existing.name)
+                existing.capacity   = t.get('capacity', existing.capacity)
+                existing.updated_at = now
+            else:
+                db.add(RestaurantTable(
+                    id         = t['id'],
+                    name       = t['name'],
+                    capacity   = t.get('capacity', 4),
+                    is_active  = True,
+                    updated_at = now,
+                ))
+            counts['tables'] += 1
+
+        db.commit()
+
+        _write_sync_log(
+            db,
+            terminal_id=None,
+            terminal_code=terminal_code,
+            sync_type='master',
+            direction='push',
+            records_affected=sum(counts.values()),
+            status='success',
+            error_message=None,
+        )
+
+        return jsonify(counts), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()
 
@@ -298,6 +409,16 @@ def _product_to_dict(prod):
         'is_active': prod.is_active,
         'created_at': prod.created_at.isoformat() if prod.created_at else None,
         'updated_at': prod.updated_at.isoformat() if prod.updated_at else None,
+    }
+
+
+def _table_to_dict(t):
+    return {
+        'id': t.id,
+        'name': t.name,
+        'capacity': t.capacity,
+        'is_active': t.is_active,
+        'updated_at': t.updated_at.isoformat() if t.updated_at else None,
     }
 
 

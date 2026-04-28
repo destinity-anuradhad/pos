@@ -122,6 +122,7 @@
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 
   &.master       { background: #3b82f6; color: #fff; }
+  &.master-up    { background: #f59e0b; color: #fff; }
   &.transactions { background: #10b981; color: #fff; }
   &.full         { background: #8b5cf6; color: #fff; }
 }

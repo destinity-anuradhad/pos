@@ -73,40 +73,46 @@ class TableStatusTransition(Base):
 
 class Category(Base):
     __tablename__ = "categories"
-    id          = Column(Integer, primary_key=True, index=True)
-    name        = Column(String, nullable=False)
-    color       = Column(String, default="#094f70")
-    updated_at  = Column(DateTime(timezone=True), onupdate=func.now())
-    synced_at   = Column(DateTime(timezone=True), nullable=True)
-    products    = relationship("Product", back_populates="category")
+    id                   = Column(Integer, primary_key=True, index=True)
+    name                 = Column(String, nullable=False)
+    color                = Column(String, default="#094f70")
+    updated_at           = Column(DateTime(timezone=True), onupdate=func.now())
+    synced_at            = Column(DateTime(timezone=True), nullable=True)
+    sync_status          = Column(String, default="pending")   # pending / synced
+    modified_by_terminal = Column(String, nullable=True)       # terminal_code that last modified
+    products             = relationship("Product", back_populates="category")
 
 
 class Product(Base):
     __tablename__ = "products"
-    id              = Column(Integer, primary_key=True, index=True)
-    name            = Column(String, nullable=False, index=True)
-    category_id     = Column(Integer, ForeignKey("categories.id"), nullable=True)
-    price_lkr       = Column(Float, nullable=False, default=0)
-    price_usd       = Column(Float, nullable=False, default=0)
-    barcode         = Column(String, nullable=True, index=True)
-    image_url       = Column(String, nullable=True)
-    stock_quantity  = Column(Integer, default=-1)   # -1 = unlimited, 0+ = tracked
-    is_active       = Column(Boolean, default=True)
-    updated_at      = Column(DateTime(timezone=True), onupdate=func.now())
-    synced_at       = Column(DateTime(timezone=True), nullable=True)
-    category        = relationship("Category", back_populates="products")
+    id                   = Column(Integer, primary_key=True, index=True)
+    name                 = Column(String, nullable=False, index=True)
+    category_id          = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    price_lkr            = Column(Float, nullable=False, default=0)
+    price_usd            = Column(Float, nullable=False, default=0)
+    barcode              = Column(String, nullable=True, index=True)
+    image_url            = Column(String, nullable=True)
+    stock_quantity       = Column(Integer, default=-1)   # -1 = unlimited, 0+ = tracked
+    is_active            = Column(Boolean, default=True)
+    updated_at           = Column(DateTime(timezone=True), onupdate=func.now())
+    synced_at            = Column(DateTime(timezone=True), nullable=True)
+    sync_status          = Column(String, default="pending")   # pending / synced
+    modified_by_terminal = Column(String, nullable=True)       # terminal_code that last modified
+    category             = relationship("Category", back_populates="products")
 
 
 class RestaurantTable(Base):
     __tablename__ = "tables"
-    id          = Column(Integer, primary_key=True, index=True)
-    name        = Column(String, nullable=False)
-    capacity    = Column(Integer, default=4)
-    status_id   = Column(Integer, ForeignKey("table_statuses.id"), nullable=True)
-    updated_at  = Column(DateTime(timezone=True), onupdate=func.now())
-    synced_at   = Column(DateTime(timezone=True), nullable=True)
-    table_status = relationship("TableStatus", back_populates="tables")
-    orders      = relationship("Order", back_populates="table")
+    id                   = Column(Integer, primary_key=True, index=True)
+    name                 = Column(String, nullable=False)
+    capacity             = Column(Integer, default=4)
+    status_id            = Column(Integer, ForeignKey("table_statuses.id"), nullable=True)
+    updated_at           = Column(DateTime(timezone=True), onupdate=func.now())
+    synced_at            = Column(DateTime(timezone=True), nullable=True)
+    sync_status          = Column(String, default="pending")   # pending / synced
+    modified_by_terminal = Column(String, nullable=True)       # terminal_code that last modified
+    table_status         = relationship("TableStatus", back_populates="tables")
+    orders               = relationship("Order", back_populates="table")
 
 
 class Order(Base):

@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 Base = declarative_base()
@@ -16,9 +16,30 @@ _engine = create_engine(
 _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 
 
+def _add_column_if_missing(conn, table: str, column: str, definition: str):
+    """ALTER TABLE … ADD COLUMN safely (SQLite doesn't support IF NOT EXISTS)."""
+    rows = conn.execute(text(f"PRAGMA table_info({table})")).fetchall()
+    existing = [row[1] for row in rows]
+    if column not in existing:
+        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {definition}"))
+
+
+def _migrate_db():
+    """Add any new columns that were not present in older databases."""
+    with _engine.connect() as conn:
+        _add_column_if_missing(conn, 'categories', 'sync_status',          "VARCHAR DEFAULT 'pending'")
+        _add_column_if_missing(conn, 'categories', 'modified_by_terminal', "VARCHAR")
+        _add_column_if_missing(conn, 'products',   'sync_status',          "VARCHAR DEFAULT 'pending'")
+        _add_column_if_missing(conn, 'products',   'modified_by_terminal', "VARCHAR")
+        _add_column_if_missing(conn, 'tables',     'sync_status',          "VARCHAR DEFAULT 'pending'")
+        _add_column_if_missing(conn, 'tables',     'modified_by_terminal', "VARCHAR")
+        conn.commit()
+
+
 def init_db():
     import models.models  # register all models in Base.metadata before create_all
     Base.metadata.create_all(bind=_engine)
+    _migrate_db()
     _seed_if_empty()
 
 

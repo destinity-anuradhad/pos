@@ -15,8 +15,10 @@ export class SyncPage implements OnInit {
   settings: SyncSettings | null = null;
 
   syncingMaster      = false;
+  syncingMasterUp    = false;
   syncingTransaction = false;
   masterResult:      { success: boolean; error?: string } | null = null;
+  masterUpResult:    { success: boolean; pushed?: number; error?: string } | null = null;
   transactionResult: { success: boolean; synced?: number; error?: string } | null = null;
 
   isOnline = navigator.onLine;
@@ -53,16 +55,16 @@ export class SyncPage implements OnInit {
     this.cdr.detectChanges();
   }
 
-  /** Count orders in local SQLite that still need to be synced to cloud */
+  /** Count orders and master records in local SQLite that still need to sync to cloud */
   private async loadPendingCount(): Promise<void> {
     try {
       const orders = await this.api.getOrders(0, 500);
-      // Mutate the existing state object rather than replacing it, so concurrent
-      // async operations in refresh() don't inadvertently wipe lastTransactionSync.
       this.state.pendingOrderCount = orders.filter(
         o => o.sync_status === 'pending' || o.sync_status === 'failed'
       ).length;
     } catch {}
+    await this.sync.refreshPendingMasterCount();
+    this.state.pendingMasterCount = this.sync.getState().pendingMasterCount;
   }
 
   async loadLogs(): Promise<void> {
@@ -79,11 +81,21 @@ export class SyncPage implements OnInit {
     } catch {}
   }
 
+  /** Pull master data from cloud → local */
   async doMasterSync(): Promise<void> {
     this.syncingMaster = true;
     this.masterResult  = null;
     this.masterResult  = await this.sync.syncMasterData();
     this.syncingMaster = false;
+    await this.refresh();
+  }
+
+  /** Push local master changes → cloud */
+  async doMasterSyncUp(): Promise<void> {
+    this.syncingMasterUp = true;
+    this.masterUpResult  = null;
+    this.masterUpResult  = await this.sync.syncMasterDataUp();
+    this.syncingMasterUp = false;
     await this.refresh();
   }
 
@@ -95,10 +107,11 @@ export class SyncPage implements OnInit {
     await this.refresh();
   }
 
+  /** Full sync: push local master up, pull cloud master down, push transactions */
   async doFullSync(): Promise<void> {
     this.syncingMaster = true;
     this.syncingTransaction = true;
-    // Pull latest master data from cloud, then push pending orders to cloud
+    await this.sync.syncMasterDataUp();
     await this.sync.syncMasterData();
     await this.sync.syncTransactions();
     this.syncingMaster = false;

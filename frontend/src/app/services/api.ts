@@ -104,7 +104,10 @@ export class ApiService {
   readonly base = resolveLocalBase();
 
   private get headers(): HeadersInit {
-    return { 'Content-Type': 'application/json' };
+    const h: Record<string, string> = { 'Content-Type': 'application/json' };
+    const code = localStorage.getItem('terminal_code');
+    if (code) h['X-Terminal-Code'] = code;
+    return h;
   }
 
   async request<T>(method: string, path: string, body?: unknown): Promise<T> {

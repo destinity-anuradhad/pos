@@ -8,15 +8,17 @@ tables_bp = Blueprint('tables', __name__)
 
 def table_to_dict(t):
     return {
-        'id':          t.id,
-        'name':        t.name,
-        'capacity':    t.capacity,
-        'status_id':   t.status_id,
-        'status':      t.table_status.code  if t.table_status else 'available',
-        'status_label': t.table_status.label if t.table_status else 'Available',
-        'status_color': t.table_status.color if t.table_status else '#22c55e',
-        'updated_at':  t.updated_at.isoformat() if t.updated_at else None,
-        'synced_at':   t.synced_at.isoformat()  if t.synced_at  else None,
+        'id':                   t.id,
+        'name':                 t.name,
+        'capacity':             t.capacity,
+        'status_id':            t.status_id,
+        'status':               t.table_status.code  if t.table_status else 'available',
+        'status_label':         t.table_status.label if t.table_status else 'Available',
+        'status_color':         t.table_status.color if t.table_status else '#22c55e',
+        'sync_status':          t.sync_status or 'pending',
+        'modified_by_terminal': t.modified_by_terminal,
+        'updated_at':           t.updated_at.isoformat() if t.updated_at else None,
+        'synced_at':            t.synced_at.isoformat()  if t.synced_at  else None,
     }
 
 
@@ -58,12 +60,16 @@ def create_table():
     db = db_session()
     try:
         data = request.get_json()
+        terminal_code = request.headers.get('X-Terminal-Code') or data.get('terminal_code')
+        incoming_sync = data.get('sync_status')
         # Default to 'available' status
         status = db.query(TableStatus).filter(TableStatus.code == 'available').first()
         t = RestaurantTable(
-            name=data['name'],
-            capacity=data.get('capacity', 4),
-            status_id=data.get('status_id', status.id if status else None),
+            name                 = data['name'],
+            capacity             = data.get('capacity', 4),
+            status_id            = data.get('status_id', status.id if status else None),
+            sync_status          = incoming_sync if incoming_sync else 'pending',
+            modified_by_terminal = terminal_code,
         )
         db.add(t)
         db.commit()
@@ -83,8 +89,14 @@ def update_table(table_id):
         if not t:
             return jsonify({'error': 'Table not found'}), 404
         data = request.get_json()
+        terminal_code = request.headers.get('X-Terminal-Code') or data.get('terminal_code')
         if 'name'     in data: t.name     = data['name']
         if 'capacity' in data: t.capacity = data['capacity']
+        if data.get('sync_status'):
+            t.sync_status = data['sync_status']
+        else:
+            t.sync_status = 'pending'
+            t.modified_by_terminal = terminal_code
         db.commit()
         db.refresh(t)
         d = table_to_dict(t)
