@@ -35,9 +35,7 @@ export class Products implements OnInit {
              (window as any).Capacitor?.isNativePlatform?.();
 
   get categories(): string[] {
-    const base  = ['Main Course','Salads','Starters','Desserts','Beverages'];
-    const extra = [...new Set(this.products.map(p => p.category))];
-    return [...new Set([...base, ...extra])];
+    return [...new Set(this.products.map(p => p.category).filter(Boolean))];
   }
 
   constructor(

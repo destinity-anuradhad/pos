@@ -24,6 +24,8 @@ code {
   width: 100%; max-width: 480px;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border);
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .modal-header {
@@ -44,12 +46,19 @@ code {
   &:hover { background: var(--bg); color: var(--text); }
 }
 
-.modal-body { padding: 20px 24px; }
+.modal-body {
+  padding: 20px 24px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+  min-width: 0;
+  .form-group { min-width: 0; }
+  .form-control { width: 100%; box-sizing: border-box; }
 }
 
 .modal-footer {
