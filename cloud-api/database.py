@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 Base = declarative_base()
@@ -18,9 +18,26 @@ def get_db():
     return _SessionLocal()
 
 
+def _migrate_db():
+    """Add new columns to existing tables (PostgreSQL supports ADD COLUMN IF NOT EXISTS)."""
+    migrations = [
+        "ALTER TABLE products    ADD COLUMN IF NOT EXISTS modified_by_terminal VARCHAR(100)",
+        "ALTER TABLE categories  ADD COLUMN IF NOT EXISTS modified_by_terminal VARCHAR(100)",
+        "ALTER TABLE tables      ADD COLUMN IF NOT EXISTS modified_by_terminal VARCHAR(100)",
+    ]
+    with _engine.connect() as conn:
+        for sql in migrations:
+            try:
+                conn.execute(text(sql))
+            except Exception:
+                pass  # column may not exist yet if table itself doesn't exist
+        conn.commit()
+
+
 def init_db():
     import models.models  # noqa: F401 — ensures models are registered with Base
     Base.metadata.create_all(bind=_engine)
+    _migrate_db()
     _seed_if_empty()
 
 
