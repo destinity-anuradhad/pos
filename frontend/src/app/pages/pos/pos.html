@@ -22,6 +22,7 @@
         <div class="table-icon">🪑</div>
         <div class="table-name">{{ t.name }}</div>
         <div class="table-cap">Cap: {{ t.capacity }}</div>
+        <div class="table-section" *ngIf="t.section">{{ t.section }}</div>
         <div class="table-status-label" [style.color]="t.status_color">{{ t.status_label }}</div>
 
         <!-- Manual transition buttons -->
@@ -120,9 +121,13 @@
             <input class="form-control" type="text" placeholder="Search..." [(ngModel)]="searchTerm" (input)="filterProducts()" />
           </div>
           <div class="categories-bar">
+            <button class="cat-btn" [class.active]="selectedCategoryId === null"
+                    (click)="filterCategory(null)">All</button>
             <button class="cat-btn" *ngFor="let c of categories"
-                    [class.active]="selectedCategory === c"
-                    (click)="filterCategory(c)">{{ c }}</button>
+                    [class.active]="selectedCategoryId === c.id"
+                    (click)="filterCategory(c.id)">
+              {{ c.icon ? c.icon + ' ' : '' }}{{ c.name }}
+            </button>
           </div>
           <div class="products-grid">
             <div class="product-tile" *ngFor="let p of filteredProducts"
@@ -131,10 +136,10 @@
               <div class="product-emoji">🍽️</div>
               <div class="product-tile-name">{{ p.name }}</div>
               <div class="product-tile-price">{{ currency }} {{ getPrice(p) | number:'1.2-2' }}</div>
-              <div class="stock-tag" *ngIf="p.stock_quantity !== -1 && p.stock_quantity !== undefined"
+              <div class="stock-tag" *ngIf="p.track_stock"
                    [class.stock-low]="p.stock_quantity > 0 && p.stock_quantity <= 5"
-                   [class.stock-out]="p.stock_quantity === 0">
-                {{ p.stock_quantity === 0 ? 'Out of Stock' : p.stock_quantity + ' left' }}
+                   [class.stock-out]="p.stock_quantity <= 0">
+                {{ p.stock_quantity <= 0 ? 'Out of Stock' : p.stock_quantity + ' left' }}
               </div>
             </div>
           </div>
@@ -165,6 +170,14 @@
           </div>
         </div>
         <div class="cart-footer" *ngIf="cart.length > 0">
+          <div class="cart-subtotal" *ngIf="getTaxAmount() > 0">
+            <span>Subtotal</span>
+            <span>{{ currency }} {{ getSubtotal() | number:'1.2-2' }}</span>
+          </div>
+          <div class="cart-tax" *ngIf="getTaxAmount() > 0">
+            <span>VAT</span>
+            <span>{{ currency }} {{ getTaxAmount() | number:'1.2-2' }}</span>
+          </div>
           <div class="cart-total">
             <span>Total</span>
             <strong>{{ currency }} {{ getTotal() | number:'1.2-2' }}</strong>
@@ -183,7 +196,6 @@
     <div class="invoice-wrap">
       <div class="invoice card">
 
-        <!-- Success banner -->
         <div class="invoice-success">
           <div class="invoice-check">✓</div>
           <div>
@@ -192,11 +204,14 @@
           </div>
         </div>
 
-        <!-- Meta -->
         <div class="invoice-meta">
           <div class="invoice-meta-item">
             <span class="inv-label">Order Ref</span>
             <span class="inv-value">{{ lastOrderRef || '#' + lastOrderId }}</span>
+          </div>
+          <div class="invoice-meta-item" *ngIf="lastOrder?.tax_invoice_no">
+            <span class="inv-label">Invoice No</span>
+            <span class="inv-value">{{ lastOrder!.tax_invoice_no }}</span>
           </div>
           <div class="invoice-meta-item">
             <span class="inv-label">Date</span>
@@ -216,7 +231,6 @@
           </div>
         </div>
 
-        <!-- Items -->
         <div class="invoice-items">
           <div class="invoice-row invoice-row--head">
             <span class="col-name">Item</span>
@@ -232,24 +246,36 @@
           </div>
         </div>
 
-        <!-- Total -->
         <div class="invoice-totals">
-          <div class="inv-subtotal-row">
-            <span>{{ cart.length }} item{{ cart.length !== 1 ? 's' : '' }}</span>
+          <div class="inv-total-row" *ngIf="getTaxAmount() > 0">
+            <span>Subtotal</span>
+            <span>{{ currency }} {{ getSubtotal() | number:'1.2-2' }}</span>
+          </div>
+          <div class="inv-total-row" *ngIf="getTaxAmount() > 0">
+            <span>VAT</span>
+            <span>{{ currency }} {{ getTaxAmount() | number:'1.2-2' }}</span>
           </div>
           <div class="inv-grand-total">
             <span>Total ({{ currency }})</span>
             <strong>{{ getTotal() | number:'1.2-2' }}</strong>
           </div>
+          <ng-container *ngIf="lastOrder">
+            <div class="inv-total-row inv-paid" *ngIf="lastOrder.paid_amount > 0">
+              <span>Paid</span>
+              <span>{{ currency }} {{ lastOrder.paid_amount | number:'1.2-2' }}</span>
+            </div>
+            <div class="inv-total-row inv-change" *ngIf="lastOrder.change_amount > 0">
+              <span>Change</span>
+              <span>{{ currency }} {{ lastOrder.change_amount | number:'1.2-2' }}</span>
+            </div>
+          </ng-container>
         </div>
 
-        <!-- Footer -->
         <div class="invoice-footer">
           <span class="inv-brand">Destinity Inspire POS</span>
           <span class="inv-thanks">Thank you for your business!</span>
         </div>
 
-        <!-- Actions -->
         <div class="invoice-actions">
           <button class="btn btn-outline" *ngIf="!isMobile" onclick="window.print()">🖨️ Print</button>
           <button class="btn btn-secondary inv-new-btn" (click)="newOrder()">+ New Order</button>
@@ -286,6 +312,49 @@
     </div>
   </div>
 
+  <!-- ── Cash Tendered Modal ───────────────────────────────────── -->
+  <div appModal class="pay-overlay" *ngIf="paymentModal === 'cash'" (click)="closePaymentModal()">
+    <div class="pay-modal pay-modal--cash" (click)="$event.stopPropagation()">
+      <div class="pay-modal-header">
+        <h3>Cash Payment</h3>
+        <button class="pay-close" (click)="closePaymentModal()">✕</button>
+      </div>
+      <div class="pay-total-row">
+        <span>Total to pay</span>
+        <strong>{{ currency }} {{ getTotal() | number:'1.2-2' }}</strong>
+      </div>
+      <div class="cash-form">
+        <div class="form-group">
+          <label class="form-label">Cash Tendered</label>
+          <input class="form-control form-control-lg" type="number" step="0.01" min="0"
+                 [(ngModel)]="cashTendered"
+                 (ngModelChange)="updateCashChange()"
+                 autofocus />
+        </div>
+        <div class="cash-change-row" [class.change-positive]="cashChange > 0">
+          <span>Change</span>
+          <strong>{{ currency }} {{ cashChange | number:'1.2-2' }}</strong>
+        </div>
+        <!-- Quick cash buttons -->
+        <div class="quick-cash-btns">
+          <button class="quick-cash-btn" *ngFor="let amt of [500, 1000, 2000, 5000]"
+                  (click)="cashTendered = amt; updateCashChange()">
+            {{ amt }}
+          </button>
+          <button class="quick-cash-btn" (click)="cashTendered = getTotal(); updateCashChange()">
+            Exact
+          </button>
+        </div>
+      </div>
+      <div class="pay-modal-footer">
+        <button class="btn btn-outline" (click)="closePaymentModal()">Cancel</button>
+        <button class="btn btn-secondary" (click)="confirmCash()" [disabled]="cashTendered < getTotal() || checkingOut">
+          {{ checkingOut ? 'Processing...' : 'Confirm Payment' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Card Details Modal ────────────────────────────────────── -->
   <div appModal class="pay-overlay" *ngIf="paymentModal === 'card'" (click)="closePaymentModal()">
     <div class="pay-modal pay-modal--card" (click)="$event.stopPropagation()">
@@ -300,9 +369,7 @@
 
       <div class="card-preview">
         <div class="card-preview-chip">▮▮</div>
-        <div class="card-preview-number">
-          {{ card.number || '•••• •••• •••• ••••' }}
-        </div>
+        <div class="card-preview-number">{{ card.number || '•••• •••• •••• ••••' }}</div>
         <div class="card-preview-footer">
           <div>
             <div class="card-preview-label">Card Holder</div>
@@ -318,34 +385,26 @@
       <div class="card-form">
         <div class="form-group">
           <label class="form-label">Cardholder Name</label>
-          <input class="form-control" type="text" placeholder="Full name on card"
-                 [(ngModel)]="card.name" />
+          <input class="form-control" type="text" placeholder="Full name on card" [(ngModel)]="card.name" />
         </div>
         <div class="form-group">
           <label class="form-label">Card Number</label>
-          <input class="form-control" type="text" placeholder="1234 5678 9012 3456"
-                 maxlength="19"
-                 [value]="card.number"
-                 (input)="formatCardNumber($event)" />
+          <input class="form-control" type="text" placeholder="1234 5678 9012 3456" maxlength="19"
+                 [value]="card.number" (input)="formatCardNumber($event)" />
         </div>
         <div class="card-form-row">
           <div class="form-group">
             <label class="form-label">Expiry Date</label>
-            <input class="form-control" type="text" placeholder="MM/YY"
-                   maxlength="5"
-                   [value]="card.expiry"
-                   (input)="formatExpiry($event)" />
+            <input class="form-control" type="text" placeholder="MM/YY" maxlength="5"
+                   [value]="card.expiry" (input)="formatExpiry($event)" />
           </div>
           <div class="form-group">
             <label class="form-label">CVV</label>
-            <input class="form-control" type="password" placeholder="•••"
-                   maxlength="4"
-                   [(ngModel)]="card.cvv" />
+            <input class="form-control" type="password" placeholder="•••" maxlength="4" [(ngModel)]="card.cvv" />
           </div>
         </div>
         <div class="card-error" *ngIf="cardError">⚠ {{ cardError }}</div>
-        <button class="btn btn-secondary card-pay-btn"
-                (click)="submitCard()" [disabled]="checkingOut">
+        <button class="btn btn-secondary card-pay-btn" (click)="submitCard()" [disabled]="checkingOut">
           {{ checkingOut ? 'Processing...' : 'Pay ' + currency + ' ' + (getTotal() | number:'1.2-2') }}
         </button>
       </div>

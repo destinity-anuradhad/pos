@@ -16,9 +16,9 @@
         <thead>
           <tr>
             <th>Name</th>
+            <th>Username</th>
             <th>Role</th>
             <th>Status</th>
-            <th>Created</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -26,10 +26,12 @@
           <tr *ngFor="let s of staffList">
             <td data-label="Name">
               <div class="staff-name-cell">
-                <div class="avatar-sm" [style.background]="ROLE_COLORS[s.role]">{{ s.name.charAt(0) }}</div>
-                {{ s.name }}
+                <div class="avatar-sm" [style.background]="ROLE_COLORS[s.role]">{{ s.display_name.charAt(0) }}</div>
+                {{ s.display_name }}
+                <span class="badge badge-danger ms-1" *ngIf="isLocked(s)" title="Account locked">🔒</span>
               </div>
             </td>
+            <td data-label="Username"><code>{{ s.username }}</code></td>
             <td data-label="Role">
               <span class="role-badge" [style.background]="ROLE_COLORS[s.role] + '22'" [style.color]="ROLE_COLORS[s.role]">
                 {{ ROLE_LABELS[s.role] }}
@@ -38,7 +40,6 @@
             <td data-label="Status">
               <span class="status-badge" [class.active]="s.is_active">{{ s.is_active ? 'Active' : 'Inactive' }}</span>
             </td>
-            <td data-label="Created">{{ s.created_at | date:'mediumDate' }}</td>
             <td data-label="Actions" class="td-actions">
               <button class="btn btn-sm btn-outline" (click)="openEdit(s)">Edit</button>
               <button class="btn btn-sm btn-danger" *ngIf="s.is_active" (click)="deactivate(s)">Deactivate</button>
@@ -59,8 +60,12 @@
       </div>
       <div class="modal-body">
         <div class="form-group mb-3">
-          <label class="form-label">Name</label>
-          <input class="form-control" [(ngModel)]="form.name" placeholder="e.g. Kasun" maxlength="100" />
+          <label class="form-label">Display Name</label>
+          <input class="form-control" [(ngModel)]="form.display_name" placeholder="e.g. Kasun Perera" maxlength="200" />
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label">Username <span class="form-hint">(used to log in)</span></label>
+          <input class="form-control" [(ngModel)]="form.username" placeholder="e.g. kasun" maxlength="100" autocomplete="off" />
         </div>
         <div class="form-group mb-3">
           <label class="form-label">Role</label>
@@ -68,16 +73,35 @@
             <option *ngFor="let r of ROLES" [value]="r">{{ ROLE_LABELS[r] }}</option>
           </select>
         </div>
-        <div class="form-group mb-3">
-          <label class="form-label">PIN {{ editingId ? '(leave blank to keep current)' : '' }}</label>
-          <input class="form-control" [(ngModel)]="form.pin" type="password" inputmode="numeric"
-                 maxlength="8" placeholder="4-8 digits" />
-        </div>
-        <div class="form-group mb-3" *ngIf="form.pin">
-          <label class="form-label">Confirm PIN</label>
-          <input class="form-control" [(ngModel)]="form.confirmPin" type="password" inputmode="numeric"
-                 maxlength="8" placeholder="Re-enter PIN" />
-        </div>
+
+        <!-- Cashier: PIN -->
+        <ng-container *ngIf="isCashierForm">
+          <div class="form-group mb-3">
+            <label class="form-label">PIN {{ editingId ? '(leave blank to keep current)' : '' }}</label>
+            <input class="form-control" [(ngModel)]="form.pin" type="password" inputmode="numeric"
+                   maxlength="8" placeholder="4-8 digits" autocomplete="new-password" />
+          </div>
+          <div class="form-group mb-3" *ngIf="form.pin">
+            <label class="form-label">Confirm PIN</label>
+            <input class="form-control" [(ngModel)]="form.confirmCredential" type="password" inputmode="numeric"
+                   maxlength="8" placeholder="Re-enter PIN" />
+          </div>
+        </ng-container>
+
+        <!-- Manager/Admin: password -->
+        <ng-container *ngIf="!isCashierForm">
+          <div class="form-group mb-3">
+            <label class="form-label">Password {{ editingId ? '(leave blank to keep current)' : '' }}</label>
+            <input class="form-control" [(ngModel)]="form.password" type="password"
+                   minlength="6" placeholder="Min. 6 characters" autocomplete="new-password" />
+          </div>
+          <div class="form-group mb-3" *ngIf="form.password">
+            <label class="form-label">Confirm Password</label>
+            <input class="form-control" [(ngModel)]="form.confirmCredential" type="password"
+                   placeholder="Re-enter password" />
+          </div>
+        </ng-container>
+
         <div class="alert alert-danger" *ngIf="formError">{{ formError }}</div>
       </div>
       <div class="modal-footer">

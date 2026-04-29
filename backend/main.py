@@ -35,13 +35,16 @@ app.register_blueprint(table_statuses_bp, url_prefix='/api/table-statuses')
 app.register_blueprint(auth_bp,           url_prefix='/api/auth')
 app.register_blueprint(staff_bp,          url_prefix='/api/staff')
 
+
 @app.get('/')
 def root():
-    return jsonify({'message': 'Destinity Inspire POS API', 'version': '2.0.0'})
+    return jsonify({'message': 'Destinity Inspire POS — Local API', 'version': '2.0.0'})
+
 
 @app.get('/health')
 def health():
     return jsonify({'status': 'ok'})
+
 
 if __name__ == '__main__':
     debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'

@@ -20,9 +20,9 @@
       <div class="staff-grid" *ngIf="!loadingStaff">
         <button class="staff-card" *ngFor="let s of staffList" (click)="selectStaff(s)">
           <div class="staff-avatar" [style.background]="getRoleColor(s.role)">
-            {{ s.name.charAt(0).toUpperCase() }}
+            {{ s.display_name.charAt(0).toUpperCase() }}
           </div>
-          <span class="staff-name">{{ s.name }}</span>
+          <span class="staff-name">{{ s.display_name }}</span>
           <span class="staff-role">{{ getRoleLabel(s.role) }}</span>
         </button>
 
@@ -38,33 +38,36 @@
 
       <div class="pin-header">
         <div class="staff-avatar lg" [style.background]="getRoleColor(selectedStaff?.role || '')">
-          {{ selectedStaff?.name?.charAt(0)?.toUpperCase() }}
+          {{ selectedStaff?.display_name?.charAt(0)?.toUpperCase() }}
         </div>
-        <h2>{{ selectedStaff?.name }}</h2>
+        <h2>{{ selectedStaff?.display_name }}</h2>
         <span class="staff-role-badge">{{ getRoleLabel(selectedStaff?.role || '') }}</span>
       </div>
 
-      <p class="login-hint">Enter your PIN</p>
+      <!-- Cashier: PIN numpad -->
+      <ng-container *ngIf="isCashier">
+        <p class="login-hint">Enter your PIN</p>
+        <div class="pin-dots">
+          <div class="pin-dot" *ngFor="let filled of pinDots" [class.filled]="filled"></div>
+        </div>
+        <div class="error-msg" *ngIf="error">{{ error }}</div>
+        <div class="numpad">
+          <button class="num-btn" *ngFor="let d of ['1','2','3','4','5','6','7','8','9']" (click)="pressDigit(d)">{{ d }}</button>
+          <button class="num-btn empty" disabled></button>
+          <button class="num-btn" (click)="pressDigit('0')">0</button>
+          <button class="num-btn del-btn" (click)="pressBack()">&#x232B;</button>
+        </div>
+        <button class="btn btn-secondary login-btn" [disabled]="pin.length < 4" (click)="submit()">Unlock</button>
+      </ng-container>
 
-      <!-- PIN dots -->
-      <div class="pin-dots">
-        <div class="pin-dot" *ngFor="let filled of pinDots" [class.filled]="filled"></div>
-      </div>
-
-      <!-- Error -->
-      <div class="error-msg" *ngIf="error">{{ error }}</div>
-
-      <!-- Numpad -->
-      <div class="numpad">
-        <button class="num-btn" *ngFor="let d of ['1','2','3','4','5','6','7','8','9']" (click)="pressDigit(d)">{{ d }}</button>
-        <button class="num-btn empty" disabled></button>
-        <button class="num-btn" (click)="pressDigit('0')">0</button>
-        <button class="num-btn del-btn" (click)="pressBack()">&#x232B;</button>
-      </div>
-
-      <button class="btn btn-secondary login-btn" [disabled]="pin.length < 4" (click)="submit()">
-        Unlock
-      </button>
+      <!-- Manager / Admin: password input -->
+      <ng-container *ngIf="!isCashier">
+        <p class="login-hint">Enter your password</p>
+        <div class="error-msg" *ngIf="error">{{ error }}</div>
+        <input class="password-input" type="password" [(ngModel)]="password"
+               placeholder="Password" (keyup.enter)="submit()" autofocus />
+        <button class="btn btn-secondary login-btn" [disabled]="password.length < 1" (click)="submit()">Unlock</button>
+      </ng-container>
     </div>
 
     <!-- Phase: loading -->

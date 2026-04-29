@@ -1,56 +1,57 @@
 import os
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from models.models import Base, Outlet, InvoiceCounter
 
-Base = declarative_base()
+DATABASE_URL = os.environ.get(
+    'DATABASE_URL',
+    'sqlite:///./cloud.db'  # fallback for local dev without Postgres
+)
 
-DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///cloud.db')
-# Railway uses postgres:// prefix but SQLAlchemy needs postgresql://
+# Postgres SSL fix
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
 
-_connect_args = {'check_same_thread': False} if 'sqlite' in DATABASE_URL else {}
-_engine = create_engine(DATABASE_URL, connect_args=_connect_args)
-_SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
+_is_sqlite = DATABASE_URL.startswith('sqlite')
+_engine_kwargs: dict = {'pool_pre_ping': True}
+if _is_sqlite:
+    _engine_kwargs['connect_args'] = {'check_same_thread': False}
+    _engine_kwargs['implicit_returning'] = False  # BigInteger PK compat on SQLite
+else:
+    _engine_kwargs['pool_size'] = 5
+    _engine_kwargs['max_overflow'] = 10
+
+engine = create_engine(DATABASE_URL, **_engine_kwargs)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def get_db():
-    return _SessionLocal()
-
-
-def _migrate_db():
-    """Add new columns to existing tables (PostgreSQL supports ADD COLUMN IF NOT EXISTS)."""
-    migrations = [
-        "ALTER TABLE products    ADD COLUMN IF NOT EXISTS modified_by_terminal VARCHAR(100)",
-        "ALTER TABLE categories  ADD COLUMN IF NOT EXISTS modified_by_terminal VARCHAR(100)",
-        "ALTER TABLE tables      ADD COLUMN IF NOT EXISTS modified_by_terminal VARCHAR(100)",
-    ]
-    with _engine.connect() as conn:
-        for sql in migrations:
-            try:
-                conn.execute(text(sql))
-            except Exception:
-                pass  # column may not exist yet if table itself doesn't exist
-        conn.commit()
+    return SessionLocal()
 
 
 def init_db():
-    import models.models  # noqa: F401 — ensures models are registered with Base
-    Base.metadata.create_all(bind=_engine)
-    _migrate_db()
+    Base.metadata.create_all(bind=engine)
     _seed_if_empty()
 
 
 def _seed_if_empty():
-    db = get_db()
+    db = SessionLocal()
     try:
-        from models.models import Outlet
-        # Only create the default outlet — products/categories/tables come from
-        # the admin reset-and-seed endpoint or are pushed up from terminals.
         if db.query(Outlet).count() == 0:
-            db.add(Outlet(name='Main Outlet', code='MAIN-01', address=''))
+            default_outlet = Outlet(
+                uuid='00000000-0000-0000-0000-000000000001',
+                code='MAIN-01',
+                name='Main Outlet',
+                timezone='Asia/Colombo',
+                currency='LKR',
+                vat_rate=18.00,
+                invoice_prefix='MAIN',
+            )
+            db.add(default_outlet)
             db.commit()
     except Exception:
         db.rollback()
+        raise
     finally:
         db.close()

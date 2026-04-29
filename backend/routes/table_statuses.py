@@ -1,164 +1,211 @@
+"""Table status and transition routes."""
+import uuid
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
-from utils import db_session
+
 from models.models import TableStatus, TableStatusTransition
+from utils import db_session
+from auth_utils import require_auth
 
 table_statuses_bp = Blueprint('table_statuses', __name__)
 
 
-def status_to_dict(s, include_transitions=False):
+def _now_iso():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _status_dict(s: TableStatus, transitions=None) -> dict:
     d = {
-        'id':         s.id,
-        'code':       s.code,
-        'label':      s.label,
-        'color':      s.color,
+        'id': s.id,
+        'code': s.code,
+        'label': s.label,
+        'color': s.color,
         'sort_order': s.sort_order,
-        'is_system':  s.is_system,
-        'is_active':  s.is_active,
+        'is_system': s.is_system,
+        'is_active': s.is_active,
     }
-    if include_transitions:
-        d['transitions_from'] = [
-            {
-                'to_status_id':    tr.to_status_id,
-                'to_status_code':  tr.to_status.code,
-                'to_status_label': tr.to_status.label,
-                'trigger_type':    tr.trigger_type,
-                'trigger_event':   tr.trigger_event,
-            }
-            for tr in s.transitions_from
-        ]
+    if transitions is not None:
+        d['transitions'] = transitions
     return d
 
 
-@table_statuses_bp.get('/')
-def get_statuses():
+def _transition_dict(t: TableStatusTransition) -> dict:
+    return {
+        'id': t.id,
+        'from_status_id': t.from_status_id,
+        'to_status_id': t.to_status_id,
+        'trigger_type': t.trigger_type,
+        'trigger_event': t.trigger_event,
+    }
+
+
+@table_statuses_bp.route('/', methods=['GET'])
+def list_statuses():
     db = db_session()
     try:
-        statuses = (db.query(TableStatus)
-                    .filter(TableStatus.is_active == True)
-                    .order_by(TableStatus.sort_order)
-                    .all())
-        return jsonify([status_to_dict(s, include_transitions=True) for s in statuses])
+        statuses = (
+            db.query(TableStatus)
+            .order_by(TableStatus.sort_order)
+            .all()
+        )
+        # Load all transitions indexed by from_status_id
+        all_transitions = db.query(TableStatusTransition).all()
+        trans_map: dict = {}
+        for tr in all_transitions:
+            trans_map.setdefault(tr.from_status_id, []).append(_transition_dict(tr))
+
+        result = [_status_dict(s, trans_map.get(s.id, [])) for s in statuses]
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()
 
 
-@table_statuses_bp.post('/')
+@table_statuses_bp.route('/', methods=['POST'])
+@require_auth(roles=['manager', 'admin'])
 def create_status():
-    """Admin: add a custom status (e.g. Reserved)."""
+    data = request.get_json(silent=True) or {}
+    code = (data.get('code') or '').strip()
+    label = (data.get('label') or '').strip()
+    if not code:
+        return jsonify({'error': 'code is required'}), 400
+    if not label:
+        return jsonify({'error': 'label is required'}), 400
+
     db = db_session()
     try:
-        data = request.get_json()
-        code = data.get('code', '').strip().lower().replace(' ', '_')
-        if not code:
-            return jsonify({'error': 'code is required'}), 400
-
         existing = db.query(TableStatus).filter(TableStatus.code == code).first()
         if existing:
-            return jsonify({'error': f'Status code "{code}" already exists'}), 409
+            return jsonify({'error': 'Status code already exists'}), 409
 
-        max_order = db.query(TableStatus).count()
         s = TableStatus(
-            code       = code,
-            label      = data.get('label', code.title()),
-            color      = data.get('color', '#64748b'),
-            sort_order = data.get('sort_order', max_order + 1),
-            is_system  = False,
-            is_active  = True,
+            code=code,
+            label=label,
+            color=data.get('color'),
+            sort_order=data.get('sort_order', 0),
+            is_system=False,
+            is_active=True,
         )
         db.add(s)
         db.commit()
         db.refresh(s)
-        return jsonify(status_to_dict(s)), 201
+        return jsonify(_status_dict(s)), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()
 
 
-@table_statuses_bp.put('/<int:status_id>')
-def update_status(status_id):
+@table_statuses_bp.route('/<int:id>', methods=['PUT'])
+@require_auth(roles=['manager', 'admin'])
+def update_status(id):
+    data = request.get_json(silent=True) or {}
     db = db_session()
     try:
-        s = db.query(TableStatus).filter(TableStatus.id == status_id).first()
+        s = db.query(TableStatus).filter(TableStatus.id == id).first()
         if not s:
             return jsonify({'error': 'Status not found'}), 404
-        data = request.get_json()
-        if 'label'      in data: s.label      = data['label']
-        if 'color'      in data: s.color      = data['color']
-        if 'sort_order' in data: s.sort_order = data['sort_order']
+
+        if 'label' in data:
+            s.label = data['label']
+        if 'color' in data:
+            s.color = data['color']
+        if 'sort_order' in data:
+            s.sort_order = data['sort_order']
+        # is_system statuses cannot have is_active or code changed
+        if not s.is_system and 'is_active' in data:
+            s.is_active = bool(data['is_active'])
+
         db.commit()
         db.refresh(s)
-        return jsonify(status_to_dict(s))
+        return jsonify(_status_dict(s)), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()
 
 
-@table_statuses_bp.delete('/<int:status_id>')
-def delete_status(status_id):
+@table_statuses_bp.route('/<int:id>', methods=['DELETE'])
+@require_auth(roles=['manager', 'admin'])
+def delete_status(id):
     db = db_session()
     try:
-        s = db.query(TableStatus).filter(TableStatus.id == status_id).first()
+        s = db.query(TableStatus).filter(TableStatus.id == id).first()
         if not s:
             return jsonify({'error': 'Status not found'}), 404
         if s.is_system:
-            return jsonify({'error': 'System statuses cannot be deleted'}), 403
-        s.is_active = False
+            return jsonify({'error': 'Cannot delete system status'}), 409
+
+        db.delete(s)
         db.commit()
-        return jsonify({'message': 'Status deactivated'})
+        return jsonify({'message': 'Status deleted'}), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()
 
 
-# ── Transitions ───────────────────────────────────────────────────────────────
-
-@table_statuses_bp.get('/transitions')
-def get_transitions():
+@table_statuses_bp.route('/<int:id>/transitions', methods=['GET'])
+def get_transitions(id):
     db = db_session()
     try:
-        transitions = db.query(TableStatusTransition).all()
-        return jsonify([
-            {
-                'id':              tr.id,
-                'from_status_id':  tr.from_status_id,
-                'from_status_code': tr.from_status.code,
-                'to_status_id':    tr.to_status_id,
-                'to_status_code':  tr.to_status.code,
-                'trigger_type':    tr.trigger_type,
-                'trigger_event':   tr.trigger_event,
-            }
-            for tr in transitions
-        ])
+        s = db.query(TableStatus).filter(TableStatus.id == id).first()
+        if not s:
+            return jsonify({'error': 'Status not found'}), 404
+
+        transitions = (
+            db.query(TableStatusTransition)
+            .filter(TableStatusTransition.from_status_id == id)
+            .all()
+        )
+        return jsonify([_transition_dict(t) for t in transitions]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()
 
 
-@table_statuses_bp.post('/transitions')
-def add_transition():
-    """Admin: add a new allowed transition."""
+@table_statuses_bp.route('/transitions', methods=['POST'])
+@require_auth(roles=['manager', 'admin'])
+def create_transition():
+    data = request.get_json(silent=True) or {}
+    from_status_id = data.get('from_status_id')
+    to_status_id = data.get('to_status_id')
+    trigger_type = data.get('trigger_type')
+
+    if from_status_id is None:
+        return jsonify({'error': 'from_status_id is required'}), 400
+    if to_status_id is None:
+        return jsonify({'error': 'to_status_id is required'}), 400
+    if not trigger_type:
+        return jsonify({'error': 'trigger_type is required'}), 400
+
     db = db_session()
     try:
-        data = request.get_json()
+        # Validate referenced statuses exist
+        from_s = db.query(TableStatus).filter(TableStatus.id == from_status_id).first()
+        to_s = db.query(TableStatus).filter(TableStatus.id == to_status_id).first()
+        if not from_s:
+            return jsonify({'error': 'from_status not found'}), 400
+        if not to_s:
+            return jsonify({'error': 'to_status not found'}), 400
+
         tr = TableStatusTransition(
-            from_status_id = data['from_status_id'],
-            to_status_id   = data['to_status_id'],
-            trigger_type   = data.get('trigger_type', 'manual'),
-            trigger_event  = data.get('trigger_event', 'staff_action'),
+            from_status_id=from_status_id,
+            to_status_id=to_status_id,
+            trigger_type=trigger_type,
+            trigger_event=data.get('trigger_event'),
         )
         db.add(tr)
         db.commit()
         db.refresh(tr)
-        return jsonify({'id': tr.id, 'message': 'Transition added'}), 201
-    finally:
-        db.close()
-
-
-@table_statuses_bp.delete('/transitions/<int:transition_id>')
-def delete_transition(transition_id):
-    db = db_session()
-    try:
-        tr = db.query(TableStatusTransition).filter(TableStatusTransition.id == transition_id).first()
-        if not tr:
-            return jsonify({'error': 'Transition not found'}), 404
-        db.delete(tr)
-        db.commit()
-        return jsonify({'message': 'Transition removed'})
+        return jsonify(_transition_dict(tr)), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()

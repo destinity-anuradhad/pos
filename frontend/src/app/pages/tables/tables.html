@@ -19,9 +19,11 @@
           <div class="table-name">{{ t.name }}</div>
           <div class="table-meta">
             <span class="capacity-badge">👥 {{ t.capacity }}</span>
-            <span class="status-pill" [style.background]="t.status_color + '22'" [style.color]="t.status_color">
-              {{ t.status | titlecase }}
+            <span class="section-badge" *ngIf="t.section">{{ t.section }}</span>
+            <span class="status-pill" [style.background]="(t.status_color || '#6b7280') + '22'" [style.color]="t.status_color || '#6b7280'">
+              {{ t.status_label || 'Unknown' }}
             </span>
+            <span class="inactive-badge" *ngIf="!t.is_active">Inactive</span>
           </div>
         </div>
         <div class="table-actions">
@@ -51,8 +53,17 @@
           <input class="form-control" [(ngModel)]="form.name" placeholder="e.g. Table 1, VIP Room, Bar Counter" maxlength="100" />
         </div>
         <div class="form-group">
+          <label class="form-label">Section <span class="form-hint">(optional, e.g. Indoor, Terrace)</span></label>
+          <input class="form-control" [(ngModel)]="form.section" placeholder="e.g. Indoor" maxlength="50" />
+        </div>
+        <div class="form-group">
           <label class="form-label">Capacity (seats)</label>
           <input class="form-control" type="number" [(ngModel)]="form.capacity" min="1" max="100" />
+        </div>
+        <div class="form-group">
+          <label class="form-check">
+            <input type="checkbox" [(ngModel)]="form.is_active" /> Active (visible in POS)
+          </label>
         </div>
         <div class="alert alert-danger" *ngIf="formError">{{ formError }}</div>
       </div>

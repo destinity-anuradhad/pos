@@ -17,9 +17,9 @@
     <div class="lock-staff-grid">
       <button class="staff-card" *ngFor="let s of staffList" (click)="selectStaff(s)">
         <div class="staff-avatar" [style.background]="getRoleColor(s.role)">
-          {{ s.name.charAt(0).toUpperCase() }}
+          {{ s.display_name.charAt(0).toUpperCase() }}
         </div>
-        <span class="staff-name">{{ s.name }}</span>
+        <span class="staff-name">{{ s.display_name }}</span>
         <span class="staff-role">{{ getRoleLabel(s.role) }}</span>
       </button>
     </div>
@@ -31,25 +31,40 @@
 
     <div class="pin-header">
       <div class="staff-avatar lg" [style.background]="getRoleColor(selectedStaff?.role || '')">
-        {{ selectedStaff?.name?.charAt(0)?.toUpperCase() }}
+        {{ selectedStaff?.display_name?.charAt(0)?.toUpperCase() }}
       </div>
-      <h2>{{ selectedStaff?.name }}</h2>
+      <h2>{{ selectedStaff?.display_name }}</h2>
     </div>
 
-    <p class="lock-sub">Enter PIN to unlock</p>
+    <!-- Cashier: PIN numpad -->
+    <ng-container *ngIf="isCashier">
+      <p class="lock-sub">Enter PIN to unlock</p>
+      <div class="pin-dots" [class.shake]="shaking">
+        <div class="pin-dot" *ngFor="let filled of pinDots" [class.filled]="filled"></div>
+      </div>
+      <div class="error-msg" *ngIf="error">{{ error }}</div>
+      <div class="numpad">
+        <button class="num-btn" *ngFor="let d of ['1','2','3','4','5','6','7','8','9']" (click)="pressDigit(d)">{{ d }}</button>
+        <button class="num-btn empty" disabled></button>
+        <button class="num-btn" (click)="pressDigit('0')">0</button>
+        <button class="num-btn del-btn" (click)="pressBack()">&#x232B;</button>
+      </div>
+    </ng-container>
 
-    <div class="pin-dots" [class.shake]="shaking">
-      <div class="pin-dot" *ngFor="let filled of pinDots" [class.filled]="filled"></div>
-    </div>
-
-    <div class="error-msg" *ngIf="error">{{ error }}</div>
-
-    <div class="numpad">
-      <button class="num-btn" *ngFor="let d of ['1','2','3','4','5','6','7','8','9']" (click)="pressDigit(d)">{{ d }}</button>
-      <button class="num-btn empty" disabled></button>
-      <button class="num-btn" (click)="pressDigit('0')">0</button>
-      <button class="num-btn del-btn" (click)="pressBack()">&#x232B;</button>
-    </div>
+    <!-- Manager / Admin: password field -->
+    <ng-container *ngIf="!isCashier">
+      <p class="lock-sub">Enter password to unlock</p>
+      <div class="error-msg" *ngIf="error">{{ error }}</div>
+      <input
+        class="password-input"
+        type="password"
+        [(ngModel)]="password"
+        placeholder="Password"
+        (keydown.enter)="submitPassword()"
+        autofocus
+      />
+      <button class="unlock-btn" (click)="submitPassword()" [disabled]="!password">Unlock</button>
+    </ng-container>
   </div>
 
 </div>

@@ -1,4 +1,7 @@
+import hashlib
+import uuid as uuid_lib
 from datetime import datetime, timezone
+
 from flask import Blueprint, request, jsonify
 from database import get_db
 from models.models import Terminal, Outlet
@@ -9,115 +12,148 @@ terminals_bp = Blueprint('terminals', __name__)
 def _terminal_to_dict(t):
     return {
         'id': t.id,
+        'uuid': str(t.uuid),
         'outlet_id': t.outlet_id,
-        'outlet_code': t.outlet.code if t.outlet else None,
-        'outlet_name': t.outlet.name if t.outlet else None,
         'terminal_code': t.terminal_code,
         'terminal_name': t.terminal_name,
-        'uuid': t.uuid,
+        'device_uuid': str(t.device_uuid) if t.device_uuid else None,
+        'platform': t.platform,
+        'last_seen_at': t.last_seen_at.isoformat() if t.last_seen_at else None,
         'last_sync_at': t.last_sync_at.isoformat() if t.last_sync_at else None,
         'is_active': t.is_active,
-        'created_at': t.created_at.isoformat() if t.created_at else None,
+        'registered_at': t.registered_at.isoformat() if t.registered_at else None,
     }
 
 
-@terminals_bp.get('/')
+@terminals_bp.route('/', methods=['GET'])
 def list_terminals():
     db = get_db()
     try:
-        active_only = request.args.get('active_only', 'false').lower() == 'true'
+        outlet_id = request.args.get('outlet_id', type=int)
         q = db.query(Terminal)
-        if active_only:
-            q = q.filter(Terminal.is_active == True)  # noqa: E712
+        if outlet_id:
+            q = q.filter(Terminal.outlet_id == outlet_id)
         terminals = q.order_by(Terminal.terminal_code).all()
-        return jsonify([_terminal_to_dict(t) for t in terminals]), 200
+        return jsonify([_terminal_to_dict(t) for t in terminals])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()
 
 
-@terminals_bp.post('/register')
+@terminals_bp.route('/register', methods=['POST'])
 def register_terminal():
-    """
-    Register a new terminal. Idempotent — if terminal_code already exists,
-    returns the existing record.
-
-    Payload:
-    {
-      "terminal_code": "T-001",
-      "terminal_name": "Counter 1",
-      "outlet_code": "MAIN-01",
-      "uuid": "550e8400-e29b-41d4-a716-446655440000"
-    }
-    """
-    data = request.get_json(silent=True) or {}
-    terminal_code = data.get('terminal_code', '').strip()
-    if not terminal_code:
-        return jsonify({'error': 'terminal_code is required'}), 400
-
     db = get_db()
     try:
-        # Idempotent — return existing if already registered
-        existing = db.query(Terminal).filter(
-            Terminal.terminal_code == terminal_code
-        ).first()
-        if existing:
-            return jsonify(_terminal_to_dict(existing)), 200
+        data = request.get_json(silent=True) or {}
 
-        # Resolve outlet by outlet_code
-        outlet_id = None
-        outlet_code = data.get('outlet_code', '').strip()
-        if outlet_code:
-            outlet = db.query(Outlet).filter(Outlet.code == outlet_code).first()
-            if outlet:
-                outlet_id = outlet.id
+        outlet_id = data.get('outlet_id')
+        terminal_code = (data.get('terminal_code') or '').strip()
+        terminal_name = (data.get('terminal_name') or '').strip()
+        device_uuid = (data.get('device_uuid') or '').strip() or str(uuid_lib.uuid4())
+        platform = data.get('platform', 'web')
+        api_key_plain = data.get('api_key')
 
+        if not outlet_id:
+            return jsonify({'error': 'outlet_id is required'}), 400
+        if not terminal_code:
+            return jsonify({'error': 'terminal_code is required'}), 400
+
+        outlet = db.query(Outlet).filter(Outlet.id == outlet_id).first()
+        if not outlet:
+            return jsonify({'error': 'Outlet not found'}), 404
+
+        # If no api_key supplied, generate one
+        if not api_key_plain:
+            api_key_plain = str(uuid_lib.uuid4())
+
+        api_key_hash = hashlib.sha256(api_key_plain.encode()).hexdigest()
+
+        now = datetime.now(timezone.utc)
         terminal = Terminal(
-            terminal_code=terminal_code,
-            terminal_name=data.get('terminal_name', ''),
+            uuid=str(uuid_lib.uuid4()),
             outlet_id=outlet_id,
-            uuid=data.get('uuid'),
+            terminal_code=terminal_code,
+            terminal_name=terminal_name,
+            device_uuid=device_uuid,
+            platform=platform,
+            api_key_hash=api_key_hash,
             is_active=True,
+            registered_at=now,
+            updated_at=now,
         )
         db.add(terminal)
         db.commit()
         db.refresh(terminal)
-        return jsonify(_terminal_to_dict(terminal)), 201
+        return jsonify({
+            'terminal': _terminal_to_dict(terminal),
+            'api_key': api_key_plain,
+        }), 201
     except Exception as e:
         db.rollback()
-        return jsonify({'error': 'Internal server error'}), 500
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()
 
 
-@terminals_bp.get('/<int:terminal_id>')
-def get_terminal(terminal_id):
+@terminals_bp.route('/<int:id>', methods=['GET'])
+def get_terminal(id):
     db = get_db()
     try:
-        terminal = db.query(Terminal).filter(Terminal.id == terminal_id).first()
+        terminal = db.query(Terminal).filter(Terminal.id == id).first()
         if not terminal:
             return jsonify({'error': 'Terminal not found'}), 404
-        return jsonify(_terminal_to_dict(terminal)), 200
+        return jsonify(_terminal_to_dict(terminal))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()
 
 
-@terminals_bp.patch('/<int:terminal_id>/heartbeat')
-def heartbeat(terminal_id):
-    """Update last_sync_at to now."""
+@terminals_bp.route('/<int:id>', methods=['PUT'])
+def update_terminal(id):
     db = get_db()
     try:
-        terminal = db.query(Terminal).filter(Terminal.id == terminal_id).first()
+        terminal = db.query(Terminal).filter(Terminal.id == id).first()
         if not terminal:
             return jsonify({'error': 'Terminal not found'}), 404
-        terminal.last_sync_at = datetime.now(timezone.utc)
+
+        data = request.get_json(silent=True) or {}
+        if 'terminal_name' in data:
+            terminal.terminal_name = data['terminal_name']
+        if 'is_active' in data:
+            terminal.is_active = bool(data['is_active'])
+
+        terminal.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(terminal)
+        return jsonify(_terminal_to_dict(terminal))
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+@terminals_bp.route('/<int:id>/heartbeat', methods=['POST'])
+def heartbeat(id):
+    db = get_db()
+    try:
+        terminal = db.query(Terminal).filter(Terminal.id == id).first()
+        if not terminal:
+            return jsonify({'error': 'Terminal not found'}), 404
+
+        now = datetime.now(timezone.utc)
+        terminal.last_seen_at = now
+        terminal.updated_at = now
         db.commit()
         return jsonify({
             'id': terminal.id,
             'terminal_code': terminal.terminal_code,
-            'last_sync_at': terminal.last_sync_at.isoformat(),
-        }), 200
+            'last_seen_at': terminal.last_seen_at.isoformat(),
+        })
     except Exception as e:
         db.rollback()
-        return jsonify({'error': 'Internal server error'}), 500
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()

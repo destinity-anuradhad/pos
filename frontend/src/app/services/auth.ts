@@ -13,7 +13,9 @@ export interface StaffSession {
 // Staff info for the login screen (no sensitive data)
 export interface StaffInfo {
   id: number;
-  name: string;
+  uuid: string;
+  username: string;
+  display_name: string;
   role: string;
 }
 
@@ -60,18 +62,20 @@ export class AuthService {
     }
   }
 
-  /** Login with staff_id + PIN. Returns true on success. */
-  async login(staffId: number, pin: string): Promise<{ success: boolean; error?: string }> {
+  /** Login with username + PIN (cashier) or username + password (manager/admin). */
+  async login(username: string, credential: string, isPassword = false): Promise<{ success: boolean; error?: string }> {
     try {
       const apiUrl = this._getApiUrl();
+      const body: any = { username };
+      if (isPassword) body.password = credential; else body.pin = credential;
       const res = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ staff_id: staffId, pin }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) return { success: false, error: data.error || 'Login failed' };
-      this._setSession(data.token, data.name, data.role);
+      this._setSession(data.token, data.staff?.display_name ?? '', data.staff?.role ?? '');
       return { success: true };
     } catch {
       return { success: false, error: 'Cannot reach server. Make sure the backend is running.' };
@@ -79,8 +83,8 @@ export class AuthService {
   }
 
   /** Re-verify PIN (used by lock screen to unlock) */
-  async verifyPin(staffId: number, pin: string): Promise<boolean> {
-    const result = await this.login(staffId, pin);
+  async verifyPin(username: string, pin: string): Promise<boolean> {
+    const result = await this.login(username, pin, false);
     return result.success;
   }
 

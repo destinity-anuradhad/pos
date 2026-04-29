@@ -7,7 +7,6 @@
     </div>
   </div>
 
-  <!-- Error -->
   <div class="offline-notice" *ngIf="error">⚠️ {{ error }}</div>
 
   <app-loading [loading]="loading" message="Loading orders..."></app-loading>
@@ -29,20 +28,22 @@
       <thead>
         <tr>
           <th>Order #</th>
-          <th>Table / Source</th>
-          <th>Items</th>
+          <th>Ref</th>
+          <th>Table</th>
           <th>Total</th>
+          <th>Paid</th>
           <th>Status</th>
-          <th>Storage</th>
+          <th>Sync</th>
           <th>Time</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let o of filteredOrders">
           <td data-label="Order #"><strong>#{{ o.id }}</strong></td>
-          <td data-label="Table">{{ o.table_name }}</td>
-          <td data-label="Items">{{ o.item_count }}</td>
+          <td data-label="Ref"><code *ngIf="o.terminal_order_ref">{{ o.terminal_order_ref }}</code></td>
+          <td data-label="Table">{{ o.table_name || '—' }}</td>
           <td data-label="Total">{{ o.currency }} {{ o.total_amount | number:'1.2-2' }}</td>
+          <td data-label="Paid">{{ o.currency }} {{ o.paid_amount | number:'1.2-2' }}</td>
           <td data-label="Status">
             <span class="badge"
               [class.badge-success]="o.status === 'completed'"
@@ -51,23 +52,12 @@
               {{ o.status }}
             </span>
           </td>
-          <td data-label="Storage">
-            <span class="storage-badge storage-badge--cloud" *ngIf="o.hq_order_id"
-                  [title]="'Cloud ID: #' + o.hq_order_id">
-              ☁ Cloud
-            </span>
-            <span class="storage-badge storage-badge--sent" *ngIf="!o.hq_order_id && o.sync_status === 'synced'"
-                  title="Sent to cloud — awaiting cloud ID">
-              ✓ Sent
-            </span>
-            <span class="storage-badge storage-badge--syncing" *ngIf="!o.hq_order_id && o.sync_status === 'syncing'">
-              ⟳ Syncing
-            </span>
-            <span class="storage-badge storage-badge--local" *ngIf="!o.hq_order_id && o.sync_status !== 'synced' && o.sync_status !== 'syncing'">
-              💾 Local
-            </span>
+          <td data-label="Sync">
+            <span class="storage-badge storage-badge--sent" *ngIf="o.sync_status === 'synced'">✓ Synced</span>
+            <span class="storage-badge storage-badge--syncing" *ngIf="o.sync_status === 'syncing'">⟳ Syncing</span>
+            <span class="storage-badge storage-badge--local" *ngIf="o.sync_status !== 'synced' && o.sync_status !== 'syncing'">💾 Local</span>
           </td>
-          <td data-label="Time" class="date-cell">{{ timeAgo(o.created_at) }}</td>
+          <td data-label="Time" class="date-cell">{{ timeAgo(o.order_created_at || '') }}</td>
         </tr>
       </tbody>
     </table>

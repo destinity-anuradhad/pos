@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Destinity Inspire POS — Database Schema</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      line-height: 1.6;
+    }
+
+    /* ── Layout ── */
+    .layout { display: flex; min-height: 100vh; }
+
+    nav {
+      width: 260px;
+      flex-shrink: 0;
+      background: #1e293b;
+      border-right: 1px solid #334155;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 24px 0;
+    }
+
+    nav h2 {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: #64748b;
+      padding: 0 20px 8px;
+    }
+
+    nav .db-group { margin-bottom: 24px; }
+
+    nav a {
+      display: block;
+      padding: 6px 20px;
+      font-size: 13px;
+      color: #94a3b8;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    nav a:hover { color: #e2e8f0; background: #0f172a; }
+    nav a.active { color: #38bdf8; border-left-color: #38bdf8; background: #0f172a; }
+
+    nav .nav-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 9999px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .badge-local  { background: #1d4ed8; color: #bfdbfe; }
+    .badge-cloud  { background: #7e22ce; color: #e9d5ff; }
+    .badge-both   { background: #065f46; color: #a7f3d0; }
+
+    main { flex: 1; padding: 40px 48px; max-width: 1100px; }
+
+    /* ── Header ── */
+    .page-header { margin-bottom: 48px; }
+    .page-header h1 { font-size: 28px; font-weight: 700; color: #f1f5f9; }
+    .page-header p  { color: #94a3b8; margin-top: 6px; font-size: 15px; }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex; gap: 16px; flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: #94a3b8;
+    }
+    .legend-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+
+    /* ── Section headings ── */
+    .db-section-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 32px;
+      margin-top: 56px;
+    }
+    .db-section-title:first-child { margin-top: 0; }
+    .local-section  { background: #1e3a8a22; color: #60a5fa; border: 1px solid #1e3a8a; }
+    .cloud-section  { background: #581c8722; color: #c084fc; border: 1px solid #581c87; }
+    .diff-section   { background: #14532d22; color: #4ade80; border: 1px solid #14532d; }
+
+    /* ── Table card ── */
+    .table-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      margin-bottom: 32px;
+      overflow: hidden;
+    }
+
+    .table-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid #334155;
+      background: #162032;
+    }
+
+    .table-card-header h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f1f5f9;
+      font-family: "SF Mono", "Fira Code", monospace;
+    }
+
+    .table-card-header .tags { display: flex; gap: 8px; }
+
+    .tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .tag-local  { background: #1d4ed8; color: #bfdbfe; }
+    .tag-cloud  { background: #7e22ce; color: #e9d5ff; }
+    .tag-both   { background: #065f46; color: #a7f3d0; }
+
+    .table-note {
+      padding: 10px 20px;
+      font-size: 13px;
+      color: #94a3b8;
+      background: #0f172a;
+      border-bottom: 1px solid #334155;
+    }
+    .table-note strong { color: #fbbf24; }
+
+    /* ── Schema table ── */
+    .schema-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+    .schema-table thead tr {
+      background: #0f172a;
+    }
+    .schema-table th {
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #64748b;
+      border-bottom: 1px solid #334155;
+    }
+
+    .schema-table tbody tr { border-bottom: 1px solid #1e293b; }
+    .schema-table tbody tr:hover { background: #0f172a55; }
+    .schema-table tbody tr:last-child { border-bottom: none; }
+
+    .schema-table td { padding: 10px 16px; vertical-align: top; }
+
+    .col-name {
+      font-family: "SF Mono", "Fira Code", monospace;
+      color: #e2e8f0;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .col-pk  { color: #fbbf24; }
+    .col-fk  { color: #34d399; }
+
+    .col-type {
+      font-family: "SF Mono", "Fira Code", monospace;
+      color: #818cf8;
+      white-space: nowrap;
+    }
+
+    .pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .pill-yes  { background: #14532d; color: #4ade80; }
+    .pill-no   { background: #450a0a; color: #fca5a5; }
+
+    .col-notes { color: #94a3b8; font-size: 12px; }
+    .col-notes code {
+      font-family: "SF Mono", "Fira Code", monospace;
+      background: #0f172a;
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: #93c5fd;
+      font-size: 11px;
+    }
+
+    /* ── Relationships ── */
+    .rels {
+      padding: 12px 20px;
+      border-top: 1px solid #334155;
+      font-size: 12px;
+      color: #64748b;
+      background: #0f172a44;
+    }
+    .rels strong { color: #94a3b8; }
+    .rels span {
+      display: inline-block;
+      margin-right: 16px;
+      font-family: "SF Mono", "Fira Code", monospace;
+      color: #34d399;
+    }
+
+    /* ── Diff table ── */
+    .diff-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 32px; }
+    .diff-table th {
+      background: #0f172a;
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #64748b;
+      border-bottom: 1px solid #334155;
+    }
+    .diff-table td { padding: 10px 16px; border-bottom: 1px solid #1e293b; vertical-align: top; }
+    .diff-table tr:last-child td { border-bottom: none; }
+    .diff-table tr:hover td { background: #1e293b44; }
+    .diff-table .aspect { color: #94a3b8; font-weight: 600; }
+    .diff-table .local-val  { color: #60a5fa; font-size: 12px; font-family: "SF Mono","Fira Code",monospace; }
+    .diff-table .cloud-val  { color: #c084fc; font-size: 12px; font-family: "SF Mono","Fira Code",monospace; }
+
+    .diff-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+    .diff-card-header {
+      padding: 14px 20px;
+      background: #162032;
+      border-bottom: 1px solid #334155;
+      font-size: 14px;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+
+    /* ── Validation box ── */
+    .val-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    .val-box {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+    .val-box h4 {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 10px;
+    }
+    .val-box ul { list-style: none; }
+    .val-box li {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid #334155;
+      font-size: 13px;
+    }
+    .val-box li:last-child { border-bottom: none; }
+    .val-key { color: #94a3b8; font-family: "SF Mono","Fira Code",monospace; font-size: 12px; }
+    .val-value { color: #fbbf24; font-family: "SF Mono","Fira Code",monospace; font-size: 12px; }
+
+    /* ── Seeds box ── */
+    .seeds {
+      padding: 12px 20px;
+      border-top: 1px solid #334155;
+      font-size: 12px;
+      color: #64748b;
+      background: #0f172a44;
+    }
+    .seeds strong { color: #fbbf24; display: block; margin-bottom: 6px; }
+    .seed-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 3px 6px 3px 0;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      padding: 3px 10px;
+      font-family: "SF Mono","Fira Code",monospace;
+      font-size: 11px;
+      color: #e2e8f0;
+    }
+    .seed-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Transitions ── */
+    .transition-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; }
+    .tr-from { color: #60a5fa; font-family: monospace; }
+    .tr-arrow { color: #475569; }
+    .tr-to   { color: #4ade80; font-family: monospace; }
+    .tr-type {
+      font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 600;
+    }
+    .tr-manual { background: #1e3a8a; color: #93c5fd; }
+    .tr-auto   { background: #14532d; color: #86efac; }
+
+    hr.section-rule { border: none; border-top: 1px solid #334155; margin: 40px 0; }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ── Sidebar nav ── -->
+  <nav>
+    <div class="db-group">
+      <h2>Local — SQLite</h2>
+      <a href="#terminals-local">terminals <span class="nav-badge badge-both">both</span></a>
+      <a href="#staff">staff</a>
+      <a href="#settings">settings</a>
+      <a href="#sync_settings">sync_settings</a>
+      <a href="#sync_log-local">sync_log</a>
+      <a href="#table_statuses">table_statuses</a>
+      <a href="#table_status_transitions">table_status_transitions</a>
+      <a href="#categories-local">categories <span class="nav-badge badge-both">both</span></a>
+      <a href="#products-local">products <span class="nav-badge badge-both">both</span></a>
+      <a href="#tables-local">tables <span class="nav-badge badge-both">both</span></a>
+      <a href="#orders-local">orders <span class="nav-badge badge-both">both</span></a>
+      <a href="#order_items-local">order_items <span class="nav-badge badge-both">both</span></a>
+    </div>
+    <div class="db-group">
+      <h2>Cloud — PostgreSQL</h2>
+      <a href="#outlets">outlets</a>
+      <a href="#terminals-cloud">terminals <span class="nav-badge badge-both">both</span></a>
+      <a href="#categories-cloud">categories <span class="nav-badge badge-both">both</span></a>
+      <a href="#products-cloud">products <span class="nav-badge badge-both">both</span></a>
+      <a href="#tables-cloud">tables <span class="nav-badge badge-both">both</span></a>
+      <a href="#orders-cloud">orders <span class="nav-badge badge-both">both</span></a>
+      <a href="#order_items-cloud">order_items <span class="nav-badge badge-both">both</span></a>
+      <a href="#sync_logs-cloud">sync_logs</a>
+    </div>
+    <div class="db-group">
+      <h2>Reference</h2>
+      <a href="#differences">Schema Differences</a>
+      <a href="#validation">Validation Constants</a>
+    </div>
+  </nav>
+
+  <!-- ── Main content ── -->
+  <main>
+    <div class="page-header">
+      <h1>Database Schema</h1>
+      <p>Destinity Inspire POS &mdash; Local SQLite (12 tables) &amp; Cloud PostgreSQL (8 tables)</p>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Local only (SQLite)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#a855f7"></div> Cloud only (PostgreSQL)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Present in both (different structure)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div> Primary key</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#34d399"></div> Foreign key</div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+         LOCAL SQLite
+    ════════════════════════════════════════════ -->
+    <div class="db-section-title local-section">Local Database &mdash; SQLite &nbsp;·&nbsp; backend/models/models.py</div>
+
+    <!-- terminals (local) -->
+    <div class="table-card" id="terminals-local">
+      <div class="table-card-header">
+        <h3>terminals</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name">uuid</td><td class="col-type">String(100)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE INDEX — device UUID</td></tr>
+          <tr><td class="col-name">terminal_code</td><td class="col-type">String(100)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — user-defined, e.g. <code>COL-M-01</code></td></tr>
+          <tr><td class="col-name">terminal_name</td><td class="col-type">String(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">platform</td><td class="col-type">String(50)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Values: <code>web</code> <code>windows</code> <code>android</code> <code>ios</code> <code>macos</code></td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">Boolean</td><td><span class="pill pill-no">NO</span></td><td>True</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">registered_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">last_seen_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">registered_by</td><td class="col-type">String(200)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ orders (1:many)</span><span>→ sync_log (1:many)</span></div>
+    </div>
+
+    <!-- staff -->
+    <div class="table-card" id="staff">
+      <div class="table-card-header">
+        <h3>staff</h3>
+        <div class="tags"><span class="tag tag-local">local only</span></div>
+      </div>
+      <div class="table-note"><strong>Seeded:</strong> Default admin account with PIN <code>1234</code> created on first run.</div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">String(100)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name">role</td><td class="col-type">String(20)</td><td><span class="pill pill-no">NO</span></td><td>cashier</td><td class="col-notes">Values: <code>cashier</code> <code>manager</code> <code>admin</code></td></tr>
+          <tr><td class="col-name">pin_hash</td><td class="col-type">String(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">bcrypt hash of numeric PIN</td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">Boolean</td><td><span class="pill pill-no">NO</span></td><td>True</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">ON UPDATE now()</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- settings -->
+    <div class="table-card" id="settings">
+      <div class="table-card-header">
+        <h3>settings</h3>
+        <div class="tags"><span class="tag tag-local">local only</span></div>
+      </div>
+      <div class="table-note">Key-value store for app configuration. One row per setting key. JWT secret is stored here.</div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name">key</td><td class="col-type">String(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name">value</td><td class="col-type">Text</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">ON UPDATE now()</td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- sync_settings -->
+    <div class="table-card" id="sync_settings">
+      <div class="table-card-header">
+        <h3>sync_settings</h3>
+        <div class="tags"><span class="tag tag-local">local only</span></div>
+      </div>
+      <div class="table-note">Single-row config table (seeded on startup).</div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name">sync_interval_minutes</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>10</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">auto_sync_enabled</td><td class="col-type">Boolean</td><td><span class="pill pill-no">NO</span></td><td>True</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">last_master_sync_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Updated after each master pull</td></tr>
+          <tr><td class="col-name">last_transaction_sync_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Updated after each transaction push</td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">ON UPDATE now()</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- sync_log (local) -->
+    <div class="table-card" id="sync_log-local">
+      <div class="table-card-header">
+        <h3>sync_log</h3>
+        <div class="tags"><span class="tag tag-local">local only</span></div>
+      </div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-fk">terminal_id</td><td class="col-type">Integer</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → terminals.id</td></tr>
+          <tr><td class="col-name">sync_type</td><td class="col-type">String(50)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Values: <code>master</code> <code>transactions</code></td></tr>
+          <tr><td class="col-name">direction</td><td class="col-type">String(20)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Values: <code>pull</code> <code>push</code></td></tr>
+          <tr><td class="col-name">status</td><td class="col-type">String(20)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Values: <code>success</code> <code>failed</code></td></tr>
+          <tr><td class="col-name">records_affected</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">error_message</td><td class="col-type">Text</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ terminals (many:1)</span></div>
+    </div>
+
+    <!-- table_statuses -->
+    <div class="table-card" id="table_statuses">
+      <div class="table-card-header">
+        <h3>table_statuses</h3>
+        <div class="tags"><span class="tag tag-local">local only</span></div>
+      </div>
+      <div class="table-note"><strong>Seeded system statuses:</strong> available, reserved, seated, ordered, billed, cleaning</div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name">code</td><td class="col-type">String(50)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — e.g. <code>available</code>, <code>seated</code></td></tr>
+          <tr><td class="col-name">label</td><td class="col-type">String(100)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Display name</td></tr>
+          <tr><td class="col-name">color</td><td class="col-type">String(20)</td><td><span class="pill pill-no">NO</span></td><td>#64748b</td><td class="col-notes">Hex color for UI</td></tr>
+          <tr><td class="col-name">sort_order</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Display ordering</td></tr>
+          <tr><td class="col-name">is_system</td><td class="col-type">Boolean</td><td><span class="pill pill-no">NO</span></td><td>False</td><td class="col-notes">System statuses cannot be deleted</td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">Boolean</td><td><span class="pill pill-no">NO</span></td><td>True</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">ON UPDATE now()</td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="seeds">
+        <strong>Seeded statuses</strong>
+        <div>
+          <span class="seed-item"><span class="seed-dot" style="background:#22c55e"></span>available</span>
+          <span class="seed-item"><span class="seed-dot" style="background:#06b6d4"></span>reserved</span>
+          <span class="seed-item"><span class="seed-dot" style="background:#3b82f6"></span>seated</span>
+          <span class="seed-item"><span class="seed-dot" style="background:#f59e0b"></span>ordered</span>
+          <span class="seed-item"><span class="seed-dot" style="background:#ef4444"></span>billed</span>
+          <span class="seed-item"><span class="seed-dot" style="background:#a855f7"></span>cleaning</span>
+        </div>
+      </div>
+      <div class="rels"><strong>Relations:</strong> <span>→ tables (1:many via status_id)</span><span>→ table_status_transitions (from + to, 1:many)</span></div>
+    </div>
+
+    <!-- table_status_transitions -->
+    <div class="table-card" id="table_status_transitions">
+      <div class="table-card-header">
+        <h3>table_status_transitions</h3>
+        <div class="tags"><span class="tag tag-local">local only</span></div>
+      </div>
+      <div class="table-note">Configures which state changes are allowed and how they are triggered.</div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-fk">from_status_id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → table_statuses.id</td></tr>
+          <tr><td class="col-name col-fk">to_status_id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → table_statuses.id</td></tr>
+          <tr><td class="col-name">trigger_type</td><td class="col-type">String(20)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Values: <code>manual</code> <code>auto</code></td></tr>
+          <tr><td class="col-name">trigger_event</td><td class="col-type">String(100)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"><code>first_item_added</code> <code>checkout_clicked</code> <code>payment_confirmed</code> <code>staff_action</code></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">ON UPDATE now()</td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="seeds">
+        <strong>Seeded transitions</strong>
+        <div class="transition-row"><span class="tr-from">available</span><span class="tr-arrow">→</span><span class="tr-to">seated</span><span class="tr-type tr-manual">manual / staff_action</span></div>
+        <div class="transition-row"><span class="tr-from">available</span><span class="tr-arrow">→</span><span class="tr-to">reserved</span><span class="tr-type tr-manual">manual / staff_action</span></div>
+        <div class="transition-row"><span class="tr-from">reserved</span><span class="tr-arrow">→</span><span class="tr-to">seated</span><span class="tr-type tr-manual">manual / staff_action</span></div>
+        <div class="transition-row"><span class="tr-from">reserved</span><span class="tr-arrow">→</span><span class="tr-to">available</span><span class="tr-type tr-manual">manual / staff_action</span></div>
+        <div class="transition-row"><span class="tr-from">cleaning</span><span class="tr-arrow">→</span><span class="tr-to">available</span><span class="tr-type tr-manual">manual / staff_action</span></div>
+        <div class="transition-row"><span class="tr-from">seated</span><span class="tr-arrow">→</span><span class="tr-to">ordered</span><span class="tr-type tr-auto">auto / first_item_added</span></div>
+        <div class="transition-row"><span class="tr-from">ordered</span><span class="tr-arrow">→</span><span class="tr-to">billed</span><span class="tr-type tr-auto">auto / checkout_clicked</span></div>
+        <div class="transition-row"><span class="tr-from">billed</span><span class="tr-arrow">→</span><span class="tr-to">cleaning</span><span class="tr-type tr-auto">auto / payment_confirmed</span></div>
+      </div>
+    </div>
+
+    <!-- categories (local) -->
+    <div class="table-card" id="categories-local">
+      <div class="table-card-header">
+        <h3>categories</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">String(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Max 200 chars</td></tr>
+          <tr><td class="col-name">color</td><td class="col-type">String(20)</td><td><span class="pill pill-no">NO</span></td><td>#094f70</td><td class="col-notes">Hex color</td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">ON UPDATE now()</td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">sync_status</td><td class="col-type">String(20)</td><td><span class="pill pill-no">NO</span></td><td>pending</td><td class="col-notes">Values: <code>pending</code> <code>synced</code></td></tr>
+          <tr><td class="col-name">modified_by_terminal</td><td class="col-type">String(100)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">terminal_code of last modifier</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ products (1:many)</span></div>
+    </div>
+
+    <!-- products (local) -->
+    <div class="table-card" id="products-local">
+      <div class="table-card-header">
+        <h3>products</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">String(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">INDEX; Max 200 chars</td></tr>
+          <tr><td class="col-name col-fk">category_id</td><td class="col-type">Integer</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → categories.id</td></tr>
+          <tr><td class="col-name">price_lkr</td><td class="col-type">Float</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Range: 0 – 10,000,000</td></tr>
+          <tr><td class="col-name">price_usd</td><td class="col-type">Float</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Range: 0 – 10,000,000</td></tr>
+          <tr><td class="col-name">barcode</td><td class="col-type">String(100)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">INDEX; Max 100 chars</td></tr>
+          <tr><td class="col-name">image_url</td><td class="col-type">String(500)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Local only — not in cloud schema</td></tr>
+          <tr><td class="col-name">stock_quantity</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>-1</td><td class="col-notes"><code>-1</code> = unlimited; <code>0+</code> = tracked qty</td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">Boolean</td><td><span class="pill pill-no">NO</span></td><td>True</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">ON UPDATE now()</td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">sync_status</td><td class="col-type">String(20)</td><td><span class="pill pill-no">NO</span></td><td>pending</td><td class="col-notes">Values: <code>pending</code> <code>synced</code></td></tr>
+          <tr><td class="col-name">modified_by_terminal</td><td class="col-type">String(100)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ categories (many:1)</span></div>
+    </div>
+
+    <!-- tables (local) -->
+    <div class="table-card" id="tables-local">
+      <div class="table-card-header">
+        <h3>tables</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">String(100)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Range: 1–200 chars</td></tr>
+          <tr><td class="col-name">capacity</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>4</td><td class="col-notes">Range: 1–100</td></tr>
+          <tr><td class="col-name col-fk">status_id</td><td class="col-type">Integer</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → table_statuses.id — not in cloud</td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">ON UPDATE now()</td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">sync_status</td><td class="col-type">String(20)</td><td><span class="pill pill-no">NO</span></td><td>pending</td><td class="col-notes">Values: <code>pending</code> <code>synced</code></td></tr>
+          <tr><td class="col-name">modified_by_terminal</td><td class="col-type">String(100)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ table_statuses (many:1)</span><span>→ orders (1:many)</span></div>
+    </div>
+
+    <!-- orders (local) -->
+    <div class="table-card" id="orders-local">
+      <div class="table-card-header">
+        <h3>orders</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-fk">terminal_id</td><td class="col-type">Integer</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → terminals.id</td></tr>
+          <tr><td class="col-name">terminal_order_ref</td><td class="col-type">String(200)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">UNIQUE INDEX — e.g. <code>COL-M-01-0045</code></td></tr>
+          <tr><td class="col-name">hq_order_id</td><td class="col-type">Integer</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">INDEX — assigned by cloud on sync</td></tr>
+          <tr><td class="col-name col-fk">table_id</td><td class="col-type">Integer</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → tables.id</td></tr>
+          <tr><td class="col-name">currency</td><td class="col-type">String(10)</td><td><span class="pill pill-no">NO</span></td><td>LKR</td><td class="col-notes">Values: <code>LKR</code> <code>USD</code></td></tr>
+          <tr><td class="col-name">total_amount</td><td class="col-type">Float</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Range: 0 – 100,000,000</td></tr>
+          <tr><td class="col-name">status</td><td class="col-type">String(20)</td><td><span class="pill pill-no">NO</span></td><td>pending</td><td class="col-notes">INDEX; Values: <code>pending</code> <code>completed</code> <code>cancelled</code></td></tr>
+          <tr><td class="col-name">payment_method</td><td class="col-type">String(50)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Values: <code>cash</code> <code>card</code> <code>online</code></td></tr>
+          <tr><td class="col-name">sync_status</td><td class="col-type">String(20)</td><td><span class="pill pill-no">NO</span></td><td>pending</td><td class="col-notes">Values: <code>pending</code> <code>syncing</code> <code>synced</code> <code>failed</code></td></tr>
+          <tr><td class="col-name">receipt_sent</td><td class="col-type">Boolean</td><td><span class="pill pill-no">NO</span></td><td>False</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes">INDEX</td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">DateTime(tz)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ terminals (many:1)</span><span>→ tables (many:1)</span><span>→ order_items (1:many, cascade delete)</span></div>
+    </div>
+
+    <!-- order_items (local) -->
+    <div class="table-card" id="order_items-local">
+      <div class="table-card-header">
+        <h3>order_items</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note">product_name is stored as a snapshot so deleted products don't break history.</div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-fk">order_id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → orders.id (cascade delete)</td></tr>
+          <tr><td class="col-name col-fk">product_id</td><td class="col-type">Integer</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → products.id (nullable for deleted products)</td></tr>
+          <tr><td class="col-name">product_name</td><td class="col-type">String(200)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Snapshot at time of order</td></tr>
+          <tr><td class="col-name">quantity</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>1</td><td class="col-notes">Range: 1 – 10,000</td></tr>
+          <tr><td class="col-name">unit_price</td><td class="col-type">Float</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Range: ≥ 0</td></tr>
+          <tr><td class="col-name">subtotal</td><td class="col-type">Float</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Range: ≥ 0</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ orders (many:1)</span><span>→ products (many:1, nullable)</span></div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+         CLOUD PostgreSQL
+    ════════════════════════════════════════════ -->
+    <hr class="section-rule" />
+    <div class="db-section-title cloud-section">Cloud Database &mdash; PostgreSQL &nbsp;·&nbsp; cloud-api/models/models.py</div>
+
+    <!-- outlets -->
+    <div class="table-card" id="outlets">
+      <div class="table-card-header">
+        <h3>outlets</h3>
+        <div class="tags"><span class="tag tag-cloud">cloud only</span></div>
+      </div>
+      <div class="table-note"><strong>Seeded:</strong> Default outlet <code>Main Outlet</code> (code: <code>MAIN-01</code>) created on first run.</div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">String(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">E.g. <code>Main Outlet</code></td></tr>
+          <tr><td class="col-name">code</td><td class="col-type">String(50)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — e.g. <code>MAIN-01</code></td></tr>
+          <tr><td class="col-name">address</td><td class="col-type">Text</td><td><span class="pill pill-no">NO</span></td><td>""</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">Boolean</td><td><span class="pill pill-no">NO</span></td><td>True</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">DateTime(UTC)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ terminals (1:many)</span><span>→ orders (1:many)</span></div>
+    </div>
+
+    <!-- terminals (cloud) -->
+    <div class="table-card" id="terminals-cloud">
+      <div class="table-card-header">
+        <h3>terminals</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-fk">outlet_id</td><td class="col-type">Integer</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → outlets.id — cloud only</td></tr>
+          <tr><td class="col-name">terminal_code</td><td class="col-type">String(100)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name">terminal_name</td><td class="col-type">String(200)</td><td><span class="pill pill-no">NO</span></td><td>""</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">uuid</td><td class="col-type">String(100)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name">last_sync_at</td><td class="col-type">DateTime(UTC)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">Boolean</td><td><span class="pill pill-no">NO</span></td><td>True</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">DateTime(UTC)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ outlets (many:1)</span><span>→ orders (1:many)</span><span>→ sync_logs (1:many)</span></div>
+    </div>
+
+    <!-- categories (cloud) -->
+    <div class="table-card" id="categories-cloud">
+      <div class="table-card-header">
+        <h3>categories</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">String(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">color</td><td class="col-type">String(20)</td><td><span class="pill pill-no">NO</span></td><td>#6b7280</td><td class="col-notes">Different default than local (#094f70)</td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">Boolean</td><td><span class="pill pill-no">NO</span></td><td>True</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">modified_by_terminal</td><td class="col-type">String(100)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">DateTime(UTC)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">DateTime(UTC)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes">ON UPDATE now()</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ products (1:many)</span></div>
+    </div>
+
+    <!-- products (cloud) -->
+    <div class="table-card" id="products-cloud">
+      <div class="table-card-header">
+        <h3>products</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-fk">category_id</td><td class="col-type">Integer</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → categories.id</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">String(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">price_lkr</td><td class="col-type">Float</td><td><span class="pill pill-no">NO</span></td><td>0.0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">price_usd</td><td class="col-type">Float</td><td><span class="pill pill-no">NO</span></td><td>0.0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">barcode</td><td class="col-type">String(100)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">stock_quantity</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>-1</td><td class="col-notes"><code>-1</code> = unlimited; no <code>image_url</code> in cloud</td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">Boolean</td><td><span class="pill pill-no">NO</span></td><td>True</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">modified_by_terminal</td><td class="col-type">String(100)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">DateTime(UTC)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">DateTime(UTC)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes">ON UPDATE now()</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ categories (many:1)</span></div>
+    </div>
+
+    <!-- tables (cloud) -->
+    <div class="table-card" id="tables-cloud">
+      <div class="table-card-header">
+        <h3>tables</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note">No status tracking in cloud — table_statuses and transitions exist only locally.</div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">String(100)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">capacity</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>4</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">Boolean</td><td><span class="pill pill-no">NO</span></td><td>True</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">modified_by_terminal</td><td class="col-type">String(100)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">DateTime(UTC)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">DateTime(UTC)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes">ON UPDATE now()</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- orders (cloud) -->
+    <div class="table-card" id="orders-cloud">
+      <div class="table-card-header">
+        <h3>orders</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY — returned as hq_order_id to terminal</td></tr>
+          <tr><td class="col-name col-fk">terminal_id</td><td class="col-type">Integer</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → terminals.id</td></tr>
+          <tr><td class="col-name col-fk">outlet_id</td><td class="col-type">Integer</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → outlets.id — cloud only</td></tr>
+          <tr><td class="col-name">terminal_order_ref</td><td class="col-type">String(200)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">UNIQUE INDEX — prevents duplicate syncs</td></tr>
+          <tr><td class="col-name">table_name</td><td class="col-type">String(100)</td><td><span class="pill pill-no">NO</span></td><td>""</td><td class="col-notes">Denormalized snapshot (no FK to tables)</td></tr>
+          <tr><td class="col-name">currency</td><td class="col-type">String(10)</td><td><span class="pill pill-no">NO</span></td><td>LKR</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">total_amount</td><td class="col-type">Float</td><td><span class="pill pill-no">NO</span></td><td>0.0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">status</td><td class="col-type">String(50)</td><td><span class="pill pill-no">NO</span></td><td>completed</td><td class="col-notes">Values: <code>pending</code> <code>completed</code> <code>cancelled</code></td></tr>
+          <tr><td class="col-name">payment_method</td><td class="col-type">String(50)</td><td><span class="pill pill-no">NO</span></td><td>cash</td><td class="col-notes">Values: <code>cash</code> <code>card</code> <code>online</code></td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">DateTime(UTC)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes">When received from terminal</td></tr>
+          <tr><td class="col-name">order_created_at</td><td class="col-type">DateTime(UTC)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Original timestamp from terminal</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ terminals (many:1)</span><span>→ outlets (many:1)</span><span>→ order_items (1:many, cascade delete)</span></div>
+    </div>
+
+    <!-- order_items (cloud) -->
+    <div class="table-card" id="order_items-cloud">
+      <div class="table-card-header">
+        <h3>order_items</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note">product_id has <strong>no foreign key</strong> in cloud — product is treated as an immutable snapshot.</div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-fk">order_id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → orders.id (cascade delete)</td></tr>
+          <tr><td class="col-name">product_id</td><td class="col-type">Integer</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">No FK — snapshot only</td></tr>
+          <tr><td class="col-name">product_name</td><td class="col-type">String(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Required in cloud (optional in local)</td></tr>
+          <tr><td class="col-name">quantity</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>1</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">unit_price</td><td class="col-type">Float</td><td><span class="pill pill-no">NO</span></td><td>0.0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">subtotal</td><td class="col-type">Float</td><td><span class="pill pill-no">NO</span></td><td>0.0</td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- sync_logs (cloud) -->
+    <div class="table-card" id="sync_logs-cloud">
+      <div class="table-card-header">
+        <h3>sync_logs</h3>
+        <div class="tags"><span class="tag tag-cloud">cloud only</span></div>
+      </div>
+      <table class="schema-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-fk">terminal_id</td><td class="col-type">Integer</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → terminals.id</td></tr>
+          <tr><td class="col-name">terminal_code</td><td class="col-type">String(100)</td><td><span class="pill pill-no">NO</span></td><td>""</td><td class="col-notes">Denormalized for log readability</td></tr>
+          <tr><td class="col-name">sync_type</td><td class="col-type">String(20)</td><td><span class="pill pill-no">NO</span></td><td>orders</td><td class="col-notes">Values: <code>orders</code> <code>master</code></td></tr>
+          <tr><td class="col-name">direction</td><td class="col-type">String(10)</td><td><span class="pill pill-no">NO</span></td><td>push</td><td class="col-notes">Values: <code>push</code> <code>pull</code></td></tr>
+          <tr><td class="col-name">records_affected</td><td class="col-type">Integer</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">status</td><td class="col-type">String(20)</td><td><span class="pill pill-no">NO</span></td><td>success</td><td class="col-notes">Values: <code>success</code> <code>partial</code> <code>failed</code></td></tr>
+          <tr><td class="col-name">error_message</td><td class="col-type">Text</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">DateTime(UTC)</td><td><span class="pill pill-no">NO</span></td><td>now()</td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ terminals (many:1)</span></div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+         DIFFERENCES
+    ════════════════════════════════════════════ -->
+    <hr class="section-rule" />
+    <div class="db-section-title diff-section" id="differences">Schema Differences &mdash; Local vs Cloud</div>
+
+    <div class="diff-card">
+      <div class="diff-card-header">Tables present only in Local (SQLite)</div>
+      <table class="diff-table">
+        <thead><tr><th>Table</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td class="aspect">staff</td><td class="local-val">PIN-based staff authentication, role management</td></tr>
+          <tr><td class="aspect">settings</td><td class="local-val">Key-value config store; holds JWT secret</td></tr>
+          <tr><td class="aspect">sync_settings</td><td class="local-val">Sync interval config and last-sync timestamps</td></tr>
+          <tr><td class="aspect">table_statuses</td><td class="local-val">Configurable table state machine (available→seated→ordered…)</td></tr>
+          <tr><td class="aspect">table_status_transitions</td><td class="local-val">Allowed state changes with manual/auto trigger rules</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="diff-card">
+      <div class="diff-card-header">Tables present only in Cloud (PostgreSQL)</div>
+      <table class="diff-table">
+        <thead><tr><th>Table</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td class="aspect">outlets</td><td class="cloud-val">Multi-outlet grouping of terminals for aggregated reporting</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="diff-card">
+      <div class="diff-card-header">Column-level differences on shared tables</div>
+      <table class="diff-table">
+        <thead><tr><th>Table · Column</th><th>Local (SQLite)</th><th>Cloud (PostgreSQL)</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="aspect">products · image_url</td>
+            <td class="local-val">String(500), nullable</td>
+            <td class="cloud-val">— not present —</td>
+          </tr>
+          <tr>
+            <td class="aspect">tables · status_id</td>
+            <td class="local-val">FK → table_statuses.id</td>
+            <td class="cloud-val">— not present — (no status tracking)</td>
+          </tr>
+          <tr>
+            <td class="aspect">categories/products/tables · sync_status</td>
+            <td class="local-val">pending / synced (on each row)</td>
+            <td class="cloud-val">— not present — (cloud is source of truth)</td>
+          </tr>
+          <tr>
+            <td class="aspect">orders · hq_order_id</td>
+            <td class="local-val">Integer, nullable (set after sync)</td>
+            <td class="cloud-val">— not present — (cloud id IS the order id)</td>
+          </tr>
+          <tr>
+            <td class="aspect">orders · sync_status / receipt_sent</td>
+            <td class="local-val">Present</td>
+            <td class="cloud-val">— not present —</td>
+          </tr>
+          <tr>
+            <td class="aspect">orders · created_at</td>
+            <td class="local-val">created_at (when placed)</td>
+            <td class="cloud-val">order_created_at (original) + synced_at (when received)</td>
+          </tr>
+          <tr>
+            <td class="aspect">orders · table reference</td>
+            <td class="local-val">table_id (FK)</td>
+            <td class="cloud-val">table_name (denormalized string snapshot)</td>
+          </tr>
+          <tr>
+            <td class="aspect">orders · outlet_id</td>
+            <td class="local-val">— not present —</td>
+            <td class="cloud-val">FK → outlets.id</td>
+          </tr>
+          <tr>
+            <td class="aspect">order_items · product_name</td>
+            <td class="local-val">nullable snapshot</td>
+            <td class="cloud-val">NOT NULL — required in cloud</td>
+          </tr>
+          <tr>
+            <td class="aspect">order_items · product_id</td>
+            <td class="local-val">FK → products.id (nullable)</td>
+            <td class="cloud-val">Integer, nullable — no FK constraint</td></tr>
+          <tr>
+            <td class="aspect">terminals · outlet_id / platform / registered_by</td>
+            <td class="local-val">platform, registered_by, registered_at, last_seen_at</td>
+            <td class="cloud-val">outlet_id (FK), last_sync_at</td>
+          </tr>
+          <tr>
+            <td class="aspect">categories · default color</td>
+            <td class="local-val">#094f70</td>
+            <td class="cloud-val">#6b7280</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+         VALIDATION
+    ════════════════════════════════════════════ -->
+    <hr class="section-rule" />
+    <div class="db-section-title diff-section" id="validation">Validation Constants &mdash; backend/validation.py</div>
+
+    <div class="val-grid">
+      <div class="val-box">
+        <h4>Enum Values</h4>
+        <ul>
+          <li><span class="val-key">Order statuses</span><span class="val-value">pending, completed, cancelled</span></li>
+          <li><span class="val-key">Payment methods</span><span class="val-value">cash, card, online, ""</span></li>
+          <li><span class="val-key">Currencies</span><span class="val-value">LKR, USD</span></li>
+          <li><span class="val-key">Sync statuses</span><span class="val-value">pending, synced, failed</span></li>
+        </ul>
+      </div>
+      <div class="val-box">
+        <h4>Field Length Limits</h4>
+        <ul>
+          <li><span class="val-key">MAX_NAME_LEN</span><span class="val-value">200</span></li>
+          <li><span class="val-key">MAX_BARCODE_LEN</span><span class="val-value">100</span></li>
+          <li><span class="val-key">MAX_COLOR_LEN</span><span class="val-value">20</span></li>
+          <li><span class="val-key">MAX_NOTES_LEN</span><span class="val-value">1,000</span></li>
+          <li><span class="val-key">MAX_PAGINATION_LIMIT</span><span class="val-value">500</span></li>
+        </ul>
+      </div>
+      <div class="val-box">
+        <h4>Numeric Ranges</h4>
+        <ul>
+          <li><span class="val-key">price_lkr / price_usd</span><span class="val-value">0 – 10,000,000</span></li>
+          <li><span class="val-key">total_amount</span><span class="val-value">0 – 100,000,000</span></li>
+          <li><span class="val-key">order_items.quantity</span><span class="val-value">1 – 10,000</span></li>
+          <li><span class="val-key">table.capacity</span><span class="val-value">1 – 100</span></li>
+          <li><span class="val-key">stock_quantity</span><span class="val-value">-1 (unlimited) or ≥ 0</span></li>
+        </ul>
+      </div>
+      <div class="val-box">
+        <h4>File Locations</h4>
+        <ul>
+          <li><span class="val-key">Local models</span><span class="val-value">backend/models/models.py</span></li>
+          <li><span class="val-key">Local DB init</span><span class="val-value">backend/database.py</span></li>
+          <li><span class="val-key">Validation</span><span class="val-value">backend/validation.py</span></li>
+          <li><span class="val-key">Cloud models</span><span class="val-value">cloud-api/models/models.py</span></li>
+          <li><span class="val-key">Cloud DB init</span><span class="val-value">cloud-api/database.py</span></li>
+        </ul>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // Highlight active nav link on scroll
+  const links = document.querySelectorAll('nav a[href^="#"]');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const match = document.querySelector(`nav a[href="#${e.target.id}"]`);
+        if (match) match.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  document.querySelectorAll('.table-card, .diff-card, .val-grid').forEach(el => {
+    if (el.id) observer.observe(el);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Destinity Inspire POS — Database Schema v2.0</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.6; }
+    .layout { display: flex; min-height: 100vh; }
+
+    nav { width: 280px; flex-shrink: 0; background: #1e293b; border-right: 1px solid #334155; position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 24px 0; }
+    nav h2 { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #64748b; padding: 16px 20px 8px; }
+    nav .db-group { margin-bottom: 16px; }
+    nav a { display: block; padding: 6px 20px; font-size: 13px; color: #94a3b8; text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+    nav a:hover { color: #e2e8f0; background: #0f172a; }
+    nav a.active { color: #38bdf8; border-left-color: #38bdf8; background: #0f172a; }
+    nav .nav-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 9999px; margin-left: 6px; vertical-align: middle; }
+    .badge-local { background: #1d4ed8; color: #bfdbfe; }
+    .badge-cloud { background: #7e22ce; color: #e9d5ff; }
+    .badge-both { background: #065f46; color: #a7f3d0; }
+    .badge-new { background: #b91c1c; color: #fecaca; }
+
+    main { flex: 1; padding: 40px 48px; max-width: 1200px; }
+
+    .page-header { margin-bottom: 48px; padding-bottom: 24px; border-bottom: 1px solid #334155; }
+    .page-header h1 { font-size: 32px; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+    .page-header .subtitle { color: #94a3b8; font-size: 15px; margin-bottom: 16px; }
+    .version-banner { display: inline-block; background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; letter-spacing: .05em; margin-bottom: 16px; }
+
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #94a3b8; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    .summary-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; margin-bottom: 32px; }
+    .summary-card h2 { font-size: 18px; color: #f1f5f9; margin-bottom: 12px; }
+    .summary-card p { color: #94a3b8; font-size: 14px; margin-bottom: 8px; }
+    .summary-card ul { padding-left: 20px; color: #cbd5e1; font-size: 14px; }
+    .summary-card li { margin-bottom: 4px; }
+    .summary-card code { background: #0f172a; color: #93c5fd; padding: 1px 6px; border-radius: 3px; font-family: "SF Mono", "Fira Code", monospace; font-size: 12px; }
+
+    .arch-diagram { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin: 16px 0; font-family: "SF Mono", "Fira Code", monospace; font-size: 12px; color: #cbd5e1; white-space: pre; overflow-x: auto; line-height: 1.5; }
+
+    .db-section-title { font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 10px 18px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 24px; margin-top: 56px; }
+    .db-section-title:first-of-type { margin-top: 0; }
+    .local-section { background: #1e3a8a22; color: #60a5fa; border: 1px solid #1e3a8a; }
+    .cloud-section { background: #581c8722; color: #c084fc; border: 1px solid #581c87; }
+
+    .section-intro { background: #1e293b; border-left: 4px solid #3b82f6; padding: 16px 20px; border-radius: 4px; margin-bottom: 32px; color: #cbd5e1; font-size: 14px; }
+    .section-intro strong { color: #f1f5f9; }
+    .section-intro.cloud-intro { border-left-color: #a855f7; }
+
+    .table-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; margin-bottom: 24px; overflow: hidden; }
+    .table-card-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid #334155; background: #162032; }
+    .table-card-header h3 { font-size: 15px; font-weight: 700; color: #f1f5f9; font-family: "SF Mono", "Fira Code", monospace; }
+    .table-card-header .tags { display: flex; gap: 8px; }
+    .tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+    .tag-local { background: #1d4ed8; color: #bfdbfe; }
+    .tag-cloud { background: #7e22ce; color: #e9d5ff; }
+    .tag-both { background: #065f46; color: #a7f3d0; }
+    .tag-new { background: #b91c1c; color: #fecaca; }
+
+    .table-note { padding: 10px 20px; font-size: 13px; color: #cbd5e1; background: #0f172a; border-bottom: 1px solid #334155; }
+    .table-note strong { color: #fbbf24; }
+    .table-note code { background: #1e293b; color: #93c5fd; padding: 1px 5px; border-radius: 3px; font-family: monospace; font-size: 12px; }
+
+    .schema-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .schema-table thead tr { background: #0f172a; }
+    .schema-table th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #334155; }
+    .schema-table tbody tr { border-bottom: 1px solid #1e293b; }
+    .schema-table tbody tr:hover { background: #0f172a55; }
+    .schema-table tbody tr:last-child { border-bottom: none; }
+    .schema-table td { padding: 10px 16px; vertical-align: top; }
+
+    .col-name { font-family: "SF Mono", "Fira Code", monospace; color: #e2e8f0; font-weight: 600; white-space: nowrap; }
+    .col-pk { color: #fbbf24; }
+    .col-fk { color: #34d399; }
+    .col-uq { color: #f472b6; }
+    .col-ix { color: #60a5fa; }
+    .col-type { font-family: "SF Mono", "Fira Code", monospace; color: #818cf8; white-space: nowrap; }
+
+    .pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; white-space: nowrap; }
+    .pill-yes { background: #14532d; color: #4ade80; }
+    .pill-no { background: #450a0a; color: #fca5a5; }
+    .col-notes { color: #94a3b8; font-size: 12px; }
+    .col-notes code { font-family: "SF Mono", "Fira Code", monospace; background: #0f172a; padding: 1px 5px; border-radius: 3px; color: #93c5fd; font-size: 11px; }
+
+    .rels { padding: 12px 20px; border-top: 1px solid #334155; font-size: 12px; color: #64748b; background: #0f172a44; }
+    .rels strong { color: #94a3b8; }
+    .rels span { display: inline-block; margin-right: 16px; font-family: "SF Mono", "Fira Code", monospace; color: #34d399; }
+
+    .indexes { padding: 12px 20px; border-top: 1px solid #334155; font-size: 12px; background: #0f172a44; }
+    .indexes strong { color: #fbbf24; display: block; margin-bottom: 6px; }
+    .index-item { display: inline-block; margin: 2px 6px 2px 0; background: #0f172a; border: 1px solid #334155; border-radius: 4px; padding: 3px 10px; font-family: "SF Mono", "Fira Code", monospace; font-size: 11px; color: #93c5fd; }
+
+    hr.section-rule { border: none; border-top: 1px solid #334155; margin: 40px 0; }
+
+    .key-pattern { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .key-pattern h4 { color: #fbbf24; font-size: 13px; margin-bottom: 8px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+    .key-pattern p { color: #cbd5e1; font-size: 13px; margin-bottom: 8px; }
+    .key-pattern code { background: #1e293b; color: #93c5fd; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 12px; }
+
+    .security-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+    .security-box { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; }
+    .security-box h4 { color: #f1f5f9; font-size: 13px; margin-bottom: 8px; font-weight: 700; }
+    .security-box p { color: #94a3b8; font-size: 12px; }
+
+    @media (max-width: 900px) {
+      nav { display: none; }
+      main { padding: 24px; }
+      .security-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <nav>
+    <h2>Overview</h2>
+    <div class="db-group">
+      <a href="#summary">Summary &amp; Architecture</a>
+      <a href="#sync-model">Sync Model</a>
+      <a href="#security">Security Design</a>
+      <a href="#id-strategy">ID Strategy (UUIDs)</a>
+    </div>
+
+    <h2>Cloud — PostgreSQL</h2>
+    <div class="db-group">
+      <a href="#cloud-outlets">outlets</a>
+      <a href="#cloud-terminals">terminals</a>
+      <a href="#cloud-staff">staff</a>
+      <a href="#cloud-categories">categories</a>
+      <a href="#cloud-products">products</a>
+      <a href="#cloud-outlet-categories">outlet_categories</a>
+      <a href="#cloud-outlet-products">outlet_products</a>
+      <a href="#cloud-tables">tables</a>
+      <a href="#cloud-orders">orders</a>
+      <a href="#cloud-order-items">order_items</a>
+      <a href="#cloud-payments">payments</a>
+      <a href="#cloud-stock-movements">stock_movements</a>
+      <a href="#cloud-invoice-counters">invoice_counters</a>
+      <a href="#cloud-customers">customers</a>
+      <a href="#cloud-audit-log">audit_log</a>
+      <a href="#cloud-sync-logs">sync_logs</a>
+    </div>
+
+    <h2>Local — SQLite (per terminal)</h2>
+    <div class="db-group">
+      <a href="#local-terminal-info">terminal_info</a>
+      <a href="#local-staff">staff</a>
+      <a href="#local-settings">settings</a>
+      <a href="#local-sync-settings">sync_settings</a>
+      <a href="#local-sync-log">sync_log</a>
+      <a href="#local-table-statuses">table_statuses</a>
+      <a href="#local-table-status-transitions">table_status_transitions</a>
+      <a href="#local-categories">categories</a>
+      <a href="#local-products">products</a>
+      <a href="#local-tables">tables</a>
+      <a href="#local-orders">orders</a>
+      <a href="#local-order-items">order_items</a>
+      <a href="#local-payments">payments</a>
+      <a href="#local-stock-movements">stock_movements</a>
+      <a href="#local-customers">customers</a>
+      <a href="#local-audit-log">audit_log</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="page-header">
+      <span class="version-banner">SCHEMA v2.0</span>
+      <h1>Destinity Inspire POS — Database Schema</h1>
+      <p class="subtitle">Single-tenant • Multi-outlet • Offline-first • VAT-compliant • Encrypted</p>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Local SQLite</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#a855f7"></div> Cloud PostgreSQL</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Both DBs</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div> Primary Key</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#34d399"></div> Foreign Key</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f472b6"></div> Unique</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div> Indexed</div>
+      </div>
+    </div>
+
+    <!-- =========================================================== -->
+    <div class="summary-card" id="summary">
+      <h2>Architecture Overview</h2>
+      <p>This schema implements a <strong>single-tenant, multi-outlet, multi-terminal</strong> POS. The cloud DB is the source of truth for master data; each terminal keeps a local SQLite database (encrypted with SQLCipher) and syncs both directions.</p>
+
+      <div class="arch-diagram">     ┌─────────────────────────────────────────────┐
+     │     CLOUD POSTGRES (HQ source of truth)     │
+     │   outlets · staff · products · orders ...    │
+     └─────────────────┬───────────────────────────┘
+                       │ HTTPS + JWT + UUIDs
+        ┌──────────────┼──────────────┐
+        │              │              │
+   ┌────▼────┐    ┌────▼────┐    ┌────▼────┐
+   │ OUTLET  │    │ OUTLET  │    │ OUTLET  │
+   │ COLOMBO │    │  KANDY  │    │  GALLE  │
+   └────┬────┘    └─────────┘    └─────────┘
+        │
+   ┌────┼─────────────┐
+   │    │             │
+ ┌─▼──┐ ┌─▼──┐     ┌──▼─┐
+ │T-1 │ │T-2 │ ... │T-N │   (each terminal = independent)
+ └────┘ └────┘     └────┘
+   │     │           │
+   ▼     ▼           ▼
+ SQLite SQLite    SQLite       (per-terminal, encrypted)</div>
+
+      <h2 style="margin-top:24px;">Key Design Decisions (locked in)</h2>
+      <ul>
+        <li><strong>IDs:</strong> Hybrid — every table has Integer PK (fast joins) <em>plus</em> <code>uuid</code> column (cross-DB identity, sync-safe).</li>
+        <li><strong>Menu:</strong> Global master <code>products</code> + <code>outlet_products</code> override table per outlet.</li>
+        <li><strong>Staff:</strong> Bound to one outlet; can log in on any terminal in that outlet. PIN for cashiers, password for managers.</li>
+        <li><strong>Tables:</strong> Stored at outlet level with optional <code>assigned_terminal_id</code>.</li>
+        <li><strong>Stock:</strong> Per-outlet count + immutable <code>stock_movements</code> log for audit.</li>
+        <li><strong>VAT:</strong> Sequential gap-less <code>tax_invoice_no</code> per outlet, allocated centrally via <code>invoice_counters</code> with row-locking.</li>
+        <li><strong>Payments:</strong> Separate <code>payments</code> table — supports split payments (cash + card on same order).</li>
+        <li><strong>Audit:</strong> Single <code>audit_log</code> capturing auth events &amp; sensitive actions (voids, refunds, price changes).</li>
+        <li><strong>Encryption:</strong> SQLCipher on local DB (AES-256). PostgreSQL uses TLS in transit + at-rest encryption (cloud provider).</li>
+        <li><strong>Customers:</strong> Optional table for future loyalty &mdash; nullable FK on orders.</li>
+      </ul>
+    </div>
+
+    <div class="summary-card" id="sync-model">
+      <h2>Sync Model (manual + 10-min auto)</h2>
+      <p>Each terminal works <strong>fully offline</strong> on its local SQLite DB. Sync to cloud happens via two operations (manual buttons + scheduled at <code>sync_interval_minutes</code>):</p>
+      <ul>
+        <li><strong>SYNC MASTER (cloud → terminal):</strong> Pulls categories, products, outlet_products, tables, staff, settings — filtered by the terminal's <code>outlet_id</code>. Only rows with <code>updated_at &gt; last_master_sync_at</code> are pulled.</li>
+        <li><strong>SYNC TRANSACTIONS (terminal → cloud):</strong> Pushes orders, order_items, payments, stock_movements, audit_log entries with <code>sync_status = 'pending'</code>. On success cloud returns the assigned <code>tax_invoice_no</code> and the row's <code>sync_status</code> flips to <code>synced</code>.</li>
+      </ul>
+      <p style="margin-top:8px;">Every synced row carries <code>outlet_uuid</code>, <code>terminal_uuid</code>, <code>local_uuid</code>, <code>updated_at</code> — the cloud uses the UUID as the deduplication key (idempotent push).</p>
+    </div>
+
+    <div class="summary-card" id="security">
+      <h2>Security Design</h2>
+      <div class="security-grid">
+        <div class="security-box">
+          <h4>🔐 Local DB Encryption</h4>
+          <p>SQLite file encrypted with SQLCipher (AES-256). Encryption key derived from device UUID + PBKDF2-stretched secret stored in OS keychain (Windows Credential Manager / macOS Keychain / Android Keystore).</p>
+        </div>
+        <div class="security-box">
+          <h4>🔑 Tiered Authentication</h4>
+          <p>Cashiers: 6-digit PIN, bcrypt cost-12. Managers/Admins: username + strong password, bcrypt cost-12. Sensitive actions (voids, refunds, discounts &gt;X%) require manager password re-entry.</p>
+        </div>
+        <div class="security-box">
+          <h4>🚦 Rate Limiting</h4>
+          <p>5 failed PIN attempts in 5min → 15min lockout per staff. 10 failed terminal-API attempts → terminal blacklisted, requires admin re-activation.</p>
+        </div>
+        <div class="security-box">
+          <h4>🪪 Token Architecture</h4>
+          <p>Two layers: (1) <strong>Terminal token</strong> — long-lived, signed with per-terminal secret, identifies the device. (2) <strong>Staff JWT</strong> — short-lived (4h), refreshed on activity, identifies the user.</p>
+        </div>
+        <div class="security-box">
+          <h4>📋 Audit Trail</h4>
+          <p>Every sensitive action logged with: who (staff_uuid), when (UTC), where (terminal_uuid, ip), what (action_type), details (JSONB old/new). Audit log is append-only — no deletes from app code.</p>
+        </div>
+        <div class="security-box">
+          <h4>🛡️ Data Isolation</h4>
+          <p>Cloud queries always filtered by <code>outlet_id</code> from the terminal's JWT. Staff cannot query other outlets even by ID guessing. Backend enforces scope at every endpoint.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-card" id="id-strategy">
+      <h2>Hybrid ID Strategy — Integer PK + UUID</h2>
+      <p>Every synchronized table has both:</p>
+      <ul>
+        <li><code>id</code> — Integer auto-increment, PRIMARY KEY (fast joins inside a single DB).</li>
+        <li><code>uuid</code> — UUID v4 (or v7 for time-ordered), UNIQUE NOT NULL, generated at the terminal at insert time. This is the <strong>sync identity</strong>.</li>
+      </ul>
+      <div class="key-pattern">
+        <h4>Why both?</h4>
+        <p><strong>Integer PK</strong> stays small (4 bytes), B-tree indexes are dense and fast for joins within one database.</p>
+        <p><strong>UUID</strong> guarantees no collisions when Terminal-A and Terminal-B both create rows offline. The cloud uses <code>uuid</code> as the ON CONFLICT key, so re-pushing the same row is idempotent.</p>
+        <p>Foreign keys between tables in the <em>same database</em> use the integer <code>id</code>. Sync messages between databases reference rows by <code>uuid</code>.</p>
+      </div>
+    </div>
+
+    <hr class="section-rule" />
+
+    <!-- =========================================================== -->
+    <!-- CLOUD POSTGRESQL                                              -->
+    <!-- =========================================================== -->
+    <div class="db-section-title cloud-section" id="cloud">CLOUD DATABASE — PostgreSQL (Source of Truth)</div>
+
+    <div class="section-intro cloud-intro">
+      <strong>PostgreSQL</strong> is the source of truth for all master data and the long-term store for transactions. All FK relationships are enforced. Every table has <code>id</code> (BIGSERIAL) and <code>uuid</code> (UUID, indexed UNIQUE). Timestamps are <code>TIMESTAMPTZ</code>. Money columns use <code>NUMERIC(14,2)</code> instead of <code>FLOAT</code> for exact arithmetic.
+    </div>
+
+    <!-- ======================================== -->
+    <!-- outlets                                  -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-outlets">
+      <div class="table-card-header">
+        <h3>outlets</h3>
+        <div class="tags"><span class="tag tag-cloud">cloud only</span></div>
+      </div>
+      <div class="table-note">A physical store/restaurant location. Top of the org tree under the (single) business.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">UUID</td><td><span class="pill pill-no">NO</span></td><td>gen_random_uuid()</td><td class="col-notes">UNIQUE — sync identity</td></tr>
+          <tr><td class="col-name col-uq">code</td><td class="col-type">VARCHAR(50)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — e.g. <code>COL-01</code></td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">VARCHAR(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">e.g. <code>Colombo Branch</code></td></tr>
+          <tr><td class="col-name">address</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">phone</td><td class="col-type">VARCHAR(30)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">timezone</td><td class="col-type">VARCHAR(50)</td><td><span class="pill pill-no">NO</span></td><td>'Asia/Colombo'</td><td class="col-notes">For per-outlet daily reports</td></tr>
+          <tr><td class="col-name">currency</td><td class="col-type">VARCHAR(10)</td><td><span class="pill pill-no">NO</span></td><td>'LKR'</td><td class="col-notes">Default currency</td></tr>
+          <tr><td class="col-name">vat_registration_no</td><td class="col-type">VARCHAR(50)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">SL VAT registration</td></tr>
+          <tr><td class="col-name">vat_rate</td><td class="col-type">NUMERIC(5,2)</td><td><span class="pill pill-no">NO</span></td><td>18.00</td><td class="col-notes">Default VAT % (overridable per product)</td></tr>
+          <tr><td class="col-name">invoice_prefix</td><td class="col-type">VARCHAR(20)</td><td><span class="pill pill-no">NO</span></td><td>code</td><td class="col-notes">e.g. <code>COL</code> → <code>COL/2026/000123</code></td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">BOOLEAN</td><td><span class="pill pill-no">NO</span></td><td>TRUE</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes">trigger: ON UPDATE</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ terminals (1:many)</span><span>→ staff (1:many)</span><span>→ tables (1:many)</span><span>→ outlet_products (1:many)</span><span>→ orders (1:many)</span></div>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_outlets_uuid (uuid)</span>
+        <span class="index-item">idx_outlets_code (code)</span>
+        <span class="index-item">idx_outlets_active (is_active)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- terminals                                -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-terminals">
+      <div class="table-card-header">
+        <h3>terminals</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note">Each registered POS device. Belongs to one outlet. Cloud row created when device first registers.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">UUID</td><td><span class="pill pill-no">NO</span></td><td>gen_random_uuid()</td><td class="col-notes">UNIQUE — sync identity</td></tr>
+          <tr><td class="col-name col-fk">outlet_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → outlets.id ON DELETE RESTRICT</td></tr>
+          <tr><td class="col-name col-uq">terminal_code</td><td class="col-type">VARCHAR(100)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — e.g. <code>COL-T1</code></td></tr>
+          <tr><td class="col-name">terminal_name</td><td class="col-type">VARCHAR(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name col-uq">device_uuid</td><td class="col-type">VARCHAR(100)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — hardware/install id</td></tr>
+          <tr><td class="col-name">platform</td><td class="col-type">VARCHAR(50)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Values: <code>web</code> <code>windows</code> <code>android</code> <code>ios</code> <code>macos</code></td></tr>
+          <tr><td class="col-name">api_key_hash</td><td class="col-type">VARCHAR(255)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">bcrypt of terminal API key</td></tr>
+          <tr><td class="col-name">last_seen_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Heartbeat / last sync</td></tr>
+          <tr><td class="col-name">last_sync_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Last successful tx push</td></tr>
+          <tr><td class="col-name">last_ip</td><td class="col-type">INET</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">For audit / fraud detection</td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">BOOLEAN</td><td><span class="pill pill-no">NO</span></td><td>TRUE</td><td class="col-notes">Set FALSE to revoke</td></tr>
+          <tr><td class="col-name">registered_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">registered_by_staff_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → staff.id (admin who registered)</td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes">trigger: ON UPDATE</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ outlets (many:1)</span><span>→ orders (1:many)</span><span>→ sync_logs (1:many)</span><span>→ audit_log (1:many)</span></div>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_terminals_uuid (uuid)</span>
+        <span class="index-item">idx_terminals_outlet (outlet_id)</span>
+        <span class="index-item">idx_terminals_device (device_uuid)</span>
+        <span class="index-item">idx_terminals_active (is_active, outlet_id)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- staff (cloud)                            -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-staff">
+      <div class="table-card-header">
+        <h3>staff</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note">Master staff list lives in cloud. Pushed to terminals via SYNC MASTER (filtered by outlet_id). <strong>Staff are bound to ONE outlet.</strong></div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">UUID</td><td><span class="pill pill-no">NO</span></td><td>gen_random_uuid()</td><td class="col-notes">UNIQUE — sync identity</td></tr>
+          <tr><td class="col-name col-fk">outlet_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → outlets.id; NULL only for <code>admin</code> role (HQ-wide)</td></tr>
+          <tr><td class="col-name col-uq">username</td><td class="col-type">VARCHAR(100)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE globally; used by managers/admins</td></tr>
+          <tr><td class="col-name">display_name</td><td class="col-type">VARCHAR(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Shown on receipts &amp; UI</td></tr>
+          <tr><td class="col-name">role</td><td class="col-type">VARCHAR(20)</td><td><span class="pill pill-no">NO</span></td><td>'cashier'</td><td class="col-notes">Values: <code>cashier</code> <code>manager</code> <code>admin</code></td></tr>
+          <tr><td class="col-name">pin_hash</td><td class="col-type">VARCHAR(255)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">bcrypt cost-12. Required for cashiers.</td></tr>
+          <tr><td class="col-name">password_hash</td><td class="col-type">VARCHAR(255)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">bcrypt cost-12. Required for managers/admins.</td></tr>
+          <tr><td class="col-name">email</td><td class="col-type">VARCHAR(255)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">For password reset (managers/admins)</td></tr>
+          <tr><td class="col-name">phone</td><td class="col-type">VARCHAR(30)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">failed_login_count</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Reset on success</td></tr>
+          <tr><td class="col-name">locked_until</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">If set &gt; NOW(), login blocked</td></tr>
+          <tr><td class="col-name">last_login_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">last_login_terminal_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → terminals.id (where last seen)</td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">BOOLEAN</td><td><span class="pill pill-no">NO</span></td><td>TRUE</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes">trigger: ON UPDATE</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ outlets (many:1)</span><span>→ orders.created_by_staff_id (1:many)</span><span>→ audit_log (1:many)</span></div>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_staff_uuid (uuid)</span>
+        <span class="index-item">idx_staff_outlet (outlet_id, is_active)</span>
+        <span class="index-item">idx_staff_username (username)</span>
+        <span class="index-item">idx_staff_role (role, outlet_id)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- categories (cloud)                       -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-categories">
+      <div class="table-card-header">
+        <h3>categories</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note"><strong>GLOBAL master list</strong> of categories — same definition for all outlets. Per-outlet visibility/order is controlled in <code>outlet_categories</code>.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">UUID</td><td><span class="pill pill-no">NO</span></td><td>gen_random_uuid()</td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">VARCHAR(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Max 200</td></tr>
+          <tr><td class="col-name">color</td><td class="col-type">VARCHAR(20)</td><td><span class="pill pill-no">NO</span></td><td>'#6b7280'</td><td class="col-notes">Hex</td></tr>
+          <tr><td class="col-name">icon</td><td class="col-type">VARCHAR(50)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Icon name for UI</td></tr>
+          <tr><td class="col-name">sort_order</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Default ordering</td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">BOOLEAN</td><td><span class="pill pill-no">NO</span></td><td>TRUE</td><td class="col-notes">HQ-level disable</td></tr>
+          <tr><td class="col-name">created_by_staff_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → staff.id</td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes">trigger: ON UPDATE — drives sync</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ products (1:many)</span><span>→ outlet_categories (1:many)</span></div>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_categories_uuid (uuid)</span>
+        <span class="index-item">idx_categories_active (is_active, sort_order)</span>
+        <span class="index-item">idx_categories_updated (updated_at)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- products (cloud)                         -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-products">
+      <div class="table-card-header">
+        <h3>products</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note"><strong>GLOBAL master catalogue.</strong> Defines what items exist in the business. Per-outlet pricing/stock/availability lives in <code>outlet_products</code>.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">UUID</td><td><span class="pill pill-no">NO</span></td><td>gen_random_uuid()</td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name col-fk">category_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → categories.id ON DELETE SET NULL</td></tr>
+          <tr><td class="col-name col-uq">sku</td><td class="col-type">VARCHAR(100)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">UNIQUE — internal stock-keeping unit</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">VARCHAR(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Indexed</td></tr>
+          <tr><td class="col-name">description</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">barcode</td><td class="col-type">VARCHAR(100)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Indexed</td></tr>
+          <tr><td class="col-name">image_url</td><td class="col-type">VARCHAR(500)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">CDN URL</td></tr>
+          <tr><td class="col-name">default_price_lkr</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0.00</td><td class="col-notes">Default — outlet can override</td></tr>
+          <tr><td class="col-name">default_price_usd</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0.00</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">default_cost</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Cost basis (for margin calc)</td></tr>
+          <tr><td class="col-name">vat_rate_override</td><td class="col-type">NUMERIC(5,2)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">NULL → use outlet default</td></tr>
+          <tr><td class="col-name">unit</td><td class="col-type">VARCHAR(20)</td><td><span class="pill pill-no">NO</span></td><td>'pcs'</td><td class="col-notes">e.g. <code>pcs</code> <code>kg</code> <code>plate</code></td></tr>
+          <tr><td class="col-name">is_taxable</td><td class="col-type">BOOLEAN</td><td><span class="pill pill-no">NO</span></td><td>TRUE</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">track_stock</td><td class="col-type">BOOLEAN</td><td><span class="pill pill-no">NO</span></td><td>FALSE</td><td class="col-notes">If FALSE, stock is unlimited</td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">BOOLEAN</td><td><span class="pill pill-no">NO</span></td><td>TRUE</td><td class="col-notes">Global enable/disable</td></tr>
+          <tr><td class="col-name">created_by_staff_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → staff.id</td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes">trigger: ON UPDATE — drives sync</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ categories (many:1)</span><span>→ outlet_products (1:many)</span></div>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_products_uuid (uuid)</span>
+        <span class="index-item">idx_products_category (category_id)</span>
+        <span class="index-item">idx_products_name (name)</span>
+        <span class="index-item">idx_products_barcode (barcode)</span>
+        <span class="index-item">idx_products_sku (sku)</span>
+        <span class="index-item">idx_products_active (is_active)</span>
+        <span class="index-item">idx_products_updated (updated_at)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- outlet_categories                        -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-outlet-categories">
+      <div class="table-card-header">
+        <h3>outlet_categories</h3>
+        <div class="tags"><span class="tag tag-cloud">cloud only</span><span class="tag tag-new">NEW</span></div>
+      </div>
+      <div class="table-note">Per-outlet override layer for categories. Outlet manager controls visibility &amp; ordering for their outlet without touching the global master.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">UUID</td><td><span class="pill pill-no">NO</span></td><td>gen_random_uuid()</td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name col-fk">outlet_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → outlets.id ON DELETE CASCADE</td></tr>
+          <tr><td class="col-name col-fk">category_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → categories.id ON DELETE CASCADE</td></tr>
+          <tr><td class="col-name">is_visible</td><td class="col-type">BOOLEAN</td><td><span class="pill pill-no">NO</span></td><td>TRUE</td><td class="col-notes">Hide category at this outlet</td></tr>
+          <tr><td class="col-name">sort_order_override</td><td class="col-type">INTEGER</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">NULL → use master sort_order</td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes">trigger: ON UPDATE</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ outlets (many:1)</span><span>→ categories (many:1)</span></div>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_oc_uuid (uuid)</span>
+        <span class="index-item">UNIQUE (outlet_id, category_id)</span>
+        <span class="index-item">idx_oc_outlet (outlet_id, is_visible)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- outlet_products                          -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-outlet-products">
+      <div class="table-card-header">
+        <h3>outlet_products</h3>
+        <div class="tags"><span class="tag tag-cloud">cloud only</span><span class="tag tag-new">NEW</span></div>
+      </div>
+      <div class="table-note">Per-outlet override for each product: enable/disable, price override, stock count, reorder threshold. <strong>This is where each outlet's stock lives.</strong></div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">UUID</td><td><span class="pill pill-no">NO</span></td><td>gen_random_uuid()</td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name col-fk">outlet_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → outlets.id ON DELETE CASCADE</td></tr>
+          <tr><td class="col-name col-fk">product_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → products.id ON DELETE CASCADE</td></tr>
+          <tr><td class="col-name">price_lkr_override</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">NULL → use products.default_price_lkr</td></tr>
+          <tr><td class="col-name">price_usd_override</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">cost_override</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">stock_quantity</td><td class="col-type">NUMERIC(14,3)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Per-outlet stock. -1 if not tracking</td></tr>
+          <tr><td class="col-name">reorder_threshold</td><td class="col-type">NUMERIC(14,3)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Alert when stock ≤ this</td></tr>
+          <tr><td class="col-name">is_available</td><td class="col-type">BOOLEAN</td><td><span class="pill pill-no">NO</span></td><td>TRUE</td><td class="col-notes">Outlet-level enable/disable</td></tr>
+          <tr><td class="col-name">last_stock_update_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Updated on every stock_movement</td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes">trigger: ON UPDATE</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ outlets (many:1)</span><span>→ products (many:1)</span><span>→ stock_movements (1:many)</span></div>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_op_uuid (uuid)</span>
+        <span class="index-item">UNIQUE (outlet_id, product_id)</span>
+        <span class="index-item">idx_op_outlet_avail (outlet_id, is_available)</span>
+        <span class="index-item">idx_op_low_stock (outlet_id, stock_quantity) WHERE reorder_threshold IS NOT NULL</span>
+        <span class="index-item">idx_op_updated (updated_at)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- tables (cloud)                           -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-tables">
+      <div class="table-card-header">
+        <h3>tables</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note">Dining tables. Stored at <strong>outlet level</strong>, optionally <strong>assigned to a specific terminal</strong> (waiter section).</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">UUID</td><td><span class="pill pill-no">NO</span></td><td>gen_random_uuid()</td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name col-fk">outlet_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → outlets.id ON DELETE CASCADE</td></tr>
+          <tr><td class="col-name col-fk">assigned_terminal_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → terminals.id; NULL = visible to all terminals in outlet</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">VARCHAR(100)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">e.g. <code>T1</code> <code>Garden-3</code></td></tr>
+          <tr><td class="col-name">capacity</td><td class="col-type">SMALLINT</td><td><span class="pill pill-no">NO</span></td><td>4</td><td class="col-notes">Range 1–100</td></tr>
+          <tr><td class="col-name">section</td><td class="col-type">VARCHAR(50)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">e.g. <code>Indoor</code> <code>Terrace</code></td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">BOOLEAN</td><td><span class="pill pill-no">NO</span></td><td>TRUE</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes">trigger: ON UPDATE</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ outlets (many:1)</span><span>→ terminals (many:1)</span></div>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_tables_uuid (uuid)</span>
+        <span class="index-item">UNIQUE (outlet_id, name)</span>
+        <span class="index-item">idx_tables_outlet (outlet_id, is_active)</span>
+        <span class="index-item">idx_tables_terminal (assigned_terminal_id)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- orders (cloud)                           -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-orders">
+      <div class="table-card-header">
+        <h3>orders</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note">Completed orders pushed from terminals. Cloud assigns the legal <code>tax_invoice_no</code> via <code>invoice_counters</code> on insert.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">UUID</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — generated at terminal; ON CONFLICT (uuid) → idempotent</td></tr>
+          <tr><td class="col-name col-fk">outlet_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → outlets.id</td></tr>
+          <tr><td class="col-name col-fk">terminal_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → terminals.id</td></tr>
+          <tr><td class="col-name col-fk">created_by_staff_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → staff.id (cashier)</td></tr>
+          <tr><td class="col-name col-fk">customer_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → customers.id (optional, future loyalty)</td></tr>
+          <tr><td class="col-name">table_uuid</td><td class="col-type">UUID</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Snapshot — not FK (table can be deleted)</td></tr>
+          <tr><td class="col-name">table_name</td><td class="col-type">VARCHAR(100)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Denormalized for receipts</td></tr>
+          <tr><td class="col-name col-uq">terminal_order_ref</td><td class="col-type">VARCHAR(100)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE per terminal — e.g. <code>COL-T1-0045</code>. Local-friendly reference.</td></tr>
+          <tr><td class="col-name col-uq">tax_invoice_no</td><td class="col-type">VARCHAR(50)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">UNIQUE — assigned by cloud on completion. e.g. <code>COL/2026/000123</code></td></tr>
+          <tr><td class="col-name">tax_invoice_issued_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">When tax_invoice_no was assigned</td></tr>
+          <tr><td class="col-name">currency</td><td class="col-type">VARCHAR(10)</td><td><span class="pill pill-no">NO</span></td><td>'LKR'</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">subtotal</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Sum of order_items.line_total before tax/discount</td></tr>
+          <tr><td class="col-name">discount_amount</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Order-level discount</td></tr>
+          <tr><td class="col-name">discount_reason</td><td class="col-type">VARCHAR(200)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">service_charge</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">tax_amount</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Total VAT (sum from items)</td></tr>
+          <tr><td class="col-name">total_amount</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Final amount payable</td></tr>
+          <tr><td class="col-name">paid_amount</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Sum of payments. Should equal total_amount.</td></tr>
+          <tr><td class="col-name">change_amount</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Cash returned</td></tr>
+          <tr><td class="col-name">status</td><td class="col-type">VARCHAR(20)</td><td><span class="pill pill-no">NO</span></td><td>'completed'</td><td class="col-notes">Values: <code>pending</code> <code>completed</code> <code>cancelled</code> <code>refunded</code></td></tr>
+          <tr><td class="col-name">void_reason</td><td class="col-type">VARCHAR(200)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">If cancelled/refunded</td></tr>
+          <tr><td class="col-name">voided_by_staff_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → staff.id (manager who authorised)</td></tr>
+          <tr><td class="col-name">notes</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Max 1000</td></tr>
+          <tr><td class="col-name">order_created_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Original timestamp at terminal</td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes">When cloud received the row</td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes">trigger: ON UPDATE</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ outlets (many:1)</span><span>→ terminals (many:1)</span><span>→ staff (many:1)</span><span>→ customers (many:1, optional)</span><span>→ order_items (1:many CASCADE)</span><span>→ payments (1:many CASCADE)</span></div>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_orders_uuid (uuid)</span>
+        <span class="index-item">UNIQUE (terminal_id, terminal_order_ref)</span>
+        <span class="index-item">idx_orders_outlet_date (outlet_id, order_created_at DESC)</span>
+        <span class="index-item">idx_orders_terminal_date (terminal_id, order_created_at DESC)</span>
+        <span class="index-item">idx_orders_status (status, outlet_id)</span>
+        <span class="index-item">idx_orders_invoice (tax_invoice_no)</span>
+        <span class="index-item">idx_orders_customer (customer_id) WHERE customer_id IS NOT NULL</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- order_items (cloud)                      -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-order-items">
+      <div class="table-card-header">
+        <h3>order_items</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note">Line items. Captures <strong>price snapshot</strong> at sale time — never updated even if product price changes later.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">UUID</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name col-fk">order_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → orders.id ON DELETE CASCADE</td></tr>
+          <tr><td class="col-name">product_uuid</td><td class="col-type">UUID</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Reference (no FK — snapshot)</td></tr>
+          <tr><td class="col-name">product_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">No FK — historical snapshot</td></tr>
+          <tr><td class="col-name">product_name</td><td class="col-type">VARCHAR(200)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Snapshot at sale time</td></tr>
+          <tr><td class="col-name">product_sku</td><td class="col-type">VARCHAR(100)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Snapshot</td></tr>
+          <tr><td class="col-name">quantity</td><td class="col-type">NUMERIC(14,3)</td><td><span class="pill pill-no">NO</span></td><td>1</td><td class="col-notes">Range 0.001–10,000</td></tr>
+          <tr><td class="col-name">unit_price</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Snapshot at sale time</td></tr>
+          <tr><td class="col-name">discount_amount</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Line-level discount</td></tr>
+          <tr><td class="col-name">vat_rate</td><td class="col-type">NUMERIC(5,2)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">VAT % applied to this line</td></tr>
+          <tr><td class="col-name">vat_amount</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">VAT amount for this line</td></tr>
+          <tr><td class="col-name">line_total</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">(qty × unit_price) − discount + vat</td></tr>
+          <tr><td class="col-name">notes</td><td class="col-type">VARCHAR(500)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Modifier notes ("no onion")</td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ orders (many:1 CASCADE)</span></div>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_oi_uuid (uuid)</span>
+        <span class="index-item">idx_oi_order (order_id)</span>
+        <span class="index-item">idx_oi_product (product_id) WHERE product_id IS NOT NULL</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- payments                                 -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-payments">
+      <div class="table-card-header">
+        <h3>payments</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span><span class="tag tag-new">NEW</span></div>
+      </div>
+      <div class="table-note">Multiple payments per order — supports split payments (e.g. cash + card).</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">UUID</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name col-fk">order_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → orders.id ON DELETE CASCADE</td></tr>
+          <tr><td class="col-name">payment_method</td><td class="col-type">VARCHAR(30)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Values: <code>cash</code> <code>card</code> <code>online</code> <code>wallet</code> <code>credit</code> <code>voucher</code></td></tr>
+          <tr><td class="col-name">amount</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Amount paid via this method</td></tr>
+          <tr><td class="col-name">currency</td><td class="col-type">VARCHAR(10)</td><td><span class="pill pill-no">NO</span></td><td>'LKR'</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">card_last4</td><td class="col-type">VARCHAR(4)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">PCI-safe — last 4 only, never store full PAN</td></tr>
+          <tr><td class="col-name">card_brand</td><td class="col-type">VARCHAR(20)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">e.g. <code>VISA</code> <code>MASTER</code></td></tr>
+          <tr><td class="col-name">transaction_ref</td><td class="col-type">VARCHAR(200)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Gateway txn id / approval code</td></tr>
+          <tr><td class="col-name">status</td><td class="col-type">VARCHAR(20)</td><td><span class="pill pill-no">NO</span></td><td>'success'</td><td class="col-notes">Values: <code>success</code> <code>pending</code> <code>failed</code> <code>refunded</code></td></tr>
+          <tr><td class="col-name">paid_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ orders (many:1 CASCADE)</span></div>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_pay_uuid (uuid)</span>
+        <span class="index-item">idx_pay_order (order_id)</span>
+        <span class="index-item">idx_pay_method_date (payment_method, paid_at)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- stock_movements                          -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-stock-movements">
+      <div class="table-card-header">
+        <h3>stock_movements</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span><span class="tag tag-new">NEW</span></div>
+      </div>
+      <div class="table-note"><strong>Append-only ledger</strong> of every stock change. Never updated, never deleted. Source of truth for stock — <code>outlet_products.stock_quantity</code> is a materialized projection.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">UUID</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name col-fk">outlet_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → outlets.id</td></tr>
+          <tr><td class="col-name col-fk">outlet_product_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → outlet_products.id</td></tr>
+          <tr><td class="col-name col-fk">terminal_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → terminals.id (where movement happened)</td></tr>
+          <tr><td class="col-name col-fk">staff_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → staff.id</td></tr>
+          <tr><td class="col-name">movement_type</td><td class="col-type">VARCHAR(30)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Values: <code>sale</code> <code>refund</code> <code>restock</code> <code>adjustment</code> <code>damage</code> <code>transfer_in</code> <code>transfer_out</code> <code>opening</code></td></tr>
+          <tr><td class="col-name">quantity_change</td><td class="col-type">NUMERIC(14,3)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Signed: -2 for sale, +50 for restock</td></tr>
+          <tr><td class="col-name">stock_after</td><td class="col-type">NUMERIC(14,3)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Snapshot of stock after this movement</td></tr>
+          <tr><td class="col-name">unit_cost</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">For restock — cost basis</td></tr>
+          <tr><td class="col-name">reference_type</td><td class="col-type">VARCHAR(30)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">e.g. <code>order</code> <code>grn</code> <code>manual</code></td></tr>
+          <tr><td class="col-name">reference_uuid</td><td class="col-type">UUID</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">UUID of related order/GRN/etc.</td></tr>
+          <tr><td class="col-name">reason</td><td class="col-type">VARCHAR(500)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Freeform note (required for adjustments)</td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ outlets (many:1)</span><span>→ outlet_products (many:1)</span><span>→ terminals (many:1)</span><span>→ staff (many:1)</span></div>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_sm_uuid (uuid)</span>
+        <span class="index-item">idx_sm_outlet_product_date (outlet_product_id, created_at DESC)</span>
+        <span class="index-item">idx_sm_outlet_date (outlet_id, created_at DESC)</span>
+        <span class="index-item">idx_sm_type (movement_type, created_at)</span>
+        <span class="index-item">idx_sm_reference (reference_type, reference_uuid)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- invoice_counters                         -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-invoice-counters">
+      <div class="table-card-header">
+        <h3>invoice_counters</h3>
+        <div class="tags"><span class="tag tag-cloud">cloud only</span><span class="tag tag-new">NEW</span></div>
+      </div>
+      <div class="table-note"><strong>VAT compliance critical.</strong> One row per (outlet, year). Used with <code>SELECT ... FOR UPDATE</code> to atomically allocate gap-less sequential <code>tax_invoice_no</code>.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-fk">outlet_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → outlets.id</td></tr>
+          <tr><td class="col-name">year</td><td class="col-type">SMALLINT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">e.g. 2026</td></tr>
+          <tr><td class="col-name">counter_type</td><td class="col-type">VARCHAR(20)</td><td><span class="pill pill-no">NO</span></td><td>'invoice'</td><td class="col-notes">Values: <code>invoice</code> <code>credit_note</code></td></tr>
+          <tr><td class="col-name">last_value</td><td class="col-type">BIGINT</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Increment under row lock</td></tr>
+          <tr><td class="col-name">format_pattern</td><td class="col-type">VARCHAR(100)</td><td><span class="pill pill-no">NO</span></td><td>'{prefix}/{year}/{seq:06d}'</td><td class="col-notes">Template</td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">UNIQUE (outlet_id, year, counter_type)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- customers (cloud)                        -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-customers">
+      <div class="table-card-header">
+        <h3>customers</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span><span class="tag tag-new">NEW</span></div>
+      </div>
+      <div class="table-note">Optional customer records for future loyalty / repeat-customer tracking. Scoped business-wide (single tenant).</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">UUID</td><td><span class="pill pill-no">NO</span></td><td>gen_random_uuid()</td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name col-uq">phone</td><td class="col-type">VARCHAR(30)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">UNIQUE — primary lookup key</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">VARCHAR(200)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">email</td><td class="col-type">VARCHAR(255)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">loyalty_card_no</td><td class="col-type">VARCHAR(50)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">UNIQUE if present</td></tr>
+          <tr><td class="col-name">loyalty_points</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Future use</td></tr>
+          <tr><td class="col-name">total_spent</td><td class="col-type">NUMERIC(14,2)</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Lifetime — updated on order completion</td></tr>
+          <tr><td class="col-name">visit_count</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">first_visit_outlet_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → outlets.id</td></tr>
+          <tr><td class="col-name">notes</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Allergies, preferences</td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">BOOLEAN</td><td><span class="pill pill-no">NO</span></td><td>TRUE</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes">trigger: ON UPDATE</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ orders (1:many)</span></div>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_cust_uuid (uuid)</span>
+        <span class="index-item">idx_cust_phone (phone)</span>
+        <span class="index-item">idx_cust_loyalty (loyalty_card_no)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- audit_log (cloud)                        -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-audit-log">
+      <div class="table-card-header">
+        <h3>audit_log</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span><span class="tag tag-new">NEW</span></div>
+      </div>
+      <div class="table-note"><strong>Append-only.</strong> Captures auth events &amp; sensitive actions (voids, refunds, discounts, price changes). Locally written, then synced to cloud. Never deleted.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">UUID</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name col-fk">outlet_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → outlets.id</td></tr>
+          <tr><td class="col-name col-fk">terminal_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → terminals.id</td></tr>
+          <tr><td class="col-name col-fk">staff_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → staff.id</td></tr>
+          <tr><td class="col-name">action</td><td class="col-type">VARCHAR(50)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">e.g. <code>login_success</code> <code>login_failed</code> <code>order_voided</code> <code>price_changed</code> <code>stock_adjusted</code> <code>discount_applied</code> <code>refund_issued</code></td></tr>
+          <tr><td class="col-name">entity_type</td><td class="col-type">VARCHAR(50)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">e.g. <code>order</code> <code>product</code> <code>staff</code></td></tr>
+          <tr><td class="col-name">entity_uuid</td><td class="col-type">UUID</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">UUID of affected entity</td></tr>
+          <tr><td class="col-name">details</td><td class="col-type">JSONB</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Old/new values, context. Indexed via GIN.</td></tr>
+          <tr><td class="col-name">ip_address</td><td class="col-type">INET</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">user_agent</td><td class="col-type">VARCHAR(500)</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">occurred_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Original timestamp at terminal</td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes">When cloud received it</td></tr>
+        </tbody>
+      </table>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_audit_uuid (uuid)</span>
+        <span class="index-item">idx_audit_outlet_date (outlet_id, occurred_at DESC)</span>
+        <span class="index-item">idx_audit_staff_date (staff_id, occurred_at DESC)</span>
+        <span class="index-item">idx_audit_action (action, occurred_at)</span>
+        <span class="index-item">idx_audit_entity (entity_type, entity_uuid)</span>
+        <span class="index-item">idx_audit_details_gin (details) USING GIN</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- sync_logs (cloud)                        -->
+    <!-- ======================================== -->
+    <div class="table-card" id="cloud-sync-logs">
+      <div class="table-card-header">
+        <h3>sync_logs</h3>
+        <div class="tags"><span class="tag tag-cloud">cloud only</span></div>
+      </div>
+      <div class="table-note">Cloud-side log of every sync request from terminals. Useful for diagnostics &amp; SLA monitoring.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">BIGSERIAL</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-fk">outlet_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → outlets.id</td></tr>
+          <tr><td class="col-name col-fk">terminal_id</td><td class="col-type">BIGINT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → terminals.id</td></tr>
+          <tr><td class="col-name">terminal_code</td><td class="col-type">VARCHAR(100)</td><td><span class="pill pill-no">NO</span></td><td>''</td><td class="col-notes">Snapshot for log readability</td></tr>
+          <tr><td class="col-name">sync_type</td><td class="col-type">VARCHAR(20)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Values: <code>master</code> <code>transactions</code></td></tr>
+          <tr><td class="col-name">direction</td><td class="col-type">VARCHAR(10)</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Values: <code>push</code> <code>pull</code></td></tr>
+          <tr><td class="col-name">records_affected</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">duration_ms</td><td class="col-type">INTEGER</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Server processing time</td></tr>
+          <tr><td class="col-name">status</td><td class="col-type">VARCHAR(20)</td><td><span class="pill pill-no">NO</span></td><td>'success'</td><td class="col-notes">Values: <code>success</code> <code>partial</code> <code>failed</code></td></tr>
+          <tr><td class="col-name">error_message</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">ip_address</td><td class="col-type">INET</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">TIMESTAMPTZ</td><td><span class="pill pill-no">NO</span></td><td>NOW()</td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_sl_terminal_date (terminal_id, synced_at DESC)</span>
+        <span class="index-item">idx_sl_outlet_date (outlet_id, synced_at DESC)</span>
+        <span class="index-item">idx_sl_status (status, synced_at) WHERE status != 'success'</span>
+      </div>
+    </div>
+
+    <hr class="section-rule" />
+
+    <!-- =========================================================== -->
+    <!-- LOCAL SQLITE                                                  -->
+    <!-- =========================================================== -->
+    <div class="db-section-title local-section" id="local">LOCAL DATABASE — SQLite (per terminal, SQLCipher-encrypted)</div>
+
+    <div class="section-intro">
+      <strong>SQLite</strong> mirrors the cloud schema for shared tables, plus terminal-only tables (settings, sync_settings, table_statuses, etc.). Each terminal has its own DB file, encrypted with SQLCipher. Tables that sync to cloud carry: <code>uuid</code>, <code>sync_status</code>, <code>synced_at</code>, <code>updated_at</code>. Foreign keys between local tables use Integer IDs; cross-DB references use UUIDs.
+    </div>
+
+    <!-- ======================================== -->
+    <!-- terminal_info (local)                    -->
+    <!-- ======================================== -->
+    <div class="table-card" id="local-terminal-info">
+      <div class="table-card-header">
+        <h3>terminal_info</h3>
+        <div class="tags"><span class="tag tag-local">local only</span></div>
+      </div>
+      <div class="table-note">Single-row table holding this terminal's identity. Populated on registration. Replaces the prior multi-row <code>terminals</code> local table.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>1</td><td class="col-notes">Always 1 — single row enforced</td></tr>
+          <tr><td class="col-name col-uq">terminal_uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — matches cloud terminals.uuid</td></tr>
+          <tr><td class="col-name col-uq">outlet_uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — matches cloud outlets.uuid. Filters all syncs.</td></tr>
+          <tr><td class="col-name">terminal_code</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">e.g. <code>COL-T1</code></td></tr>
+          <tr><td class="col-name">terminal_name</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">outlet_code</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">e.g. <code>COL</code></td></tr>
+          <tr><td class="col-name">outlet_name</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">device_uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Hardware/install id</td></tr>
+          <tr><td class="col-name">platform</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">api_key_encrypted</td><td class="col-type">BLOB</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Terminal API key for cloud auth, AES-encrypted with OS-keychain key</td></tr>
+          <tr><td class="col-name">currency</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td>'LKR'</td><td class="col-notes">Outlet default</td></tr>
+          <tr><td class="col-name">vat_rate</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>18.0</td><td class="col-notes">Cached from outlet</td></tr>
+          <tr><td class="col-name">timezone</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td>'Asia/Colombo'</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">invoice_prefix</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Cached from outlet</td></tr>
+          <tr><td class="col-name">registered_at</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">ISO8601 UTC</td></tr>
+          <tr><td class="col-name">last_master_sync_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">last_tx_sync_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="indexes"><strong>Constraints</strong>
+        <span class="index-item">CHECK (id = 1) — single row only</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- staff (local)                            -->
+    <!-- ======================================== -->
+    <div class="table-card" id="local-staff">
+      <div class="table-card-header">
+        <h3>staff</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note">Mirror of cloud staff filtered by this terminal's <code>outlet_uuid</code>. Pulled via SYNC MASTER. Used for offline login.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY (local)</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — matches cloud staff.uuid</td></tr>
+          <tr><td class="col-name">username</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">display_name</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">role</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td>'cashier'</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">pin_hash</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">bcrypt</td></tr>
+          <tr><td class="col-name">password_hash</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">bcrypt — managers/admins</td></tr>
+          <tr><td class="col-name">failed_login_count</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Local rate-limit</td></tr>
+          <tr><td class="col-name">locked_until</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">ISO8601</td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>1</td><td class="col-notes">0/1</td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">When last received from cloud</td></tr>
+        </tbody>
+      </table>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_staff_uuid (uuid)</span>
+        <span class="index-item">idx_staff_username (username)</span>
+        <span class="index-item">idx_staff_active (is_active)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- settings, sync_settings, sync_log,       -->
+    <!-- table_statuses, table_status_transitions -->
+    <!-- ======================================== -->
+    <div class="table-card" id="local-settings">
+      <div class="table-card-header">
+        <h3>settings</h3>
+        <div class="tags"><span class="tag tag-local">local only</span></div>
+      </div>
+      <div class="table-note">Key-value config. JWT secret moved out — now stored in OS keychain.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">key</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name">value</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">is_secret</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">If 1, value is AES-encrypted</td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-card" id="local-sync-settings">
+      <div class="table-card-header">
+        <h3>sync_settings</h3>
+        <div class="tags"><span class="tag tag-local">local only</span></div>
+      </div>
+      <div class="table-note">Single-row config. Mostly unchanged from v1.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>1</td><td class="col-notes">CHECK (id=1)</td></tr>
+          <tr><td class="col-name">sync_interval_minutes</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>10</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">auto_sync_enabled</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>1</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">last_master_sync_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">last_tx_sync_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">cloud_base_url</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">e.g. https://api.destinityinspire.lk</td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-card" id="local-sync-log">
+      <div class="table-card-header">
+        <h3>sync_log</h3>
+        <div class="tags"><span class="tag tag-local">local only</span></div>
+      </div>
+      <div class="table-note">Local sync history. Capped — keep last 1000 rows (delete older on each new sync).</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name">sync_type</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Values: <code>master</code> <code>transactions</code></td></tr>
+          <tr><td class="col-name">direction</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Values: <code>push</code> <code>pull</code></td></tr>
+          <tr><td class="col-name">status</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Values: <code>success</code> <code>failed</code> <code>partial</code></td></tr>
+          <tr><td class="col-name">records_affected</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">duration_ms</td><td class="col-type">INTEGER</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">error_message</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">started_at</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">finished_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_sync_log_started (started_at DESC)</span>
+      </div>
+    </div>
+
+    <div class="table-card" id="local-table-statuses">
+      <div class="table-card-header">
+        <h3>table_statuses</h3>
+        <div class="tags"><span class="tag tag-local">local only</span></div>
+      </div>
+      <div class="table-note">Same as v1. Local-only state machine for dining tables. Seeded: <code>available, reserved, seated, ordered, billed, cleaning</code>.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">code</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name">label</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">color</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td>'#64748b'</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">sort_order</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">is_system</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>1</td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-card" id="local-table-status-transitions">
+      <div class="table-card-header">
+        <h3>table_status_transitions</h3>
+        <div class="tags"><span class="tag tag-local">local only</span></div>
+      </div>
+      <div class="table-note">Same as v1 — defines allowed state changes.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-fk">from_status_id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → table_statuses.id</td></tr>
+          <tr><td class="col-name col-fk">to_status_id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → table_statuses.id</td></tr>
+          <tr><td class="col-name">trigger_type</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Values: <code>manual</code> <code>auto</code></td></tr>
+          <tr><td class="col-name">trigger_event</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- categories (local)                       -->
+    <!-- ======================================== -->
+    <div class="table-card" id="local-categories">
+      <div class="table-card-header">
+        <h3>categories</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note">Mirror of cloud categories merged with this outlet's <code>outlet_categories</code> overrides applied. Pulled via SYNC MASTER. <strong>Read-only at terminal.</strong></div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY (local)</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — matches cloud categories.uuid</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">color</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td>'#6b7280'</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">icon</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">sort_order</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">After outlet override applied</td></tr>
+          <tr><td class="col-name">is_visible</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>1</td><td class="col-notes">After outlet override applied</td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_cat_uuid (uuid)</span>
+        <span class="index-item">idx_cat_visible (is_visible, sort_order)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- products (local)                         -->
+    <!-- ======================================== -->
+    <div class="table-card" id="local-products">
+      <div class="table-card-header">
+        <h3>products</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note">Merged view of <code>products</code> + <code>outlet_products</code> for this outlet. Each row = a product available at this outlet, with effective price &amp; stock pre-resolved. Pulled via SYNC MASTER. <strong>Read-only at terminal</strong> (except <code>stock_quantity</code> which decrements locally on sale).</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY (local)</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — matches cloud products.uuid</td></tr>
+          <tr><td class="col-name">outlet_product_uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — matches cloud outlet_products.uuid</td></tr>
+          <tr><td class="col-name col-fk">category_id</td><td class="col-type">INTEGER</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → categories.id</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Indexed</td></tr>
+          <tr><td class="col-name">sku</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">barcode</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Indexed</td></tr>
+          <tr><td class="col-name">image_url</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">price_lkr</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Effective price (override or default)</td></tr>
+          <tr><td class="col-name">price_usd</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">vat_rate</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Effective rate</td></tr>
+          <tr><td class="col-name">unit</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td>'pcs'</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">track_stock</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">0/1</td></tr>
+          <tr><td class="col-name">stock_quantity</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Decrements locally on sale</td></tr>
+          <tr><td class="col-name">is_available</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>1</td><td class="col-notes">After outlet override</td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_prod_uuid (uuid)</span>
+        <span class="index-item">idx_prod_op_uuid (outlet_product_uuid)</span>
+        <span class="index-item">idx_prod_category (category_id)</span>
+        <span class="index-item">idx_prod_name (name)</span>
+        <span class="index-item">idx_prod_barcode (barcode)</span>
+        <span class="index-item">idx_prod_available (is_available)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- tables (local)                           -->
+    <!-- ======================================== -->
+    <div class="table-card" id="local-tables">
+      <div class="table-card-header">
+        <h3>tables</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note">Mirror of cloud tables WHERE outlet_id = mine AND (assigned_terminal_id IS NULL OR assigned_terminal_id = me). Plus local-only <code>status_id</code> for the table state machine.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — matches cloud tables.uuid</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">capacity</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>4</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">section</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name col-fk">status_id</td><td class="col-type">INTEGER</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → table_statuses.id (local-only)</td></tr>
+          <tr><td class="col-name">is_active</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>1</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_tables_uuid (uuid)</span>
+        <span class="index-item">idx_tables_status (status_id)</span>
+        <span class="index-item">idx_tables_active (is_active)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- orders (local)                           -->
+    <!-- ======================================== -->
+    <div class="table-card" id="local-orders">
+      <div class="table-card-header">
+        <h3>orders</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note">Created locally. Carries sync metadata. <code>tax_invoice_no</code> is NULL until cloud assigns it on push.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — UUID v4 generated on insert</td></tr>
+          <tr><td class="col-name col-fk">staff_id</td><td class="col-type">INTEGER</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → staff.id</td></tr>
+          <tr><td class="col-name col-fk">customer_id</td><td class="col-type">INTEGER</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → customers.id (optional)</td></tr>
+          <tr><td class="col-name col-fk">table_id</td><td class="col-type">INTEGER</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → tables.id</td></tr>
+          <tr><td class="col-name col-uq">terminal_order_ref</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE — e.g. <code>COL-T1-0045</code></td></tr>
+          <tr><td class="col-name">tax_invoice_no</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Filled from cloud response. <strong>Receipt re-printed when assigned.</strong></td></tr>
+          <tr><td class="col-name">currency</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td>'LKR'</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">subtotal</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">discount_amount</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">discount_reason</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">service_charge</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">tax_amount</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">total_amount</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">paid_amount</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">change_amount</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">status</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td>'pending'</td><td class="col-notes">Indexed</td></tr>
+          <tr><td class="col-name">void_reason</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">voided_by_staff_id</td><td class="col-type">INTEGER</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → staff.id</td></tr>
+          <tr><td class="col-name">notes</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">order_created_at</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">ISO8601 UTC</td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">sync_status</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td>'pending'</td><td class="col-notes">Indexed; Values: <code>pending</code> <code>syncing</code> <code>synced</code> <code>failed</code></td></tr>
+          <tr><td class="col-name">sync_attempts</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Retry counter</td></tr>
+          <tr><td class="col-name">sync_error</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Last error msg</td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">receipt_printed</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">0/1</td></tr>
+        </tbody>
+      </table>
+      <div class="rels"><strong>Relations:</strong> <span>→ staff (many:1)</span><span>→ tables (many:1)</span><span>→ customers (many:1)</span><span>→ order_items (1:many)</span><span>→ payments (1:many)</span></div>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_orders_uuid (uuid)</span>
+        <span class="index-item">idx_orders_ref (terminal_order_ref)</span>
+        <span class="index-item">idx_orders_status (status)</span>
+        <span class="index-item">idx_orders_sync (sync_status) WHERE sync_status != 'synced'</span>
+        <span class="index-item">idx_orders_date (order_created_at DESC)</span>
+        <span class="index-item">idx_orders_table (table_id, status)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- order_items (local)                      -->
+    <!-- ======================================== -->
+    <div class="table-card" id="local-order-items">
+      <div class="table-card-header">
+        <h3>order_items</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span></div>
+      </div>
+      <div class="table-note">Same shape as cloud version. <strong>product_name is NOT NULL</strong> — captures snapshot at sale time.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name col-fk">order_id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → orders.id ON DELETE CASCADE</td></tr>
+          <tr><td class="col-name">product_uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Snapshot</td></tr>
+          <tr><td class="col-name">product_id</td><td class="col-type">INTEGER</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">No FK — historical</td></tr>
+          <tr><td class="col-name">product_name</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Snapshot</td></tr>
+          <tr><td class="col-name">product_sku</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">quantity</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>1</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">unit_price</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">discount_amount</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">vat_rate</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">vat_amount</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">line_total</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">notes</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_oi_uuid (uuid)</span>
+        <span class="index-item">idx_oi_order (order_id)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- payments (local)                         -->
+    <!-- ======================================== -->
+    <div class="table-card" id="local-payments">
+      <div class="table-card-header">
+        <h3>payments</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span><span class="tag tag-new">NEW</span></div>
+      </div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name col-fk">order_id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → orders.id ON DELETE CASCADE</td></tr>
+          <tr><td class="col-name">payment_method</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">amount</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">currency</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td>'LKR'</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">card_last4</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Last 4 only</td></tr>
+          <tr><td class="col-name">card_brand</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">transaction_ref</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">status</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td>'success'</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">paid_at</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_pay_uuid (uuid)</span>
+        <span class="index-item">idx_pay_order (order_id)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- stock_movements (local)                  -->
+    <!-- ======================================== -->
+    <div class="table-card" id="local-stock-movements">
+      <div class="table-card-header">
+        <h3>stock_movements</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span><span class="tag tag-new">NEW</span></div>
+      </div>
+      <div class="table-note">Same shape as cloud. Append-only. Each sale, refund, or adjustment writes a row + updates <code>products.stock_quantity</code> in same transaction.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name col-fk">product_id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">FK → products.id (local)</td></tr>
+          <tr><td class="col-name">product_uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">For cross-DB reference</td></tr>
+          <tr><td class="col-name">outlet_product_uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Cloud uses this to update outlet_products.stock</td></tr>
+          <tr><td class="col-name col-fk">staff_id</td><td class="col-type">INTEGER</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → staff.id</td></tr>
+          <tr><td class="col-name">movement_type</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">quantity_change</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">Signed</td></tr>
+          <tr><td class="col-name">stock_after</td><td class="col-type">REAL</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">unit_cost</td><td class="col-type">REAL</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">reference_type</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">reference_uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">reason</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">created_at</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">sync_status</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td>'pending'</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_sm_uuid (uuid)</span>
+        <span class="index-item">idx_sm_product_date (product_id, created_at DESC)</span>
+        <span class="index-item">idx_sm_sync (sync_status) WHERE sync_status != 'synced'</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- customers (local)                        -->
+    <!-- ======================================== -->
+    <div class="table-card" id="local-customers">
+      <div class="table-card-header">
+        <h3>customers</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span><span class="tag tag-new">NEW</span></div>
+      </div>
+      <div class="table-note">Cached subset for offline lookup by phone. Synced via SYNC MASTER (recently seen at this outlet).</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name">phone</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">Indexed</td></tr>
+          <tr><td class="col-name">name</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">loyalty_card_no</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">loyalty_points</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>0</td><td class="col-notes">Cached</td></tr>
+          <tr><td class="col-name">notes</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">updated_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">sync_status</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td>'synced'</td><td class="col-notes">'pending' if locally created</td></tr>
+        </tbody>
+      </table>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_cust_uuid (uuid)</span>
+        <span class="index-item">idx_cust_phone (phone)</span>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- audit_log (local)                        -->
+    <!-- ======================================== -->
+    <div class="table-card" id="local-audit-log">
+      <div class="table-card-header">
+        <h3>audit_log</h3>
+        <div class="tags"><span class="tag tag-both">both DBs</span><span class="tag tag-new">NEW</span></div>
+      </div>
+      <div class="table-note">Append-only. Pushed to cloud during SYNC TRANSACTIONS. Locally retained 30 days then purged.</div>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="col-name col-pk">id</td><td class="col-type">INTEGER</td><td><span class="pill pill-no">NO</span></td><td>auto</td><td class="col-notes">PRIMARY KEY</td></tr>
+          <tr><td class="col-name col-uq">uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">UNIQUE</td></tr>
+          <tr><td class="col-name col-fk">staff_id</td><td class="col-type">INTEGER</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">FK → staff.id</td></tr>
+          <tr><td class="col-name">action</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">entity_type</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">entity_uuid</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">details_json</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes">JSON-encoded</td></tr>
+          <tr><td class="col-name">occurred_at</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td></td><td class="col-notes">ISO8601 UTC</td></tr>
+          <tr><td class="col-name">sync_status</td><td class="col-type">TEXT</td><td><span class="pill pill-no">NO</span></td><td>'pending'</td><td class="col-notes"></td></tr>
+          <tr><td class="col-name">synced_at</td><td class="col-type">TEXT</td><td><span class="pill pill-yes">YES</span></td><td></td><td class="col-notes"></td></tr>
+        </tbody>
+      </table>
+      <div class="indexes"><strong>Indexes</strong>
+        <span class="index-item">idx_audit_uuid (uuid)</span>
+        <span class="index-item">idx_audit_action_date (action, occurred_at)</span>
+        <span class="index-item">idx_audit_sync (sync_status) WHERE sync_status != 'synced'</span>
+      </div>
+    </div>
+
+  </main>
+</div>
+</body>
+</html>

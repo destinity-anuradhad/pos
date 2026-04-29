@@ -1,7 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { DatabaseService } from '../../services/database';
-
-interface Table { id: number; name: string; capacity: number; status: string; status_color: string; }
+import { ApiTable } from '../../services/api';
 
 @Component({
   selector: 'app-tables-page',
@@ -10,13 +9,13 @@ interface Table { id: number; name: string; capacity: number; status: string; st
   styleUrls: ['./tables.scss']
 })
 export class TablesPage implements OnInit {
-  tables: Table[] = [];
+  tables: ApiTable[] = [];
   loading = true;
   error = '';
 
   showForm = false;
   editingId: number | null = null;
-  form = { name: '', capacity: 4 };
+  form = { name: '', capacity: 4, section: '', is_active: true };
   formError = '';
   saving = false;
 
@@ -39,14 +38,14 @@ export class TablesPage implements OnInit {
 
   openAdd(): void {
     this.editingId = null;
-    this.form = { name: '', capacity: 4 };
+    this.form = { name: '', capacity: 4, section: '', is_active: true };
     this.formError = '';
     this.showForm = true;
   }
 
-  openEdit(t: Table): void {
+  openEdit(t: ApiTable): void {
     this.editingId = t.id;
-    this.form = { name: t.name, capacity: t.capacity };
+    this.form = { name: t.name, capacity: t.capacity, section: t.section ?? '', is_active: t.is_active };
     this.formError = '';
     this.showForm = true;
   }
@@ -56,11 +55,17 @@ export class TablesPage implements OnInit {
     if (!this.form.name.trim()) { this.formError = 'Table name is required'; return; }
     if (this.form.capacity < 1 || this.form.capacity > 100) { this.formError = 'Capacity must be 1–100'; return; }
     this.saving = true;
+    const payload = {
+      name: this.form.name.trim(),
+      capacity: this.form.capacity,
+      section: this.form.section || null,
+      is_active: this.form.is_active,
+    };
     try {
       if (this.editingId) {
-        await this.db.updateTable(this.editingId, { name: this.form.name.trim(), capacity: this.form.capacity });
+        await this.db.updateTable(this.editingId, payload);
       } else {
-        await this.db.createTable({ name: this.form.name.trim(), capacity: this.form.capacity });
+        await this.db.createTable(payload);
       }
       this.showForm = false;
       await this.load();
@@ -72,7 +77,7 @@ export class TablesPage implements OnInit {
     }
   }
 
-  async deleteTable(t: Table): Promise<void> {
+  async deleteTable(t: ApiTable): Promise<void> {
     if (!confirm(`Delete "${t.name}"?`)) return;
     try {
       await this.db.deleteTable(t.id);

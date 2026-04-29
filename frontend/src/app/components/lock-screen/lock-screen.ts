@@ -17,6 +17,7 @@ export class LockScreenComponent implements OnInit, OnDestroy {
   staffList: StaffInfo[] = [];
   selectedStaff: StaffInfo | null = null;
   pin = '';
+  password = '';
   error = '';
   attempts = 0;
   shaking = false;
@@ -59,9 +60,12 @@ export class LockScreenComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  get isCashier(): boolean { return this.selectedStaff?.role === 'cashier'; }
+
   selectStaff(s: StaffInfo): void {
     this.selectedStaff = s;
     this.pin = '';
+    this.password = '';
     this.error = '';
     this.phase = 'pin';
   }
@@ -70,6 +74,7 @@ export class LockScreenComponent implements OnInit, OnDestroy {
     this.phase = 'staff';
     this.selectedStaff = null;
     this.pin = '';
+    this.password = '';
     this.error = '';
   }
 
@@ -85,17 +90,25 @@ export class LockScreenComponent implements OnInit, OnDestroy {
     this.pin = this.pin.slice(0, -1);
   }
 
+  async submitPassword(): Promise<void> {
+    if (!this.password) return;
+    await this._tryUnlock();
+  }
+
   private async _tryUnlock(): Promise<void> {
     if (!this.selectedStaff) return;
-    const ok = await this.auth.verifyPin(this.selectedStaff.id, this.pin);
+    const credential = this.isCashier ? this.pin : this.password;
+    const ok = await this.auth.verifyPin(this.selectedStaff.username, credential);
     if (ok) {
       this.inactivity.unlock();
     } else {
       this.attempts++;
       this.pin = '';
+      this.password = '';
+      const label = this.isCashier ? 'PIN' : 'Password';
       this.error = this.attempts >= 3
-        ? `Incorrect PIN (${this.attempts} attempts)`
-        : 'Incorrect PIN';
+        ? `Incorrect ${label} (${this.attempts} attempts)`
+        : `Incorrect ${label}`;
       this._shake();
     }
     this.cdr.detectChanges();

@@ -222,13 +222,13 @@ export class SyncService implements OnDestroy {
           currency:           o!.currency,
           total_amount:       o!.total_amount,
           status:             o!.status,
-          payment_method:     o!.payment_method,
+          payment_method:     o!.payments?.[0]?.payment_method ?? null,
           items:              (o!.items || []).map(i => ({
             product_id:   i.product_id,
             product_name: i.product_name,
             quantity:     i.quantity,
             unit_price:   i.unit_price,
-            subtotal:     i.subtotal,
+            line_total:   i.line_total,
           })),
         })),
       };

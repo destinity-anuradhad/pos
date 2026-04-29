@@ -39,7 +39,8 @@ export class Orders implements OnInit {
     this.filteredOrders = this.allOrders.filter(o => {
       const matchStatus = this.filterStatus === 'all' || o.status === this.filterStatus;
       const matchSearch = !term ||
-        o.table_name.toLowerCase().includes(term) ||
+        (o.table_name ?? '').toLowerCase().includes(term) ||
+        (o.terminal_order_ref ?? '').toLowerCase().includes(term) ||
         String(o.id).includes(term);
       return matchStatus && matchSearch;
     });

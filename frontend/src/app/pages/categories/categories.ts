@@ -1,7 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { DatabaseService } from '../../services/database';
-
-interface Category { id: number; name: string; color: string; sync_status: string; }
+import { ApiCategory } from '../../services/api';
 
 @Component({
   selector: 'app-categories',
@@ -10,13 +9,13 @@ interface Category { id: number; name: string; color: string; sync_status: strin
   styleUrls: ['./categories.scss']
 })
 export class Categories implements OnInit {
-  categories: Category[] = [];
+  categories: ApiCategory[] = [];
   loading = true;
   error = '';
 
   showForm = false;
   editingId: number | null = null;
-  form = { name: '', color: '#094f70' };
+  form = { name: '', color: '#094f70', icon: '', sort_order: 0, is_visible: true };
   formError = '';
   saving = false;
 
@@ -45,14 +44,20 @@ export class Categories implements OnInit {
 
   openAdd(): void {
     this.editingId = null;
-    this.form = { name: '', color: '#094f70' };
+    this.form = { name: '', color: '#094f70', icon: '', sort_order: 0, is_visible: true };
     this.formError = '';
     this.showForm = true;
   }
 
-  openEdit(c: Category): void {
+  openEdit(c: ApiCategory): void {
     this.editingId = c.id;
-    this.form = { name: c.name, color: c.color || '#094f70' };
+    this.form = {
+      name: c.name,
+      color: c.color || '#094f70',
+      icon: c.icon || '',
+      sort_order: c.sort_order ?? 0,
+      is_visible: c.is_visible ?? true,
+    };
     this.formError = '';
     this.showForm = true;
   }
@@ -61,11 +66,18 @@ export class Categories implements OnInit {
     this.formError = '';
     if (!this.form.name.trim()) { this.formError = 'Name is required'; return; }
     this.saving = true;
+    const payload: Partial<ApiCategory> = {
+      name: this.form.name.trim(),
+      color: this.form.color,
+      icon: this.form.icon || null,
+      sort_order: this.form.sort_order,
+      is_visible: this.form.is_visible,
+    };
     try {
       if (this.editingId) {
-        await this.db.updateCategory(this.editingId, { name: this.form.name.trim(), color: this.form.color });
+        await this.db.updateCategory(this.editingId, payload);
       } else {
-        await this.db.createCategory({ name: this.form.name.trim(), color: this.form.color });
+        await this.db.createCategory(payload);
       }
       this.showForm = false;
       await this.load();
@@ -77,7 +89,7 @@ export class Categories implements OnInit {
     }
   }
 
-  async deleteCategory(c: Category): Promise<void> {
+  async deleteCategory(c: ApiCategory): Promise<void> {
     if (!confirm(`Delete "${c.name}"? Products in this category will lose their category.`)) return;
     try {
       await this.db.deleteCategory(c.id);

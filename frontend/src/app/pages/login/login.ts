@@ -16,6 +16,7 @@ export class Login implements OnInit {
   staffList: StaffInfo[] = [];
   selectedStaff: StaffInfo | null = null;
   pin = '';
+  password = '';
   error = '';
   loadingStaff = true;
 
@@ -37,6 +38,7 @@ export class Login implements OnInit {
   selectStaff(s: StaffInfo): void {
     this.selectedStaff = s;
     this.pin = '';
+    this.password = '';
     this.error = '';
     this.phase = 'pin';
   }
@@ -45,6 +47,7 @@ export class Login implements OnInit {
     this.phase = 'staff';
     this.selectedStaff = null;
     this.pin = '';
+    this.password = '';
     this.error = '';
   }
 
@@ -57,17 +60,24 @@ export class Login implements OnInit {
     this.pin = this.pin.slice(0, -1);
   }
 
+  get isCashier(): boolean {
+    return this.selectedStaff?.role === 'cashier';
+  }
+
   async submit(): Promise<void> {
-    if (!this.selectedStaff || this.pin.length < 4) return;
+    if (!this.selectedStaff) return;
+    const credential = this.isCashier ? this.pin : this.password;
+    if (!credential || (this.isCashier && credential.length < 4)) return;
     this.phase = 'loading';
     this.error = '';
-    const result = await this.auth.login(this.selectedStaff.id, this.pin);
+    const result = await this.auth.login(this.selectedStaff.username, credential, !this.isCashier);
     if (result.success) {
       this.inactivity.start();
       this.auth.redirectAfterLogin();
     } else {
-      this.error = result.error || 'Incorrect PIN';
+      this.error = result.error || (this.isCashier ? 'Incorrect PIN' : 'Incorrect password');
       this.pin = '';
+      this.password = '';
       this.phase = 'pin';
       this.cdr.detectChanges();
     }

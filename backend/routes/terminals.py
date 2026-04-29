@@ -1,144 +1,119 @@
+"""Terminal info / registration routes."""
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
+
+from models.models import TerminalInfo
 from utils import db_session
-from models.models import Terminal
-from datetime import datetime
+from auth_utils import require_auth
 
 terminals_bp = Blueprint('terminals', __name__)
 
 
-def terminal_to_dict(t):
+def _now_iso():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _terminal_dict(t: TerminalInfo) -> dict:
     return {
-        'id':            t.id,
-        'uuid':          t.uuid,
+        'terminal_uuid': t.terminal_uuid,
+        'outlet_uuid': t.outlet_uuid,
         'terminal_code': t.terminal_code,
         'terminal_name': t.terminal_name,
-        'platform':      t.platform,
-        'is_active':     t.is_active,
+        'outlet_code': t.outlet_code,
+        'outlet_name': t.outlet_name,
+        'currency': t.currency,
+        'vat_rate': t.vat_rate,
+        'timezone': t.timezone,
+        'invoice_prefix': t.invoice_prefix,
         'registered_at': t.registered_at.isoformat() if t.registered_at else None,
-        'last_seen_at':  t.last_seen_at.isoformat()  if t.last_seen_at  else None,
-        'registered_by': t.registered_by,
+        'last_master_sync_at': t.last_master_sync_at.isoformat() if t.last_master_sync_at else None,
+        'last_tx_sync_at': t.last_tx_sync_at.isoformat() if t.last_tx_sync_at else None,
     }
 
 
-@terminals_bp.get('/')
-def get_terminals():
+@terminals_bp.route('/info', methods=['GET'])
+def get_info():
     db = db_session()
     try:
-        return jsonify([terminal_to_dict(t) for t in db.query(Terminal).all()])
+        t = db.query(TerminalInfo).first()
+        if not t:
+            return jsonify({'error': 'Terminal not registered'}), 404
+        return jsonify(_terminal_dict(t)), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()
 
 
-@terminals_bp.post('/')
-def register_terminal():
-    """Register a new terminal. Called on first launch."""
+@terminals_bp.route('/register', methods=['POST'])
+def register():
+    data = request.get_json(silent=True) or {}
+
+    required = ['terminal_code', 'terminal_name', 'outlet_code', 'outlet_name',
+                'terminal_uuid', 'outlet_uuid']
+    for field in required:
+        if not data.get(field):
+            return jsonify({'error': f'{field} is required'}), 400
+
     db = db_session()
     try:
-        data = request.get_json()
-        uuid          = data.get('uuid')
-        terminal_code = data.get('terminal_code', '').strip().upper()
-        terminal_name = data.get('terminal_name', '').strip()
-        platform      = data.get('platform', 'web')
-        registered_by = data.get('registered_by')
+        now = datetime.now(timezone.utc)
+        t = db.query(TerminalInfo).first()
 
-        if not uuid or not terminal_code:
-            return jsonify({'error': 'uuid and terminal_code are required'}), 400
+        if t:
+            # Update existing
+            t.terminal_uuid = data['terminal_uuid']
+            t.outlet_uuid = data['outlet_uuid']
+            t.terminal_code = data['terminal_code']
+            t.terminal_name = data['terminal_name']
+            t.outlet_code = data['outlet_code']
+            t.outlet_name = data['outlet_name']
+            if 'currency' in data:
+                t.currency = data['currency']
+            if 'vat_rate' in data:
+                t.vat_rate = float(data['vat_rate'])
+            if 'invoice_prefix' in data:
+                t.invoice_prefix = data['invoice_prefix']
+        else:
+            t = TerminalInfo(
+                terminal_uuid=data['terminal_uuid'],
+                outlet_uuid=data['outlet_uuid'],
+                terminal_code=data['terminal_code'],
+                terminal_name=data['terminal_name'],
+                outlet_code=data['outlet_code'],
+                outlet_name=data['outlet_name'],
+                currency=data.get('currency', 'LKR'),
+                vat_rate=float(data.get('vat_rate', 0)),
+                timezone=data.get('timezone', 'Asia/Colombo'),
+                invoice_prefix=data.get('invoice_prefix', 'INV'),
+                registered_at=now,
+            )
+            db.add(t)
 
-        # Check for duplicate code
-        existing = db.query(Terminal).filter(Terminal.terminal_code == terminal_code).first()
-        if existing:
-            return jsonify({'error': f'Terminal code "{terminal_code}" is already registered'}), 409
-
-        # Check for duplicate UUID (re-registration)
-        existing_uuid = db.query(Terminal).filter(Terminal.uuid == uuid).first()
-        if existing_uuid:
-            existing_uuid.last_seen_at = datetime.utcnow()
-            db.commit()
-            return jsonify(terminal_to_dict(existing_uuid))
-
-        t = Terminal(
-            uuid          = uuid,
-            terminal_code = terminal_code,
-            terminal_name = terminal_name or terminal_code,
-            platform      = platform,
-            registered_by = registered_by,
-            last_seen_at  = datetime.utcnow(),
-        )
-        db.add(t)
         db.commit()
         db.refresh(t)
-        return jsonify(terminal_to_dict(t)), 201
+        return jsonify(_terminal_dict(t)), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()
 
 
-@terminals_bp.get('/<int:terminal_id>')
-def get_terminal(terminal_id):
+@terminals_bp.route('/info', methods=['DELETE'])
+@require_auth(roles=['admin'])
+def unregister():
     db = db_session()
     try:
-        t = db.query(Terminal).filter(Terminal.id == terminal_id).first()
+        t = db.query(TerminalInfo).first()
         if not t:
-            return jsonify({'error': 'Terminal not found'}), 404
-        return jsonify(terminal_to_dict(t))
-    finally:
-        db.close()
+            return jsonify({'error': 'Terminal not registered'}), 404
 
-
-@terminals_bp.get('/by-uuid/<uuid>')
-def get_terminal_by_uuid(uuid):
-    db = db_session()
-    try:
-        t = db.query(Terminal).filter(Terminal.uuid == uuid).first()
-        if not t:
-            return jsonify({'error': 'Terminal not found'}), 404
-        t.last_seen_at = datetime.utcnow()
-        db.commit()
-        return jsonify(terminal_to_dict(t))
-    finally:
-        db.close()
-
-
-@terminals_bp.put('/<int:terminal_id>')
-def update_terminal(terminal_id):
-    db = db_session()
-    try:
-        t = db.query(Terminal).filter(Terminal.id == terminal_id).first()
-        if not t:
-            return jsonify({'error': 'Terminal not found'}), 404
-        data = request.get_json()
-        if 'terminal_name' in data: t.terminal_name = data['terminal_name']
-        if 'is_active'     in data: t.is_active     = data['is_active']
-        db.commit()
-        db.refresh(t)
-        return jsonify(terminal_to_dict(t))
-    finally:
-        db.close()
-
-
-@terminals_bp.delete('/<int:terminal_id>')
-def delete_terminal(terminal_id):
-    db = db_session()
-    try:
-        t = db.query(Terminal).filter(Terminal.id == terminal_id).first()
-        if not t:
-            return jsonify({'error': 'Terminal not found'}), 404
         db.delete(t)
         db.commit()
-        return jsonify({'message': 'deleted'})
-    finally:
-        db.close()
-
-
-@terminals_bp.patch('/<int:terminal_id>/heartbeat')
-def terminal_heartbeat(terminal_id):
-    """Update last_seen_at timestamp."""
-    db = db_session()
-    try:
-        t = db.query(Terminal).filter(Terminal.id == terminal_id).first()
-        if not t:
-            return jsonify({'error': 'Terminal not found'}), 404
-        t.last_seen_at = datetime.utcnow()
-        db.commit()
-        return jsonify({'message': 'ok', 'last_seen_at': t.last_seen_at.isoformat()})
+        return jsonify({'message': 'Terminal unregistered'}), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()

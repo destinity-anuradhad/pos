@@ -3,8 +3,9 @@ import { Subscription } from 'rxjs';
 import { ScannerService } from '../../services/scanner';
 import { CustomerDisplayService } from '../../services/customer-display';
 import { KeyboardShortcutsService } from '../../services/keyboard-shortcuts';
-import { ApiProduct, ApiTable } from '../../services/api';
+import { ApiProduct, ApiTable, ApiCategory, ApiOrder } from '../../services/api';
 import { DatabaseService } from '../../services/database';
+import { ApiService } from '../../services/api';
 import { TerminalService } from '../../services/terminal';
 import { SyncService } from '../../services/sync';
 
@@ -26,17 +27,18 @@ export class Pos implements OnInit, OnDestroy {
   tables: ApiTable[] = [];
   products: ApiProduct[] = [];
   filteredProducts: ApiProduct[] = [];
+  categories: ApiCategory[] = [];
   cart: CartItem[] = [];
   selectedTable: ApiTable | null = null;
   currency: 'LKR' | 'USD' = 'LKR';
   searchTerm = '';
   step: 'tables' | 'order' | 'receipt' = 'tables';
+  lastOrder: ApiOrder | null = null;
   lastOrderRef  = '';
   lastOrderId   = 0;
   today = new Date().toLocaleString();
 
-  categories: string[] = [];
-  selectedCategory = 'All';
+  selectedCategoryId: number | null = null;  // null = All
 
   loadingProducts = true;
   loadingTables   = true;
@@ -45,8 +47,10 @@ export class Pos implements OnInit, OnDestroy {
   mobileTab: 'products' | 'cart' = 'products';
 
   // Payment
-  paymentModal: 'closed' | 'method' | 'card' = 'closed';
+  paymentModal: 'closed' | 'method' | 'cash' | 'card' = 'closed';
   paymentMethod: 'cash' | 'card' | null = null;
+  cashTendered = 0;
+  cashChange   = 0;
   card: CardDetails = { name: '', number: '', expiry: '', cvv: '' };
   cardError = '';
 
@@ -61,6 +65,7 @@ export class Pos implements OnInit, OnDestroy {
     private displayService: CustomerDisplayService,
     private shortcuts: KeyboardShortcutsService,
     private db: DatabaseService,
+    private api: ApiService,
     private terminal: TerminalService,
     private sync: SyncService,
     private cdr: ChangeDetectorRef
@@ -105,8 +110,12 @@ export class Pos implements OnInit, OnDestroy {
     this.loadingProducts = true;
     this.error = '';
     try {
-      this.products = await this.db.getProducts();
-      this.categories = ['All', ...new Set(this.products.map(p => p.category))];
+      [this.products, this.categories] = await Promise.all([
+        this.db.getProducts(),
+        this.db.getCategories(),
+      ]);
+      // Only show available products in POS
+      this.products = this.products.filter(p => p.is_available !== false);
       this.filterProducts();
     } catch {
       this.error = 'Cannot reach server. Make sure the backend is running.';
@@ -120,6 +129,8 @@ export class Pos implements OnInit, OnDestroy {
     this.loadingTables = true;
     try {
       this.tables = await this.db.getTables();
+      // Only show active tables
+      this.tables = this.tables.filter(t => t.is_active !== false);
     } catch {
       // silent
     } finally {
@@ -158,9 +169,8 @@ export class Pos implements OnInit, OnDestroy {
 
   // ── Table selection ────────────────────────────────────────────────────────
 
-  /** Returns true if the table can be selected (not billed or cleaning) */
   canSelectTable(table: ApiTable): boolean {
-    return !['billed', 'cleaning'].includes(table.status);
+    return !['billed', 'cleaning'].includes(table.status_code || '');
   }
 
   selectTable(table: ApiTable): void {
@@ -170,11 +180,19 @@ export class Pos implements OnInit, OnDestroy {
     this.step = 'order';
 
     // Transition: Available/Reserved → Seated (manual staff action)
-    if (['available', 'reserved'].includes(table.status)) {
+    if (['available', 'reserved'].includes(table.status_code || '')) {
       this.db.updateTableStatus(table.id, 'seated').then(updated => {
         const t = this.tables.find(t => t.id === table.id);
-        if (t && updated) { t.status = updated.status; t.status_label = updated.status_label; t.status_color = updated.status_color; }
-        if (this.selectedTable) this.selectedTable.status = 'seated';
+        if (t && updated) {
+          t.status_code  = updated.status_code;
+          t.status_label = updated.status_label;
+          t.status_color = updated.status_color;
+        }
+        if (this.selectedTable && updated) {
+          this.selectedTable.status_code  = updated.status_code;
+          this.selectedTable.status_label = updated.status_label;
+          this.selectedTable.status_color = updated.status_color;
+        }
       }).catch(() => {});
     }
   }
@@ -187,14 +205,13 @@ export class Pos implements OnInit, OnDestroy {
     this.displayService.send({ items: [], total: 0, currency: this.currency, status: 'idle' });
   }
 
-  /** Manual status change from the tables grid */
   async changeTableStatus(table: ApiTable, toCode: string, event: Event): Promise<void> {
     event.stopPropagation();
     try {
       const updated = await this.db.updateTableStatus(table.id, toCode);
-      table.status       = updated.status;
-      table.status_label = updated.status_label;
-      table.status_color = updated.status_color;
+      table.status_code       = updated.status_code;
+      table.status_label      = updated.status_label;
+      table.status_color      = updated.status_color;
       table.allowed_transitions = updated.allowed_transitions;
       this.cdr.detectChanges();
     } catch (e: any) {
@@ -213,17 +230,22 @@ export class Pos implements OnInit, OnDestroy {
 
   async openCamera(): Promise<void> { await this.scanner.scanWithCamera(); }
 
-  filterCategory(cat: string): void { this.selectedCategory = cat; this.filterProducts(); }
+  filterCategory(catId: number | null): void {
+    this.selectedCategoryId = catId;
+    this.filterProducts();
+  }
 
   filterProducts(): void {
     let list = this.products;
-    if (this.selectedCategory !== 'All') list = list.filter(p => p.category === this.selectedCategory);
-    if (this.searchTerm) list = list.filter(p => p.name.toLowerCase().includes(this.searchTerm.toLowerCase()));
+    if (this.selectedCategoryId !== null)
+      list = list.filter(p => p.category_id === this.selectedCategoryId);
+    if (this.searchTerm)
+      list = list.filter(p => p.name.toLowerCase().includes(this.searchTerm.toLowerCase()));
     this.filteredProducts = list;
   }
 
   isOutOfStock(product: ApiProduct): boolean {
-    return product.stock_quantity !== -1 && product.stock_quantity !== undefined && product.stock_quantity <= 0;
+    return product.track_stock && product.stock_quantity <= 0;
   }
 
   getStockInCart(productId: number): number {
@@ -231,24 +253,25 @@ export class Pos implements OnInit, OnDestroy {
   }
 
   canAddToCart(product: ApiProduct): boolean {
-    if (product.stock_quantity === -1 || product.stock_quantity === undefined) return true;
+    if (!product.is_available) return false;
+    if (!product.track_stock) return true;
     const inCart = this.getStockInCart(product.id);
     return product.stock_quantity - inCart > 0;
   }
 
   addToCart(product: ApiProduct): void {
     if (!this.canAddToCart(product)) {
-      this.scanMessage = `✗ Out of stock: ${product.name}`;
+      this.scanMessage = `✗ ${!product.is_available ? 'Unavailable' : 'Out of stock'}: ${product.name}`;
       setTimeout(() => { this.scanMessage = ''; this.cdr.detectChanges(); }, 2500);
       this.cdr.detectChanges();
       return;
     }
 
     // Transition: Seated → Ordered (first item added — auto)
-    if (this.selectedTable && this.selectedTable.status === 'seated' && this.cart.length === 0) {
+    if (this.selectedTable && this.selectedTable.status_code === 'seated' && this.cart.length === 0) {
       this.db.updateTableStatus(this.selectedTable.id, 'ordered').then(updated => {
         if (this.selectedTable && updated) {
-          this.selectedTable.status       = updated.status;
+          this.selectedTable.status_code  = updated.status_code;
           this.selectedTable.status_label = updated.status_label;
           this.selectedTable.status_color = updated.status_color;
         }
@@ -273,7 +296,13 @@ export class Pos implements OnInit, OnDestroy {
 
   getPrice(p: ApiProduct): number { return this.currency === 'LKR' ? p.price_lkr : p.price_usd; }
 
-  getTotal(): number { return this.cart.reduce((sum, i) => sum + this.getPrice(i) * i.quantity, 0); }
+  getSubtotal(): number { return this.cart.reduce((s, i) => s + this.getPrice(i) * i.quantity, 0); }
+
+  getTaxAmount(): number {
+    return this.cart.reduce((s, i) => s + (this.getPrice(i) * i.quantity * (i.vat_rate || 0) / 100), 0);
+  }
+
+  getTotal(): number { return this.getSubtotal() + this.getTaxAmount(); }
 
   private sendToDisplay(): void {
     this.displayService.send({
@@ -290,21 +319,42 @@ export class Pos implements OnInit, OnDestroy {
     if (this.cart.length === 0 || this.checkingOut) return;
     this.paymentModal  = 'method';
     this.paymentMethod = null;
+    this.cashTendered  = Math.ceil(this.getTotal() / 10) * 10;  // Round up to nearest 10
+    this.cashChange    = 0;
     this.card          = { name: '', number: '', expiry: '', cvv: '' };
     this.cardError     = '';
     this.cdr.detectChanges();
   }
 
-  selectCash(): void { this.paymentMethod = 'cash'; this.paymentModal = 'closed'; this.checkout(); }
+  selectCash(): void {
+    this.paymentMethod = 'cash';
+    this.cashTendered  = Math.ceil(this.getTotal() / 10) * 10;
+    this.updateCashChange();
+    this.paymentModal  = 'cash';
+    this.cdr.detectChanges();
+  }
+
+  updateCashChange(): void {
+    this.cashChange = Math.max(0, this.cashTendered - this.getTotal());
+  }
+
+  confirmCash(): void {
+    if (this.cashTendered < this.getTotal()) {
+      alert('Cash tendered must be at least ' + this.currency + ' ' + this.getTotal().toFixed(2));
+      return;
+    }
+    this.paymentModal = 'closed';
+    this.checkout();
+  }
 
   selectCard(): void { this.paymentMethod = 'card'; this.paymentModal = 'card'; this.cardError = ''; this.cdr.detectChanges(); }
 
   submitCard(): void {
     const num = this.card.number.replace(/\s/g, '');
-    if (!this.card.name.trim())                                  { this.cardError = 'Cardholder name is required.'; return; }
+    if (!this.card.name.trim())                                    { this.cardError = 'Cardholder name is required.'; return; }
     if (num.length < 13 || num.length > 19 || !/^\d+$/.test(num)) { this.cardError = 'Enter a valid card number.'; return; }
-    if (!/^\d{2}\/\d{2}$/.test(this.card.expiry))               { this.cardError = 'Expiry must be MM/YY.'; return; }
-    if (!/^\d{3,4}$/.test(this.card.cvv))                       { this.cardError = 'CVV must be 3 or 4 digits.'; return; }
+    if (!/^\d{2}\/\d{2}$/.test(this.card.expiry))                 { this.cardError = 'Expiry must be MM/YY.'; return; }
+    if (!/^\d{3,4}$/.test(this.card.cvv))                         { this.cardError = 'CVV must be 3 or 4 digits.'; return; }
     this.cardError = '';
     this.paymentModal = 'closed';
     this.checkout();
@@ -334,59 +384,90 @@ export class Pos implements OnInit, OnDestroy {
     this.checkingOut = true;
     this.today = new Date().toLocaleString();
 
-    const terminalId   = this.terminal.getTerminalId();
-    const terminalCode = this.terminal.getTerminalCode();
+    const total = this.getTotal();
+    const paidAmount = this.paymentMethod === 'cash' ? this.cashTendered : total;
+    const changeAmount = Math.max(0, paidAmount - total);
 
     try {
+      // 1. Create order
       const order = await this.db.createOrder({
-        terminal_id:   terminalId,
         table_id:      this.selectedTable?.id ?? null,
         currency:      this.currency,
-        total_amount:  this.getTotal(),
-        payment_method: this.paymentMethod,
         items: this.cart.map(i => ({
-          product_id:   i.id,
-          product_name: i.name,
-          quantity:     i.quantity,
-          unit_price:   this.getPrice(i),
-          subtotal:     this.getPrice(i) * i.quantity,
+          product_id:    i.id,
+          product_uuid:  i.uuid,
+          product_name:  i.name,
+          product_sku:   i.sku ?? null,
+          quantity:      i.quantity,
+          unit_price:    this.getPrice(i),
+          vat_rate:      i.vat_rate ?? 0,
         }))
       });
 
-      this.lastOrderId  = order.id;
-      this.lastOrderRef = order.terminal_order_ref || `#${order.id}`;
+      // 2. Record payment
+      const cardLast4 = this.paymentMethod === 'card'
+        ? this.card.number.replace(/\s/g, '').slice(-4) : undefined;
+      await this.api.addPayment(order.id, {
+        payment_method: this.paymentMethod!,
+        amount:   paidAmount,
+        currency: this.currency,
+        ...(cardLast4 ? { card_last4: cardLast4, card_brand: 'card' } : {}),
+      });
 
-      // Update local table status: Ordered → Billed (auto on checkout)
+      // 3. Complete the order
+      const completed = await this.api.completeOrder(order.id);
+      this.lastOrder  = { ...completed, paid_amount: paidAmount, change_amount: changeAmount };
+      this.lastOrderRef = completed.terminal_order_ref || `#${completed.id}`;
+      this.lastOrderId  = completed.id;
+
+      // Update local table status: Ordered → Billed
       if (this.selectedTable) {
-        const t = this.tables.find(t => t.id === this.selectedTable!.id);
-        if (t) { t.status = 'billed'; t.status_label = 'Billed'; t.status_color = '#ef4444'; }
-        this.selectedTable.status = 'billed';
+        this.db.updateTableStatus(this.selectedTable.id, 'billed').then(updated => {
+          const t = this.tables.find(t => t.id === this.selectedTable!.id);
+          if (t && updated) {
+            t.status_code  = updated.status_code;
+            t.status_label = updated.status_label;
+            t.status_color = updated.status_color;
+          }
+          if (this.selectedTable && updated) {
+            this.selectedTable.status_code = updated.status_code;
+          }
+        }).catch(() => {});
       }
-
 
     } catch {
       // Offline fallback — queue locally
+      const terminalCode = this.terminal.getTerminalCode();
       const seq  = Date.now();
       const ref  = terminalCode ? `${terminalCode}-OFFLINE-${seq}` : `OFFLINE-${seq}`;
       this.lastOrderRef = ref;
       this.lastOrderId  = seq;
+      this.lastOrder    = null;
 
       this.sync.addPendingOrder({
         terminal_order_ref: ref,
         table_id:           this.selectedTable?.id ?? null,
         currency:           this.currency,
-        total_amount:       this.getTotal(),
+        total_amount:       total,
+        paid_amount:        paidAmount,
+        change_amount:      changeAmount,
         payment_method:     this.paymentMethod,
         items: this.cart.map(i => ({
           product_id:   i.id,
+          product_uuid: i.uuid,
           product_name: i.name,
+          product_sku:  i.sku ?? null,
           quantity:     i.quantity,
           unit_price:   this.getPrice(i),
-          subtotal:     this.getPrice(i) * i.quantity,
+          vat_rate:     i.vat_rate ?? 0,
         })),
       });
 
-      if (this.selectedTable) this.selectedTable.status = 'billed';
+      if (this.selectedTable) {
+        this.selectedTable.status_code  = 'billed';
+        this.selectedTable.status_label = 'Billed';
+        this.selectedTable.status_color = '#ef4444';
+      }
     } finally {
       this.checkingOut = false;
     }
@@ -398,6 +479,7 @@ export class Pos implements OnInit, OnDestroy {
 
   newOrder(): void {
     this.cart = [];
+    this.lastOrder = null;
     this.loadTables();
     this.step = 'tables';
     this.selectedTable = null;

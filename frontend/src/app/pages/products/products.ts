@@ -2,12 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { DatabaseService } from '../../services/database';
 import { ScannerService } from '../../services/scanner';
 import { AppModeService } from '../../services/app-mode';
-
-interface Product {
-  id: number; name: string; category: string;
-  price_lkr: number; price_usd: number; barcode: string;
-  stock_quantity: number;
-}
+import { ApiProduct, ApiCategory } from '../../services/api';
 
 @Component({
   selector: 'app-products',
@@ -17,15 +12,23 @@ interface Product {
 })
 export class Products implements OnInit {
   isRestaurant = false;
-  products: Product[] = [];
-  filteredProducts: Product[] = [];
+  products: ApiProduct[] = [];
+  filteredProducts: ApiProduct[] = [];
+  categories: ApiCategory[] = [];
   searchTerm = '';
   loading = true;
   error = '';
 
   showForm = false;
   editingId: number | null = null;
-  form = { name: '', category: '', price_lkr: 0, price_usd: 0, barcode: '', stock_quantity: -1 };
+  form = {
+    name: '', category_id: null as number | null,
+    sku: '', barcode: '',
+    price_lkr: 0, price_usd: 0,
+    vat_rate: 0, unit: 'pcs',
+    track_stock: false, stock_quantity: -1,
+    is_available: true,
+  };
 
   scanningBarcode = false;
   lookupStatus: 'idle' | 'loading' | 'found' | 'not-found' | 'error' = 'idle';
@@ -34,8 +37,9 @@ export class Products implements OnInit {
   isMobile = typeof (window as any).Capacitor !== 'undefined' &&
              (window as any).Capacitor?.isNativePlatform?.();
 
-  get categories(): string[] {
-    return [...new Set(this.products.map(p => p.category).filter(Boolean))];
+  categoryName(id: number | null): string {
+    if (!id) return '—';
+    return this.categories.find(c => c.id === id)?.name ?? '—';
   }
 
   constructor(
@@ -54,12 +58,10 @@ export class Products implements OnInit {
     this.loading = true;
     this.error = '';
     try {
-      const data = await this.db.getProducts();
-      this.products = data.map(p => ({
-        id: p.id, name: p.name, category: p.category,
-        price_lkr: p.price_lkr, price_usd: p.price_usd, barcode: p.barcode,
-        stock_quantity: p.stock_quantity ?? -1,
-      }));
+      [this.products, this.categories] = await Promise.all([
+        this.db.getProducts(),
+        this.db.getCategories(),
+      ]);
       this.filteredProducts = [...this.products];
     } catch {
       this.error = 'Cannot reach server (localhost:8000). Start the backend: cd backend && python main.py';
@@ -73,34 +75,62 @@ export class Products implements OnInit {
     const term = this.searchTerm.toLowerCase();
     this.filteredProducts = this.products.filter(p =>
       p.name.toLowerCase().includes(term) ||
-      p.category.toLowerCase().includes(term) ||
-      p.barcode.toLowerCase().includes(term)
+      (p.sku ?? '').toLowerCase().includes(term) ||
+      (p.barcode ?? '').toLowerCase().includes(term) ||
+      this.categoryName(p.category_id).toLowerCase().includes(term)
     );
   }
 
   openAdd(): void {
     this.editingId = null;
-    this.form = { name: '', category: '', price_lkr: 0, price_usd: 0, barcode: '', stock_quantity: -1 };
+    this.form = {
+      name: '', category_id: null, sku: '', barcode: '',
+      price_lkr: 0, price_usd: 0, vat_rate: 0, unit: 'pcs',
+      track_stock: false, stock_quantity: -1, is_available: true,
+    };
     this.lookupStatus = 'idle'; this.lookupMessage = '';
     this.showForm = true;
   }
 
-  openEdit(p: Product): void {
+  openEdit(p: ApiProduct): void {
     this.editingId = p.id;
-    this.form = { name: p.name, category: p.category, price_lkr: p.price_lkr, price_usd: p.price_usd, barcode: p.barcode, stock_quantity: p.stock_quantity };
+    this.form = {
+      name: p.name,
+      category_id: p.category_id,
+      sku: p.sku ?? '',
+      barcode: p.barcode ?? '',
+      price_lkr: p.price_lkr,
+      price_usd: p.price_usd,
+      vat_rate: p.vat_rate,
+      unit: p.unit,
+      track_stock: p.track_stock,
+      stock_quantity: p.stock_quantity ?? -1,
+      is_available: p.is_available,
+    };
     this.lookupStatus = 'idle'; this.lookupMessage = '';
     this.showForm = true;
   }
 
   async saveProduct(): Promise<void> {
-    if (!this.form.name.trim() || !this.form.barcode.trim()) {
-      alert('Name and Barcode are required.'); return;
-    }
+    if (!this.form.name.trim()) { alert('Name is required.'); return; }
     try {
+      const payload: Partial<ApiProduct> = {
+        name: this.form.name.trim(),
+        category_id: this.form.category_id ?? undefined,
+        sku: this.form.sku || null,
+        barcode: this.form.barcode || null,
+        price_lkr: this.form.price_lkr,
+        price_usd: this.form.price_usd,
+        vat_rate: this.form.vat_rate,
+        unit: this.form.unit,
+        track_stock: this.form.track_stock,
+        stock_quantity: this.form.track_stock ? this.form.stock_quantity : -1,
+        is_available: this.form.is_available,
+      };
       if (this.editingId) {
-        await this.db.updateProduct(this.editingId, this.form);
+        await this.db.updateProduct(this.editingId, payload);
       } else {
-        await this.db.createProduct(this.form);
+        await this.db.createProduct(payload);
       }
       this.showForm = false;
       await this.load();
@@ -152,10 +182,8 @@ export class Products implements OnInit {
         const p = data.product;
         const name = p.product_name_en || p.product_name || '';
         const brand = p.brands || '';
-        const cat = this.mapCategory(p.categories_tags || []);
         if (name) {
-          if (!this.form.name)     this.form.name     = brand ? `${brand} ${name}` : name;
-          if (!this.form.category) this.form.category = cat;
+          if (!this.form.name) this.form.name = brand ? `${brand} ${name}` : name;
           this.lookupStatus = 'found';
           this.lookupMessage = `✓ Found: ${name}${brand ? ' by ' + brand : ''}`;
         } else {
@@ -171,22 +199,5 @@ export class Products implements OnInit {
       this.lookupMessage = 'Lookup failed (offline?) — fill manually.';
     }
     this.cdr.detectChanges();
-  }
-
-  private mapCategory(tags: string[]): string {
-    const map: Record<string, string> = {
-      'beverages':'Beverages','drinks':'Beverages','waters':'Beverages',
-      'snacks':'Snacks','biscuits':'Snacks','chips':'Snacks','chocolates':'Snacks',
-      'dairy':'Dairy','cheeses':'Dairy','milks':'Dairy',
-      'cereals':'Grocery','flours':'Grocery','oils':'Grocery','sugars':'Grocery',
-      'personal-care':'Personal Care','hygiene':'Personal Care','shampoos':'Personal Care',
-    };
-    for (const tag of tags) {
-      const key = tag.replace(/^[a-z]+:/, '').toLowerCase();
-      for (const [kw, cat] of Object.entries(map)) {
-        if (key.includes(kw)) return cat;
-      }
-    }
-    return '';
   }
 }

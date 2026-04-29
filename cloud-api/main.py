@@ -1,28 +1,28 @@
 import os
+import re
 from flask import Flask, jsonify
 from flask_cors import CORS
 from database import init_db
-from routes.sync import sync_bp
-from routes.products import products_bp
+from routes.sync       import sync_bp
+from routes.products   import products_bp
 from routes.categories import categories_bp
-from routes.terminals import terminals_bp
-from routes.outlets import outlets_bp
-from routes.reports import reports_bp
+from routes.terminals  import terminals_bp
+from routes.outlets    import outlets_bp
+from routes.reports    import reports_bp
+from routes.staff      import staff_bp
+from routes.tables     import tables_bp
+from routes.orders     import orders_bp
+from routes.customers  import customers_bp
 
-# Initialise DB and seed default data before the first request
 init_db()
 
 app = Flask(__name__)
 
-# Restrict CORS to known local origins — no wildcard in production
-_ALLOWED_ORIGINS = [
-    r'http://localhost(:[0-9]+)?',
-    r'http://127\.0\.0\.1(:[0-9]+)?',
-]
-CORS(app, origins=_ALLOWED_ORIGINS, supports_credentials=False)
+# Allow localhost origins only — no wildcard in production
+_ALLOWED = re.compile(r'http://(localhost|127\.0\.0\.1)(:[0-9]+)?$')
+CORS(app, origins=_ALLOWED, supports_credentials=False)
 
-# Reject requests larger than 2 MB
-app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024   # 2 MB payload cap
 
 app.register_blueprint(sync_bp,       url_prefix='/api/sync')
 app.register_blueprint(products_bp,   url_prefix='/api/products')
@@ -30,24 +30,32 @@ app.register_blueprint(categories_bp, url_prefix='/api/categories')
 app.register_blueprint(terminals_bp,  url_prefix='/api/terminals')
 app.register_blueprint(outlets_bp,    url_prefix='/api/outlets')
 app.register_blueprint(reports_bp,    url_prefix='/api/reports')
+app.register_blueprint(staff_bp,      url_prefix='/api/staff')
+app.register_blueprint(tables_bp,     url_prefix='/api/tables')
+app.register_blueprint(orders_bp,     url_prefix='/api/orders')
+app.register_blueprint(customers_bp,  url_prefix='/api/customers')
 
 
 @app.get('/')
 def root():
     return jsonify({
         'message': 'Destinity Inspire POS — Cloud HQ API',
-        'version': '1.0.0',
+        'version': '2.0.0',
         'endpoints': {
-            'sync_push':       'POST /api/sync/push',
-            'sync_pull':       'GET  /api/sync/pull',
-            'products':        'GET  /api/products/',
-            'categories':      'GET  /api/categories/',
-            'terminals':       'GET  /api/terminals/',
-            'outlets':         'GET  /api/outlets/',
-            'reports_sales':   'GET  /api/reports/sales',
-            'reports_orders':  'GET  /api/reports/orders',
-            'reports_outlets': 'GET  /api/reports/outlets',
-            'health':          'GET  /health',
+            'sync_pull':        'GET  /api/sync/pull',
+            'sync_push':        'POST /api/sync/push',
+            'outlets':          'GET  /api/outlets/',
+            'terminals':        'GET  /api/terminals/',
+            'staff':            'GET  /api/staff/',
+            'categories':       'GET  /api/categories/',
+            'products':         'GET  /api/products/',
+            'tables':           'GET  /api/tables/',
+            'orders':           'GET  /api/orders/',
+            'customers':        'GET  /api/customers/',
+            'reports_sales':    'GET  /api/reports/sales',
+            'reports_stock':    'GET  /api/reports/stock',
+            'reports_outlets':  'GET  /api/reports/outlets',
+            'health':           'GET  /health',
         },
     })
 
@@ -55,93 +63,6 @@ def root():
 @app.get('/health')
 def health():
     return jsonify({'status': 'ok'})
-
-
-@app.post('/api/admin/reset-and-seed')
-def reset_and_seed():
-    """
-    Wipe all master + transaction data and reseed with fresh restaurant menu.
-    Keeps outlets and terminals intact.
-    Protected by a simple secret header: X-Reset-Key: destinity-reset-2024
-    """
-    from flask import request
-    _reset_key = os.environ.get('RESET_KEY', '')
-    if not _reset_key or request.headers.get('X-Reset-Key') != _reset_key:
-        return jsonify({'error': 'Unauthorized'}), 403
-
-    from database import get_db
-    from models.models import (
-        Order, OrderItem, Product, Category, RestaurantTable, SyncLog
-    )
-    from sqlalchemy import text
-
-    db = get_db()
-    try:
-        # Wipe in FK-safe order
-        db.execute(text('DELETE FROM sync_logs'))
-        db.execute(text('DELETE FROM order_items'))
-        db.execute(text('DELETE FROM orders'))
-        db.execute(text('DELETE FROM products'))
-        db.execute(text('DELETE FROM categories'))
-        db.execute(text('DELETE FROM tables'))
-        db.commit()
-
-        # Reseed categories
-        cat_names = [
-            ('Main Course', '#ef4444'),
-            ('Salads',      '#22c55e'),
-            ('Starters',    '#f59e0b'),
-            ('Desserts',    '#ec4899'),
-            ('Beverages',   '#06b6d4'),
-        ]
-        cats = {}
-        for name, color in cat_names:
-            c = Category(name=name, color=color)
-            db.add(c)
-            db.flush()
-            cats[name] = c.id
-
-        # Reseed products (full restaurant menu)
-        menu = [
-            ('Grilled Chicken', 'Main Course', 1800, 6.00, 'R1001', 50),
-            ('Fried Rice',      'Main Course', 1200, 4.00, 'R1002', 50),
-            ('Pasta Carbonara', 'Main Course', 1500, 5.00, 'R1003', 30),
-            ('Beef Burger',     'Main Course', 1650, 5.50, 'R1004', 40),
-            ('Caesar Salad',    'Salads',       900, 3.00, 'R1005', 30),
-            ('Greek Salad',     'Salads',       850, 2.80, 'R1006', 30),
-            ('Garlic Bread',    'Starters',     450, 1.50, 'R1007', 60),
-            ('Chicken Soup',    'Starters',     600, 2.00, 'R1008', 40),
-            ('Spring Rolls',    'Starters',     550, 1.80, 'R1009', 40),
-            ('Chocolate Cake',  'Desserts',     750, 2.50, 'R1010', 20),
-            ('Ice Cream',       'Desserts',     500, 1.60, 'R1011', 25),
-            ('Coca Cola',       'Beverages',    300, 1.00, 'R1012', 100),
-            ('Mango Juice',     'Beverages',    400, 1.25, 'R1013', 80),
-            ('Iced Coffee',     'Beverages',    480, 1.60, 'R1014', 60),
-            ('Mineral Water',   'Beverages',    150, 0.50, 'R1015', 100),
-        ]
-        for name, cat, lkr, usd, bc, stock in menu:
-            db.add(Product(
-                name=name, category_id=cats[cat],
-                price_lkr=lkr, price_usd=usd,
-                barcode=bc, stock_quantity=stock,
-            ))
-
-        # Reseed tables
-        for i in range(1, 13):
-            db.add(RestaurantTable(name=f'Table {i}', capacity=4))
-
-        db.commit()
-        return jsonify({
-            'ok': True,
-            'categories': len(cat_names),
-            'products':   len(menu),
-            'tables':     12,
-        })
-    except Exception as e:
-        db.rollback()
-        return jsonify({'error': str(e)}), 500
-    finally:
-        db.close()
 
 
 if __name__ == '__main__':

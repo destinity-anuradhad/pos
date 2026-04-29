@@ -1,177 +1,148 @@
+"""Restaurant table routes."""
+import uuid
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
+
+from models.models import RestaurantTable, TableStatus
 from utils import db_session
-from models.models import RestaurantTable, TableStatus, TableStatusTransition
-from sqlalchemy.sql import func
-from validation import validate_table
+from auth_utils import require_auth
 
 tables_bp = Blueprint('tables', __name__)
 
 
-def table_to_dict(t):
+def _now_iso():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _table_dict(t: RestaurantTable, status: TableStatus = None) -> dict:
     return {
-        'id':                   t.id,
-        'name':                 t.name,
-        'capacity':             t.capacity,
-        'status_id':            t.status_id,
-        'status':               t.table_status.code  if t.table_status else 'available',
-        'status_label':         t.table_status.label if t.table_status else 'Available',
-        'status_color':         t.table_status.color if t.table_status else '#22c55e',
-        'sync_status':          t.sync_status or 'pending',
-        'modified_by_terminal': t.modified_by_terminal,
-        'updated_at':           t.updated_at.isoformat() if t.updated_at else None,
-        'synced_at':            t.synced_at.isoformat()  if t.synced_at  else None,
+        'id': t.id,
+        'uuid': t.uuid,
+        'name': t.name,
+        'capacity': t.capacity,
+        'section': t.section,
+        'status_id': t.status_id,
+        'status_code': status.code if status else None,
+        'status_label': status.label if status else None,
+        'status_color': status.color if status else None,
+        'is_active': t.is_active,
+        'updated_at': t.updated_at.isoformat() if t.updated_at else None,
+        'synced_at': t.synced_at.isoformat() if t.synced_at else None,
     }
 
 
-def _get_allowed_transitions(db, status_id):
-    """Return list of to_status dicts allowed from the given status_id."""
-    transitions = (db.query(TableStatusTransition)
-                   .filter(TableStatusTransition.from_status_id == status_id)
-                   .all())
-    return [
-        {
-            'to_status_id':    tr.to_status_id,
-            'to_status_code':  tr.to_status.code,
-            'to_status_label': tr.to_status.label,
-            'to_status_color': tr.to_status.color,
-            'trigger_type':    tr.trigger_type,
-            'trigger_event':   tr.trigger_event,
-        }
-        for tr in transitions
-    ]
-
-
-@tables_bp.get('/')
-def get_tables():
+@tables_bp.route('/', methods=['GET'])
+def list_tables():
     db = db_session()
     try:
-        tables = db.query(RestaurantTable).all()
-        result = []
-        for t in tables:
-            d = table_to_dict(t)
-            d['allowed_transitions'] = _get_allowed_transitions(db, t.status_id)
-            result.append(d)
-        return jsonify(result)
+        tables = (
+            db.query(RestaurantTable)
+            .filter(RestaurantTable.is_active == True)
+            .all()
+        )
+        # Collect status ids
+        status_ids = {t.status_id for t in tables if t.status_id}
+        statuses = {}
+        if status_ids:
+            for st in db.query(TableStatus).filter(TableStatus.id.in_(status_ids)).all():
+                statuses[st.id] = st
+
+        return jsonify([_table_dict(t, statuses.get(t.status_id)) for t in tables]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()
 
 
-@tables_bp.post('/')
+@tables_bp.route('/', methods=['POST'])
+@require_auth(roles=['manager', 'admin'])
 def create_table():
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'name is required'}), 400
+
     db = db_session()
     try:
-        data = request.get_json(silent=True) or {}
-        err, code = validate_table(data)
-        if err:
-            return err, code
-        terminal_code = request.headers.get('X-Terminal-Code') or data.get('terminal_code')
-        incoming_sync = data.get('sync_status')
-        # Default to 'available' status
-        status = db.query(TableStatus).filter(TableStatus.code == 'available').first()
+        # Find the default 'available' status
+        available_status = (
+            db.query(TableStatus)
+            .filter(TableStatus.code == 'available')
+            .first()
+        )
+        status_id = available_status.id if available_status else None
+
         t = RestaurantTable(
-            name                 = data['name'],
-            capacity             = data.get('capacity', 4),
-            status_id            = data.get('status_id', status.id if status else None),
-            sync_status          = incoming_sync if incoming_sync else 'pending',
-            modified_by_terminal = terminal_code,
+            uuid=str(uuid.uuid4()),
+            name=name,
+            capacity=data.get('capacity'),
+            section=data.get('section'),
+            status_id=status_id,
+            is_active=True,
+            updated_at=datetime.now(timezone.utc),
         )
         db.add(t)
         db.commit()
         db.refresh(t)
-        d = table_to_dict(t)
-        d['allowed_transitions'] = _get_allowed_transitions(db, t.status_id)
-        return jsonify(d), 201
+
+        status = db.query(TableStatus).filter(TableStatus.id == t.status_id).first() if t.status_id else None
+        return jsonify(_table_dict(t, status)), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()
 
 
-@tables_bp.put('/<int:table_id>')
-def update_table(table_id):
+@tables_bp.route('/<int:id>', methods=['PUT'])
+@require_auth(roles=['manager', 'admin'])
+def update_table(id):
+    data = request.get_json(silent=True) or {}
     db = db_session()
     try:
-        t = db.query(RestaurantTable).filter(RestaurantTable.id == table_id).first()
-        if not t:
-            return jsonify({'error': 'Not found'}), 404
-        data = request.get_json(silent=True) or {}
-        err, code = validate_table(data)
-        if err:
-            return err, code
-        terminal_code = request.headers.get('X-Terminal-Code') or data.get('terminal_code')
-        if 'name'     in data: t.name     = data['name']
-        if 'capacity' in data: t.capacity = data['capacity']
-        if data.get('sync_status'):
-            t.sync_status = data['sync_status']
-        else:
-            t.sync_status = 'pending'
-            t.modified_by_terminal = terminal_code
-        db.commit()
-        db.refresh(t)
-        d = table_to_dict(t)
-        d['allowed_transitions'] = _get_allowed_transitions(db, t.status_id)
-        return jsonify(d)
-    finally:
-        db.close()
-
-
-@tables_bp.delete('/<int:table_id>')
-def delete_table(table_id):
-    db = db_session()
-    try:
-        t = db.query(RestaurantTable).filter(RestaurantTable.id == table_id).first()
-        if not t:
-            return jsonify({'error': 'Table not found'}), 404
-        db.delete(t)
-        db.commit()
-        return jsonify({'message': 'Table deleted'})
-    finally:
-        db.close()
-
-
-@tables_bp.patch('/<int:table_id>/status')
-def update_table_status(table_id):
-    """
-    Transition a table to a new status.
-    Validates that the transition is allowed.
-    Query param: to_status_code=seated  (or to_status_id=3)
-    """
-    db = db_session()
-    try:
-        t = db.query(RestaurantTable).filter(RestaurantTable.id == table_id).first()
+        t = db.query(RestaurantTable).filter(RestaurantTable.id == id).first()
         if not t:
             return jsonify({'error': 'Table not found'}), 404
 
-        # Resolve target status
-        to_code = request.args.get('status') or request.args.get('to_status_code')
-        to_id   = request.args.get('to_status_id')
+        if 'name' in data:
+            t.name = data['name']
+        if 'capacity' in data:
+            t.capacity = data['capacity']
+        if 'section' in data:
+            t.section = data['section']
+        if 'status_id' in data:
+            t.status_id = data['status_id']
+        if 'is_active' in data:
+            t.is_active = bool(data['is_active'])
 
-        if to_code:
-            target = db.query(TableStatus).filter(TableStatus.code == to_code).first()
-        elif to_id:
-            target = db.query(TableStatus).filter(TableStatus.id == int(to_id)).first()
-        else:
-            return jsonify({'error': 'to_status_code or to_status_id required'}), 400
-
-        if not target:
-            return jsonify({'error': 'Target status not found'}), 404
-
-        # Validate transition
-        allowed = db.query(TableStatusTransition).filter(
-            TableStatusTransition.from_status_id == t.status_id,
-            TableStatusTransition.to_status_id   == target.id,
-        ).first()
-
-        if not allowed:
-            from_label = t.table_status.label if t.table_status else '?'
-            return jsonify({
-                'error': f'Transition from "{from_label}" to "{target.label}" is not allowed'
-            }), 422
-
-        t.status_id  = target.id
-        t.updated_at = func.now()
+        t.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(t)
-        d = table_to_dict(t)
-        d['allowed_transitions'] = _get_allowed_transitions(db, t.status_id)
-        return jsonify(d)
+
+        status = db.query(TableStatus).filter(TableStatus.id == t.status_id).first() if t.status_id else None
+        return jsonify(_table_dict(t, status)), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+@tables_bp.route('/<int:id>', methods=['DELETE'])
+@require_auth(roles=['manager', 'admin'])
+def delete_table(id):
+    db = db_session()
+    try:
+        t = db.query(RestaurantTable).filter(RestaurantTable.id == id).first()
+        if not t:
+            return jsonify({'error': 'Table not found'}), 404
+
+        t.is_active = False
+        t.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        return jsonify({'message': 'Table deactivated'}), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
     finally:
         db.close()

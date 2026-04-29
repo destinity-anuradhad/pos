@@ -159,7 +159,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let log of logs" [class.failed]="log.status === 'failed'">
-            <td>{{ formatDate(log.synced_at) }}</td>
+            <td>{{ formatDate(log.started_at) }}</td>
             <td><span class="type-badge" [class]="log.sync_type">{{ log.sync_type }}</span></td>
             <td>{{ log.direction === 'pull' ? '↓ Pull' : '↑ Push' }}</td>
             <td><span class="status-badge" [class]="log.status">{{ log.status }}</span></td>
