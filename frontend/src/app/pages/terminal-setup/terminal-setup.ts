@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { TerminalService } from '../../services/terminal';
 import { AuthService } from '../../services/auth';
@@ -24,6 +24,7 @@ export class TerminalSetup {
     public terminal: TerminalService,
     private auth: AuthService,
     private router: Router,
+    private cdr: ChangeDetectorRef,
   ) {
     this.platform = terminal.getPlatform();
   }
@@ -75,18 +76,23 @@ export class TerminalSetup {
 
     this.saving = true;
     try {
-      // Verify admin PIN against backend
+      console.log('[setup] Verifying admin PIN...');
       const result = await this.auth.login('admin', this.adminPin, false);
+      console.log('[setup] auth.login result:', result.success, result.error);
       if (!result.success) {
         this.error = 'Invalid admin PIN.';
         this.adminPin = '';
+        this.cdr.detectChanges();
         return;
       }
 
+      console.log('[setup] Registering terminal...');
       await this.terminal.register(this.terminalCode, this.terminalName, this.outletCode, this.outletName);
+      console.log('[setup] Registration successful, navigating to dashboard');
       this.router.navigate(['/dashboard']);
     } catch (e: any) {
       const msg = e?.message || '';
+      console.error('[setup] Registration error:', msg);
       if (msg.includes('409') || msg.includes('already')) {
         this.error = `Terminal code "${this.terminalCode.toUpperCase()}" is already registered.`;
       } else if (msg.includes('Failed to fetch') || msg.includes('abort')) {
@@ -97,6 +103,7 @@ export class TerminalSetup {
       this.adminPin = '';
     } finally {
       this.saving = false;
+      this.cdr.detectChanges();
     }
   }
 }

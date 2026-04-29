@@ -3,9 +3,14 @@
  *
  * Simulates a brand-new device with no stored auth or terminal registration.
  * Flow:
- *   1. App loads → login page (no pos_auth in localStorage)
- *   2. Enter PIN 1234 → auth succeeds → mode-guard detects no terminal → /terminal-setup
- *   3. Fill terminal_code, terminal_name, admin PIN → Register Terminal → /dashboard
+ *   1. App loads → login page — staff selection grid
+ *   2. Click "Admin" staff card → PIN numpad (6-digit)
+ *   3. Enter admin PIN (123456) → auto-submits → mode-guard sees no terminal → /terminal-setup
+ *   4. Fill outlet + terminal fields; enter admin PIN on numpad → Register Terminal
+ *   5. Should land on /dashboard
+ *
+ * Negative test:
+ *   - Wrong admin PIN on terminal-setup shows error, stays on setup page
  */
 import { test, expect } from '@playwright/test';
 import { _electron as electron } from '@playwright/test';
@@ -14,6 +19,10 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 const SCREENSHOTS = path.join(__dirname, '../screenshots');
+const ADMIN_PIN   = '123456';
+const BAD_PIN     = '000000';
+
+// ── Helpers ───────────────────────────────────────────────────────────────
 
 async function closeElectron(app: ElectronApplication) {
   await Promise.race([
@@ -23,7 +32,6 @@ async function closeElectron(app: ElectronApplication) {
   try { app.process().kill(); } catch (_) {}
 }
 
-/** Return the main app window (not DevTools) */
 async function getMainWindow(app: ElectronApplication): Promise<Page> {
   const waitForMain = async (): Promise<Page> => {
     for (const w of app.windows()) {
@@ -36,163 +44,195 @@ async function getMainWindow(app: ElectronApplication): Promise<Page> {
   return waitForMain();
 }
 
-/** Wipe all localStorage keys that the app uses — simulates fresh device */
+/** Poll the local backend /health until it responds (Electron spawns Python first) */
+async function waitForBackend(maxMs = 60000): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    try {
+      const res = await fetch('http://localhost:8000/health');
+      if (res.ok) return;
+    } catch (_) {}
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  throw new Error('Backend did not start within ' + maxMs + 'ms');
+}
+
+/** Wipe all terminal / auth localStorage keys — simulates a fresh device */
 async function clearAppStorage(page: Page) {
   await page.evaluate(() => {
-    const keys = [
+    [
       'pos_auth', 'pos_mode',
-      'terminal_uuid', 'terminal_id', 'terminal_code',
-      'api_url', 'sync_cache',
-    ];
-    keys.forEach(k => localStorage.removeItem(k));
-    // Force api_url to local backend so tests don't hit Railway
+      'terminal_uuid', 'terminal_code', 'terminal_name',
+      'outlet_uuid', 'outlet_code', 'outlet_name',
+      'sync_cache',
+    ].forEach(k => localStorage.removeItem(k));
+    // Point at local backend so tests never hit Railway
     localStorage.setItem('api_url', 'http://localhost:8000/api');
   });
 }
 
-/**
- * Reset app to login page without calling page.reload() which fails on file:// URLs.
- * Clears storage then navigates directly to /#/login (no guards on this route).
- * Also waits for Angular to have bootstrapped first so the hash change is picked up.
- */
-async function resetToLogin(page: Page) {
-  // Wait for Angular to boot (any app-root content visible) before clearing storage
-  await page.waitForFunction(
-    () => !!document.querySelector('app-root') && document.querySelector('app-root')!.innerHTML.trim().length > 50,
-    { timeout: 30000 }
-  );
-  await clearAppStorage(page);
-  // Navigate directly to /login — this route has no guards so always shows login page
-  await page.evaluate(() => { window.location.hash = '/login'; });
-  await page.waitForSelector('.pin-input', { timeout: 20000 });
+/** Enter PIN digits one by one via the numpad buttons */
+async function enterPinOnNumpad(page: Page, pin: string) {
+  for (const digit of pin) {
+    const btn = digit === '0'
+      ? page.locator('.numpad .num-btn:not(.empty):not(.del-btn)', { hasText: '0' })
+      : page.locator(`.numpad .num-btn`, { hasText: digit }).first();
+    await btn.click();
+    await page.waitForTimeout(80); // small delay so dots animate
+  }
 }
 
-// ── Cleanup: remove the test terminal after test run ──────────────────────
-async function deleteTestTerminal(terminalCode: string) {
+/** Remove the test terminal — login as admin first to get a token */
+async function deleteTestTerminal() {
   try {
-    const res = await fetch('http://localhost:8000/api/terminals/');
-    if (!res.ok) return;
-    const data: { id?: number; terminal_code?: string }[] = await res.json().catch(() => []);
-    if (!Array.isArray(data)) return;
-    for (const t of data) {
-      if (t.terminal_code?.toUpperCase() === terminalCode.toUpperCase() && t.id) {
-        await fetch(`http://localhost:8000/api/terminals/${t.id}`, { method: 'DELETE' }).catch(() => {});
-        console.log(`[cleanup] Deleted terminal ${t.terminal_code} (id=${t.id})`);
-      }
-    }
+    const loginRes = await fetch('http://localhost:8000/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-POS-Mode': 'restaurant' },
+      body: JSON.stringify({ username: 'admin', pin: '123456' }),
+    });
+    if (!loginRes.ok) return;
+    const { token } = await loginRes.json();
+    await fetch('http://localhost:8000/api/terminals/info', {
+      method: 'DELETE',
+      headers: { 'X-POS-Mode': 'restaurant', 'Authorization': `Bearer ${token}` },
+    }).catch(() => {});
   } catch (_) { /* best-effort */ }
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-test('ELECTRON — first-time login flow', async () => {
-  const TEST_TERMINAL_CODE = 'TEST-W-01';
-  const TEST_TERMINAL_NAME = 'Test Windows 01';
-  const ADMIN_PIN = '1234';
+/** Navigate to login page on a running Electron window */
+async function resetToLogin(page: Page) {
+  // Wait for Angular to bootstrap
+  await page.waitForFunction(
+    () => {
+      const root = document.querySelector('app-root');
+      return !!root && root.innerHTML.trim().length > 50;
+    },
+    { timeout: 60000 }
+  );
+  // Brief wait for any in-flight verifyWithCloud to complete
+  await page.waitForTimeout(2000);
+  await clearAppStorage(page);
+  await page.evaluate(() => { window.location.hash = '/login'; });
+  // Wait for staff selection grid
+  await page.waitForSelector('.staff-grid, .no-staff', { timeout: 20000 });
+}
 
-  // Pre-clean: remove test terminal from previous runs
-  await deleteTestTerminal(TEST_TERMINAL_CODE);
+// ── Positive: full first-time flow ────────────────────────────────────────
+test('ELECTRON — first-time login and terminal registration', async () => {
+  const OUTLET_CODE    = 'COL-01';
+  const OUTLET_NAME    = 'Colombo Branch';
+  const TERMINAL_CODE  = 'TEST-W-01';
+  const TERMINAL_NAME  = 'Test Windows 01';
 
+  await deleteTestTerminal();
   fs.mkdirSync(SCREENSHOTS, { recursive: true });
 
   const app = await electron.launch({
     args: [path.join(__dirname, '../../electron/main.js')],
-    cwd: path.join(__dirname, '../../electron'),
-    env: { ...process.env, NODE_ENV: 'test' },
+    cwd:  path.join(__dirname, '../../electron'),
+    env:  { ...process.env, NODE_ENV: 'test' },
     timeout: 60000,
   });
 
   const page = await getMainWindow(app);
   await page.waitForLoadState('domcontentloaded');
 
-  // ── STEP 1: Wipe storage so app treats this as a fresh device ──────────
-  // resetToLogin clears storage and navigates via hash (safe for file:// URLs)
-  console.log('\n[login] Resetting to login page...');
+  // Capture browser console output for debugging
+  page.on('console', msg => {
+    if (msg.type() === 'error') console.error(`[browser-error] ${msg.text()}`);
+    else if (msg.text().startsWith('[setup]')) console.log(`[browser] ${msg.text()}`);
+  });
+
+  // ── 1. Reset to login ──────────────────────────────────────────────────
+  console.log('\n[1] Resetting to login page...');
   await resetToLogin(page);
-  await page.screenshot({ path: `${SCREENSHOTS}/FTL-1-login.png` });
+  await page.screenshot({ path: `${SCREENSHOTS}/FTL-1-staff-grid.png` });
 
-  // ── STEP 2: Login page must be visible ─────────────────────────────────
-  console.log('[login] Login page visible');
-  expect(
-    await page.locator('.login-card').isVisible(),
-    'Login card must be visible on first load'
-  ).toBe(true);
+  // Staff grid must be visible
+  await expect(page.locator('.login-card')).toBeVisible();
+  await expect(page.locator('.staff-grid')).toBeVisible();
 
-  // ── STEP 3: Enter PIN ───────────────────────────────────────────────────
-  console.log('[login] Entering PIN...');
-  await page.locator('.pin-input').fill(ADMIN_PIN);
-  await page.screenshot({ path: `${SCREENSHOTS}/FTL-2-pin-entered.png` });
+  // ── 2. Select Admin staff ──────────────────────────────────────────────
+  console.log('[2] Selecting Admin staff card...');
+  const adminCard = page.locator('.staff-card', { hasText: 'Admin' }).first();
+  await expect(adminCard).toBeVisible({ timeout: 10000 });
+  await adminCard.click();
 
-  await page.locator('.login-btn').click();
+  // PIN numpad phase
+  await page.waitForSelector('.pin-screen', { timeout: 10000 });
+  await page.screenshot({ path: `${SCREENSHOTS}/FTL-2-pin-numpad.png` });
 
-  // ── STEP 4: Redirect to terminal-setup (no terminal registered) ─────────
-  console.log('[login] Waiting for terminal-setup...');
-  await page.waitForSelector('.setup-card', { timeout: 20000 });
+  await expect(page.locator('.pin-title')).toContainText('6-digit PIN');
+  console.log('[2] PIN numpad visible, entering PIN...');
+
+  // ── 3. Enter admin PIN ─────────────────────────────────────────────────
+  await enterPinOnNumpad(page, ADMIN_PIN);
+  // Auto-submits on 6th digit — wait for navigation away from login
+  await page.waitForFunction(
+    () => !window.location.hash.includes('/login'),
+    { timeout: 15000 }
+  );
+  console.log(`[3] Navigated to: ${await page.evaluate(() => window.location.hash)}`);
+
+  // ── 4. Terminal setup page ─────────────────────────────────────────────
+  await page.waitForSelector('.setup-page', { timeout: 15000 });
   await page.screenshot({ path: `${SCREENSHOTS}/FTL-3-terminal-setup.png` });
 
-  expect(
-    await page.locator('h1.setup-title').textContent(),
-    'Terminal Setup heading must be visible'
-  ).toContain('Terminal Setup');
+  console.log('[4] Terminal setup visible');
+  await expect(page.locator('.setup-heading h1')).toContainText('Terminal Setup');
 
-  // UUID should be auto-populated (non-empty)
-  const uuidText = (await page.locator('.uuid-value').textContent() ?? '').trim();
-  expect(uuidText, 'Device UUID must be populated').not.toBe('');
+  // UUID must be auto-populated
+  const uuid = (await page.locator('.uuid-value').textContent() ?? '').trim();
+  expect(uuid, 'Device UUID must be populated').not.toBe('');
 
-  // ── STEP 5: Fill the registration form ─────────────────────────────────
-  console.log('[setup] Filling registration form...');
-  await page.locator('input[name="terminalCode"]').fill(TEST_TERMINAL_CODE);
-  await page.locator('input[name="terminalName"]').fill(TEST_TERMINAL_NAME);
-  await page.locator('input[name="adminPin"]').fill(ADMIN_PIN);
+  // ── 5. Fill outlet + terminal fields ──────────────────────────────────
+  console.log('[5] Filling setup form...');
+  await page.locator('input[name="outletCode"]').fill(OUTLET_CODE);
+  await page.locator('input[name="outletName"]').fill(OUTLET_NAME);
+  await page.locator('input[name="terminalCode"]').fill(TERMINAL_CODE);
+  await page.locator('input[name="terminalName"]').fill(TERMINAL_NAME);
   await page.screenshot({ path: `${SCREENSHOTS}/FTL-4-form-filled.png` });
 
-  // ── STEP 6: Submit form ─────────────────────────────────────────────────
-  console.log('[setup] Registering terminal...');
-  await page.locator('.save-btn').click();
+  // ── 6. Enter admin PIN on terminal-setup numpad ────────────────────────
+  console.log('[6] Entering admin PIN on setup numpad...');
+  await enterPinOnNumpad(page, ADMIN_PIN);
+  // Auto-submits on 6th digit — wait a moment for the HTTP calls to complete
+  await page.waitForTimeout(3000);
+  await page.screenshot({ path: `${SCREENSHOTS}/FTL-5-after-pin.png` });
 
-  // ── STEP 7: Should land on dashboard ───────────────────────────────────
-  console.log('[setup] Waiting for dashboard...');
+  // Capture any error shown on setup page
+  const setupError = await page.locator('.error-msg').textContent({ timeout: 500 }).catch(() => '');
+  if (setupError) console.error(`[6] Registration error: "${setupError}"`);
+  const hashAfterPin = await page.evaluate(() => window.location.hash);
+  console.log(`[6] Hash after PIN: ${hashAfterPin}`);
 
-  // Dashboard has .stats-grid or .page-title "Dashboard"; also check hash route
-  const dashboardReached = await Promise.race([
-    page.waitForSelector('.stats-grid, .stat-card', { timeout: 20000 })
-      .then(() => true).catch(() => false),
-    // Fallback: hash route contains /dashboard
-    (async () => {
-      for (let i = 0; i < 40; i++) {
-        const hash = await page.evaluate(() => window.location.hash);
-        if (hash.includes('dashboard')) return true;
-        await new Promise(r => setTimeout(r, 500));
-      }
-      return false;
-    })(),
-  ]);
+  // ── 7. Expect dashboard ────────────────────────────────────────────────
+  console.log('[7] Waiting for dashboard...');
+  await page.waitForFunction(
+    () => window.location.hash.includes('/dashboard'),
+    { timeout: 30000 }
+  );
+  await page.screenshot({ path: `${SCREENSHOTS}/FTL-6-dashboard.png` });
+  console.log('[7] Dashboard reached!');
 
-  await page.screenshot({ path: `${SCREENSHOTS}/FTL-5-dashboard.png` });
-  console.log(`[setup] Dashboard reached: ${dashboardReached}`);
+  // Verify localStorage was populated
+  const storedCode    = await page.evaluate(() => localStorage.getItem('terminal_code'));
+  const storedOutlet  = await page.evaluate(() => localStorage.getItem('outlet_code'));
+  expect(storedCode?.toUpperCase()).toBe(TERMINAL_CODE.toUpperCase());
+  expect(storedOutlet?.toUpperCase()).toBe(OUTLET_CODE.toUpperCase());
 
-  // Verify terminal info is now stored
-  const storedCode = await page.evaluate(() => localStorage.getItem('terminal_code'));
-  const storedId   = await page.evaluate(() => localStorage.getItem('terminal_id'));
-  console.log(`[setup] Stored terminal_code: ${storedCode}, terminal_id: ${storedId}`);
-
-  // ── Assertions ──────────────────────────────────────────────────────────
-  expect(dashboardReached, 'Must reach dashboard after registration').toBe(true);
-  expect(storedCode?.toUpperCase(), 'terminal_code must be saved in localStorage').toBe(TEST_TERMINAL_CODE.toUpperCase());
-  expect(storedId, 'terminal_id must be saved in localStorage').not.toBeNull();
-
-  // ── Cleanup ─────────────────────────────────────────────────────────────
   await closeElectron(app);
-  await deleteTestTerminal(TEST_TERMINAL_CODE);
+  await deleteTestTerminal();
 });
 
-// ── Negative: wrong admin PIN ──────────────────────────────────────────────
+// ── Negative: wrong admin PIN on terminal-setup ───────────────────────────
 test('ELECTRON — terminal-setup rejects wrong admin PIN', async () => {
   fs.mkdirSync(SCREENSHOTS, { recursive: true });
 
   const app = await electron.launch({
     args: [path.join(__dirname, '../../electron/main.js')],
-    cwd: path.join(__dirname, '../../electron'),
-    env: { ...process.env, NODE_ENV: 'test' },
+    cwd:  path.join(__dirname, '../../electron'),
+    env:  { ...process.env, NODE_ENV: 'test' },
     timeout: 60000,
   });
 
@@ -201,29 +241,35 @@ test('ELECTRON — terminal-setup rejects wrong admin PIN', async () => {
 
   await resetToLogin(page);
 
-  // Login
-  await page.locator('.pin-input').fill('1234');
-  await page.locator('.login-btn').click();
+  // Select Admin → enter correct PIN to get past login
+  const adminCard = page.locator('.staff-card', { hasText: 'Admin' }).first();
+  await adminCard.click();
+  await page.waitForSelector('.pin-screen', { timeout: 10000 });
+  await enterPinOnNumpad(page, ADMIN_PIN);
+  await page.waitForSelector('.setup-page', { timeout: 15000 });
 
-  // Terminal setup
-  await page.waitForSelector('.setup-card', { timeout: 20000 });
-
-  // Fill with WRONG admin PIN
+  // Fill form fields
+  await page.locator('input[name="outletCode"]').fill('ERR-01');
+  await page.locator('input[name="outletName"]').fill('Error Outlet');
   await page.locator('input[name="terminalCode"]').fill('TEST-ERR-01');
   await page.locator('input[name="terminalName"]').fill('Error Test Terminal');
-  await page.locator('input[name="adminPin"]').fill('0000');  // wrong PIN
-  await page.locator('.save-btn').click();
 
-  // Should show error message, stay on setup page
-  const errorMsg = await page.locator('.error-msg').textContent({ timeout: 5000 }).catch(() => '');
-  console.log(`[neg-test] Error message: "${errorMsg}"`);
+  // Enter WRONG admin PIN on numpad
+  console.log('[neg] Entering wrong PIN...');
+  await enterPinOnNumpad(page, BAD_PIN);
+  await page.waitForTimeout(3000); // allow HTTP round-trip + change detection
+
+  const hashNeg = await page.evaluate(() => window.location.hash);
+  console.log(`[neg] Hash after bad PIN: ${hashNeg}`);
+
+  // Should show error, stay on setup page
+  await page.waitForSelector('.error-msg', { timeout: 10000 });
+  const errorMsg = (await page.locator('.error-msg').textContent()) ?? '';
+  console.log(`[neg] Error: "${errorMsg}"`);
   await page.screenshot({ path: `${SCREENSHOTS}/FTL-NEG-wrong-pin.png` });
 
-  expect(errorMsg, 'Must show invalid PIN error').toContain('Invalid admin PIN');
-  expect(
-    await page.locator('.setup-card').isVisible(),
-    'Must stay on setup page after wrong PIN'
-  ).toBe(true);
+  expect(errorMsg).toContain('Invalid admin PIN');
+  await expect(page.locator('.setup-page')).toBeVisible();
 
   await closeElectron(app);
 });

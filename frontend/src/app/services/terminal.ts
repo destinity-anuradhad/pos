@@ -94,8 +94,9 @@ export class TerminalService {
     });
   }
 
-  /** Re-verify registration with backend on startup. */
+  /** Re-verify registration with backend on startup (only if already registered locally). */
   async verifyWithCloud(): Promise<void> {
+    if (!this.isRegistered()) return; // fresh install — nothing to verify
     try {
       const t = await this.api.getTerminalInfo();
       localStorage.setItem(TERMINAL_UUID_KEY, t.terminal_uuid);
