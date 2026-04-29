@@ -1,4 +1,5 @@
 """Terminal info / registration routes."""
+import uuid as _uuid
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 
@@ -25,9 +26,9 @@ def _terminal_dict(t: TerminalInfo) -> dict:
         'vat_rate': t.vat_rate,
         'timezone': t.timezone,
         'invoice_prefix': t.invoice_prefix,
-        'registered_at': t.registered_at.isoformat() if t.registered_at else None,
-        'last_master_sync_at': t.last_master_sync_at.isoformat() if t.last_master_sync_at else None,
-        'last_tx_sync_at': t.last_tx_sync_at.isoformat() if t.last_tx_sync_at else None,
+        'registered_at': t.registered_at if isinstance(t.registered_at, str) else (t.registered_at.isoformat() if t.registered_at else None),
+        'last_master_sync_at': t.last_master_sync_at,
+        'last_tx_sync_at': t.last_tx_sync_at,
     }
 
 
@@ -68,6 +69,12 @@ def register():
             t.terminal_name = data['terminal_name']
             t.outlet_code = data['outlet_code']
             t.outlet_name = data['outlet_name']
+            if not t.device_uuid:
+                t.device_uuid = data.get('device_uuid') or str(_uuid.uuid4())
+            if not t.platform:
+                t.platform = data.get('platform', 'local')
+            if not t.api_key_encrypted:
+                t.api_key_encrypted = data.get('api_key_encrypted', '')
             if 'currency' in data:
                 t.currency = data['currency']
             if 'vat_rate' in data:
@@ -82,11 +89,14 @@ def register():
                 terminal_name=data['terminal_name'],
                 outlet_code=data['outlet_code'],
                 outlet_name=data['outlet_name'],
+                device_uuid=data.get('device_uuid') or str(_uuid.uuid4()),
+                platform=data.get('platform', 'local'),
+                api_key_encrypted=data.get('api_key_encrypted', ''),
                 currency=data.get('currency', 'LKR'),
                 vat_rate=float(data.get('vat_rate', 0)),
                 timezone=data.get('timezone', 'Asia/Colombo'),
                 invoice_prefix=data.get('invoice_prefix', 'INV'),
-                registered_at=now,
+                registered_at=now.isoformat(),
             )
             db.add(t)
 
