@@ -1,72 +1,85 @@
-<div class="setup-wrap">
-  <div class="setup-card">
+<div class="setup-page">
 
-    <div class="setup-logo">
-      <img src="/logo.svg" alt="Destinity Inspire" />
-    </div>
+  <!-- Left: branding + terminal info form -->
+  <div class="setup-left">
+    <div class="setup-left-inner">
 
-    <h1 class="setup-title">Terminal Setup</h1>
-    <p class="setup-sub">First-time setup — admin required</p>
+      <div class="setup-brand">
+        <img src="/logo.svg" class="setup-logo-img" alt="Destinity Inspire" />
+        <div>
+          <div class="setup-brand-name">Destinity Inspire</div>
+          <div class="setup-brand-sub">Point of Sale</div>
+        </div>
+      </div>
 
-    <div class="platform-badge">
-      <span class="platform-dot"></span>
-      {{ platformLabel }}
-    </div>
+      <div class="setup-heading">
+        <h1>Terminal Setup</h1>
+        <p>First-time registration — admin PIN required</p>
+      </div>
 
-    <div class="uuid-display">
-      <span class="uuid-label">Device UUID</span>
-      <span class="uuid-value">{{ terminal.getUUID() }}</span>
-    </div>
+      <div class="platform-badge">
+        <span class="platform-dot"></span>
+        {{ platformLabel }}
+      </div>
 
-    <form class="setup-form" (ngSubmit)="save()">
-
-      <div class="form-group">
-        <label>Terminal Code <span class="required">*</span></label>
-        <input
-          type="text"
-          [(ngModel)]="terminalCode"
-          name="terminalCode"
-          [placeholder]="codePlaceholder"
-          class="form-input"
-          autocomplete="off"
-          maxlength="20"
-        />
-        <div class="form-hint">Unique identifier for this device (e.g. COL-M-01 = Colombo, Mobile, Device 1)</div>
+      <div class="uuid-display">
+        <span class="uuid-label">Device UUID</span>
+        <span class="uuid-value">{{ terminal.getUUID() }}</span>
       </div>
 
       <div class="form-group">
-        <label>Terminal Name <span class="required">*</span></label>
-        <input
-          type="text"
-          [(ngModel)]="terminalName"
-          name="terminalName"
-          placeholder="e.g. Colombo Mobile Counter 1"
-          class="form-input"
-          autocomplete="off"
-        />
+        <label class="form-label">Terminal Code <span class="required">*</span></label>
+        <input type="text" [(ngModel)]="terminalCode" name="terminalCode"
+               [placeholder]="codePlaceholder" class="form-input"
+               autocomplete="off" maxlength="20" />
+        <div class="form-hint">e.g. COL-W-01 = Colombo, Windows, Device 1</div>
       </div>
 
       <div class="form-group">
-        <label>Admin PIN <span class="required">*</span></label>
-        <input
-          type="password"
-          [(ngModel)]="adminPin"
-          name="adminPin"
-          placeholder="Enter admin PIN"
-          class="form-input"
-          maxlength="8"
-        />
-        <div class="form-hint">Required to register a new terminal</div>
+        <label class="form-label">Terminal Name <span class="required">*</span></label>
+        <input type="text" [(ngModel)]="terminalName" name="terminalName"
+               placeholder="e.g. Colombo Counter 1" class="form-input"
+               autocomplete="off" />
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Right: admin PIN numpad -->
+  <div class="setup-right">
+    <div class="setup-right-inner">
+
+      <div class="pin-user">
+        <div class="pin-avatar admin-avatar">A</div>
+        <div>
+          <div class="pin-user-name">Admin</div>
+          <div class="pin-user-role">Administrator</div>
+        </div>
+      </div>
+
+      <h2 class="pin-title">Enter Admin PIN</h2>
+      <p class="pin-sub">6-digit PIN to authorise registration</p>
+
+      <div class="pin-dots">
+        <div class="pin-dot" *ngFor="let filled of pinDots" [class.filled]="filled"></div>
       </div>
 
       <div class="error-msg" *ngIf="error">{{ error }}</div>
 
-      <button type="submit" class="save-btn" [disabled]="saving">
+      <div class="numpad">
+        <button class="num-btn" *ngFor="let d of ['1','2','3','4','5','6','7','8','9']"
+                (click)="pressDigit(d)" [disabled]="saving">{{ d }}</button>
+        <button class="num-btn empty" disabled></button>
+        <button class="num-btn" (click)="pressDigit('0')" [disabled]="saving">0</button>
+        <button class="num-btn del-btn" (click)="pressBack()" [disabled]="saving">&#x232B;</button>
+      </div>
+
+      <button class="register-btn" [disabled]="saving || adminPin.length < 6 || !terminalCode.trim() || !terminalName.trim()" (click)="save()">
         <span *ngIf="!saving">Register Terminal</span>
         <span *ngIf="saving">Registering...</span>
       </button>
 
-    </form>
-
+    </div>
   </div>
+
 </div>

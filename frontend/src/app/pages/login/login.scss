@@ -1,9 +1,9 @@
+/* ── Page shell ───────────────────────────────────────────────── */
 .login-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
   background: #0b1120;
   background-image:
     radial-gradient(ellipse 80% 60% at 50% -20%, rgba(9,79,112,0.6) 0%, transparent 65%),
@@ -11,11 +11,9 @@
   position: relative;
   overflow: hidden;
 
-  /* subtle grid */
   &::before {
     content: '';
-    position: absolute;
-    inset: 0;
+    position: absolute; inset: 0;
     background-image:
       linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
@@ -24,57 +22,42 @@
   }
 }
 
+/* ── Staff selection card ─────────────────────────────────────── */
 .login-card {
   background: rgba(17,24,39,0.85);
   border: 1px solid rgba(255,255,255,0.08);
   backdrop-filter: blur(20px);
   border-radius: 24px;
-  width: 100%;
-  max-width: 380px;
+  width: 100%; max-width: 420px;
   overflow: hidden;
   box-shadow: 0 32px 64px rgba(0,0,0,0.5);
-  position: relative;
-  z-index: 1;
+  position: relative; z-index: 1;
 }
 
 .login-logo {
   padding: 40px 32px 28px;
-  text-align: center;
-  color: white;
-  position: relative;
+  text-align: center; color: white; position: relative;
 
   &::after {
     content: '';
-    position: absolute;
-    bottom: 0; left: 50%;
+    position: absolute; bottom: 0; left: 50%;
     transform: translateX(-50%);
     width: 60%; height: 1px;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
   }
 
   .login-logo-img {
-    width: 80px; height: 80px;
-    object-fit: contain;
-    margin: 0 auto 14px;
-    display: block;
+    width: 72px; height: 72px; object-fit: contain;
+    margin: 0 auto 12px; display: block;
     filter: drop-shadow(0 4px 20px rgba(9,79,112,0.6));
     animation: logoPop 0.5s cubic-bezier(0.34,1.56,0.64,1);
   }
 
-  h1 {
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    color: white;
-  }
+  h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; color: white; }
 
   .logo-sub {
-    font-size: 11px;
-    color: rgba(255,255,255,0.45);
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    margin-top: 5px;
-    display: block;
+    font-size: 11px; color: rgba(255,255,255,0.45);
+    letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; display: block;
   }
 }
 
@@ -84,94 +67,32 @@
 }
 
 .login-body {
-  padding: 28px 32px 32px;
+  padding: 24px 32px 32px;
 
-  h2 {
-    font-size: 18px;
-    font-weight: 700;
-    color: white;
-    margin-bottom: 4px;
-  }
+  h2 { font-size: 18px; font-weight: 700; color: white; margin-bottom: 4px; }
 
-  .login-hint {
-    color: rgba(255,255,255,0.4);
-    font-size: 13px;
-    margin-bottom: 24px;
-  }
-
-  .form-label { color: rgba(255,255,255,0.5); }
-
-  .form-control {
-    background: rgba(255,255,255,0.06);
-    border-color: rgba(255,255,255,0.1);
-    color: white;
-    &:focus {
-      border-color: rgba(9,79,112,0.8);
-      box-shadow: 0 0 0 3px rgba(9,79,112,0.25);
-      background: rgba(255,255,255,0.09);
-    }
-    &::placeholder { color: rgba(255,255,255,0.2); }
-  }
+  .login-hint { color: rgba(255,255,255,0.4); font-size: 13px; margin-bottom: 20px; }
 }
 
-.pin-input {
-  font-size: 28px;
-  letter-spacing: 10px;
-  text-align: center;
-  padding: 16px;
-  font-weight: 700;
-}
-
-.error-msg {
-  background: rgba(220,38,38,0.12);
-  border: 1px solid rgba(220,38,38,0.3);
-  color: #fca5a5;
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-size: 13px;
-  margin-bottom: 16px;
-}
-
-.login-btn {
-  width: 100%;
-  justify-content: center;
-  margin-top: 8px;
-  padding: 14px;
-  font-size: 15px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  box-shadow: 0 8px 20px rgba(9,79,112,0.4);
-  letter-spacing: 0.3px;
-  &:hover { box-shadow: 0 10px 24px rgba(9,79,112,0.5); }
-}
-
-.default-hint {
-  text-align: center;
-  font-size: 12px;
-  color: rgba(255,255,255,0.25);
-  margin-top: 18px;
-  strong { color: rgba(255,255,255,0.5); }
+.login-body.center {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px; padding: 48px 32px;
 }
 
 /* ── Staff grid ───────────────────────────────────────────────── */
 .staff-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 12px;
-  margin-top: 8px;
+  gap: 12px; margin-top: 8px;
 }
 
 .staff-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 16px;
-  padding: 16px 8px;
-  cursor: pointer;
-  transition: all 0.18s;
+  border-radius: 16px; padding: 16px 8px;
+  cursor: pointer; transition: all 0.18s;
 
   &:hover {
     background: rgba(9,79,112,0.25);
@@ -181,122 +102,217 @@
 }
 
 .staff-avatar {
-  width: 48px; height: 48px;
-  border-radius: 50%;
+  width: 48px; height: 48px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 20px; font-weight: 800; color: white;
-
-  &.lg { width: 64px; height: 64px; font-size: 26px; margin: 0 auto 8px; }
+  &.lg { width: 64px; height: 64px; font-size: 26px; }
 }
 
-.staff-name {
-  font-size: 13px; font-weight: 700; color: white; text-align: center;
-}
-
-.staff-role {
-  font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px;
-}
-
-.staff-role-badge {
-  font-size: 11px; color: rgba(255,255,255,0.4);
-  text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-top: -4px;
-}
+.staff-name  { font-size: 13px; font-weight: 700; color: white; text-align: center; }
+.staff-role  { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; }
 
 .no-staff {
   grid-column: 1/-1; text-align: center; padding: 20px;
   color: rgba(255,255,255,0.3); font-size: 13px;
 }
 
-.staff-loading {
-  display: flex; justify-content: center; padding: 32px;
+.staff-loading { display: flex; justify-content: center; padding: 32px; }
+
+/* ── Full-screen PIN screen ───────────────────────────────────── */
+.pin-screen {
+  position: fixed; inset: 0; z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  animation: fadeIn 0.2s ease;
 }
 
-/* ── PIN pad ──────────────────────────────────────────────────── */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Left panel */
+.pin-left {
+  background: rgba(9,79,112,0.15);
+  border-right: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 48px;
+}
+
+.pin-left-inner {
+  display: flex; flex-direction: column; gap: 40px;
+  max-width: 340px; width: 100%;
+}
+
+.pin-brand {
+  display: flex; align-items: center; gap: 16px;
+}
+
+.pin-logo-img {
+  width: 56px; height: 56px; object-fit: contain;
+  filter: drop-shadow(0 4px 16px rgba(9,79,112,0.7));
+}
+
+.pin-brand-name {
+  font-size: 20px; font-weight: 800; color: white; letter-spacing: -0.4px;
+}
+.pin-brand-sub {
+  font-size: 11px; color: rgba(255,255,255,0.4);
+  text-transform: uppercase; letter-spacing: 2.5px; margin-top: 2px;
+}
+
+.pin-user {
+  display: flex; align-items: center; gap: 20px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px; padding: 20px 24px;
+}
+
+.pin-avatar {
+  width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800; color: white;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.pin-user-name {
+  font-size: 22px; font-weight: 800; color: white; line-height: 1.2;
+}
+.pin-user-role {
+  font-size: 12px; color: rgba(255,255,255,0.45);
+  text-transform: uppercase; letter-spacing: 0.8px; margin-top: 4px;
+}
+
+.pin-welcome {
+  font-size: 15px; color: rgba(255,255,255,0.5); line-height: 1.6;
+}
+
 .back-btn {
-  background: none; border: none; color: rgba(255,255,255,0.4);
-  font-size: 13px; cursor: pointer; padding: 0; margin-bottom: 16px;
+  background: none; border: none; color: rgba(255,255,255,0.35);
+  font-size: 13px; cursor: pointer; padding: 0; text-align: left;
   &:hover { color: white; }
 }
 
-.pin-header {
-  text-align: center; margin-bottom: 16px;
+/* Right panel */
+.pin-right {
+  display: flex; align-items: center; justify-content: center;
+  padding: 48px;
 }
 
+.pin-right-inner {
+  display: flex; flex-direction: column; align-items: center;
+  width: 100%; max-width: 300px;
+}
+
+.pin-title {
+  font-size: 18px; font-weight: 700; color: white;
+  margin-bottom: 24px; text-align: center;
+}
+
+/* ── PIN dots ─────────────────────────────────────────────────── */
 .pin-dots {
-  display: flex; justify-content: center; gap: 14px; margin: 12px 0 8px;
+  display: flex; justify-content: center; gap: 16px; margin-bottom: 24px;
 }
 
 .pin-dot {
-  width: 14px; height: 14px; border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.25);
-  background: transparent;
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.25); background: transparent;
   transition: all 0.15s;
 
   &.filled {
-    background: var(--primary, #094f70);
-    border-color: var(--primary, #094f70);
-    box-shadow: 0 0 8px rgba(9,79,112,0.7);
+    background: #094f70; border-color: #094f70;
+    box-shadow: 0 0 10px rgba(9,79,112,0.8);
+    transform: scale(1.15);
   }
 }
 
+/* ── Numpad ───────────────────────────────────────────────────── */
 .numpad {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin: 16px 0;
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px; width: 100%; margin-bottom: 16px;
 }
 
 .num-btn {
   background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: white;
-  border-radius: 14px;
-  font-size: 22px;
-  font-weight: 600;
-  padding: 16px;
-  cursor: pointer;
-  transition: all 0.12s;
-  user-select: none;
+  border: 1px solid rgba(255,255,255,0.09);
+  color: white; border-radius: 16px;
+  font-size: 24px; font-weight: 600;
+  padding: 18px; cursor: pointer;
+  transition: all 0.12s; user-select: none;
 
   &:hover:not(:disabled) {
     background: rgba(9,79,112,0.35);
     border-color: rgba(9,79,112,0.5);
+    transform: translateY(-1px);
   }
-
-  &:active:not(:disabled) { transform: scale(0.93); }
-
+  &:active:not(:disabled) { transform: scale(0.92); }
   &.empty { visibility: hidden; }
-
   &.del-btn {
     font-size: 18px;
     background: rgba(220,38,38,0.1);
     border-color: rgba(220,38,38,0.2);
-    &:hover { background: rgba(220,38,38,0.2); }
+    &:hover { background: rgba(220,38,38,0.22); }
   }
 }
 
-.login-btn {
-  width: 100%; justify-content: center;
-  margin-top: 4px; padding: 14px; font-size: 15px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark, #063a52));
-  box-shadow: 0 8px 20px rgba(9,79,112,0.4);
-  &:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+/* ── Password input ───────────────────────────────────────────── */
+.password-input {
+  width: 100%; padding: 14px 18px; margin-bottom: 16px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px; color: white; font-size: 16px; outline: none;
+  box-sizing: border-box;
+
+  &::placeholder { color: rgba(255,255,255,0.25); }
+  &:focus { border-color: #094f70; box-shadow: 0 0 0 3px rgba(9,79,112,0.3); }
 }
 
+/* ── Unlock button ────────────────────────────────────────────── */
+.login-btn {
+  width: 100%; padding: 15px; border-radius: 14px;
+  background: linear-gradient(135deg, #094f70, #063a52);
+  border: none; color: white;
+  font-size: 16px; font-weight: 700;
+  cursor: pointer; letter-spacing: 0.3px;
+  box-shadow: 0 8px 20px rgba(9,79,112,0.4);
+  transition: all 0.15s;
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 10px 28px rgba(9,79,112,0.55);
+    transform: translateY(-1px);
+  }
+  &:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+}
+
+/* ── Error message ────────────────────────────────────────────── */
+.error-msg {
+  width: 100%;
+  background: rgba(220,38,38,0.12);
+  border: 1px solid rgba(220,38,38,0.3);
+  color: #fca5a5; border-radius: 10px;
+  padding: 10px 14px; font-size: 13px;
+  margin-bottom: 16px; text-align: center;
+  box-sizing: border-box;
+}
+
+/* ── Spinner ──────────────────────────────────────────────────── */
 .spinner {
   width: 32px; height: 32px;
   border: 3px solid rgba(255,255,255,0.1);
-  border-top-color: var(--primary, #094f70);
+  border-top-color: #094f70;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
-
   &.lg { width: 48px; height: 48px; }
 }
-
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.login-body.center {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 16px; padding: 48px 32px;
+/* ── Responsive: stack vertically on small screens ───────────── */
+@media (max-width: 640px) {
+  .pin-screen { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .pin-left {
+    padding: 24px 24px 16px; border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .pin-left-inner { gap: 16px; }
+  .pin-welcome { display: none; }
+  .pin-right { padding: 24px; }
+  .login-page { padding: 16px; }
 }

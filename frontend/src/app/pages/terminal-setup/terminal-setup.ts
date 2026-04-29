@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { TerminalService } from '../../services/terminal';
+import { AuthService } from '../../services/auth';
 
 @Component({
   selector: 'app-terminal-setup',
@@ -17,7 +18,11 @@ export class TerminalSetup {
 
   readonly platform: string;
 
-  constructor(public terminal: TerminalService, private router: Router) {
+  constructor(
+    public terminal: TerminalService,
+    private auth: AuthService,
+    private router: Router,
+  ) {
     this.platform = terminal.getPlatform();
   }
 
@@ -41,25 +46,51 @@ export class TerminalSetup {
     return map[this.platform] || 'e.g. COL-M-01';
   }
 
+  /** 6-digit PIN numpad */
+  get pinDots(): boolean[] {
+    return Array.from({ length: 6 }, (_, i) => i < this.adminPin.length);
+  }
+
+  pressDigit(d: string): void {
+    if (this.adminPin.length < 6) {
+      this.adminPin += d;
+      this.error = '';
+      if (this.adminPin.length === 6) this.save();
+    }
+  }
+
+  pressBack(): void {
+    this.adminPin = this.adminPin.slice(0, -1);
+  }
+
   async save(): Promise<void> {
     this.error = '';
     if (!this.terminalCode.trim()) { this.error = 'Terminal code is required.'; return; }
     if (!this.terminalName.trim()) { this.error = 'Terminal name is required.'; return; }
-    if (this.adminPin !== '1234')  { this.error = 'Invalid admin PIN.'; return; }
+    if (this.adminPin.length < 6)  { this.error = 'Enter the 6-digit admin PIN.'; return; }
 
     this.saving = true;
     try {
+      // Verify admin PIN against backend
+      const result = await this.auth.login('admin', this.adminPin, false);
+      if (!result.success) {
+        this.error = 'Invalid admin PIN.';
+        this.adminPin = '';
+        return;
+      }
+
       await this.terminal.register(this.terminalCode, this.terminalName);
       this.router.navigate(['/dashboard']);
     } catch (e: any) {
       const msg = e?.message || '';
       if (msg.includes('409') || msg.includes('already')) {
-        this.error = `Terminal code "${this.terminalCode.toUpperCase()}" is already registered. Choose a different code.`;
+        this.error = `Terminal code "${this.terminalCode.toUpperCase()}" is already registered.`;
       } else if (msg.includes('Failed to fetch') || msg.includes('abort')) {
         this.error = 'Cannot reach server. Make sure the backend is running.';
       } else {
         this.error = `Registration failed: ${msg || 'unknown error'}`;
       }
+      this.adminPin = '';
     } finally {
       this.saving = false;
     }
