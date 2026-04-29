@@ -23,7 +23,7 @@ export class SyncPage implements OnInit {
 
   isOnline = navigator.onLine;
   terminalCode: string;
-  terminalId: number | null;
+  terminalId: number | null = null;
 
   // Admin settings edit
   isAdmin = false;
@@ -40,7 +40,6 @@ export class SyncPage implements OnInit {
     private cdr: ChangeDetectorRef
   ) {
     this.terminalCode = terminal.getTerminalCode();
-    this.terminalId   = terminal.getTerminalId();
   }
 
   ngOnInit(): void {

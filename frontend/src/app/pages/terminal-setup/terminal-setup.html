@@ -28,6 +28,21 @@
       </div>
 
       <div class="form-group">
+        <label class="form-label">Outlet Code <span class="required">*</span></label>
+        <input type="text" [(ngModel)]="outletCode" name="outletCode"
+               placeholder="e.g. COL-01" class="form-input"
+               autocomplete="off" maxlength="20" />
+        <div class="form-hint">Short code for your outlet location</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Outlet Name <span class="required">*</span></label>
+        <input type="text" [(ngModel)]="outletName" name="outletName"
+               placeholder="e.g. Colombo Branch" class="form-input"
+               autocomplete="off" />
+      </div>
+
+      <div class="form-group">
         <label class="form-label">Terminal Code <span class="required">*</span></label>
         <input type="text" [(ngModel)]="terminalCode" name="terminalCode"
                [placeholder]="codePlaceholder" class="form-input"
@@ -74,7 +89,7 @@
         <button class="num-btn del-btn" (click)="pressBack()" [disabled]="saving">&#x232B;</button>
       </div>
 
-      <button class="register-btn" [disabled]="saving || adminPin.length < 6 || !terminalCode.trim() || !terminalName.trim()" (click)="save()">
+      <button class="register-btn" [disabled]="saving || adminPin.length < 6 || !terminalCode.trim() || !terminalName.trim() || !outletCode.trim() || !outletName.trim()" (click)="save()">
         <span *ngIf="!saving">Register Terminal</span>
         <span *ngIf="saving">Registering...</span>
       </button>

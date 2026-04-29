@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
 import { ApiService, ApiTerminal, resolveCloudBase } from './api';
 
-const TERMINAL_UUID_KEY      = 'terminal_uuid';
-const TERMINAL_ID_KEY        = 'terminal_id';
-const TERMINAL_CODE_KEY      = 'terminal_code';
-const TERMINAL_NAME_KEY      = 'terminal_name';
-const TERMINAL_CLOUD_ID_KEY  = 'terminal_cloud_id';
+const TERMINAL_UUID_KEY   = 'terminal_uuid';
+const TERMINAL_CODE_KEY   = 'terminal_code';
+const TERMINAL_NAME_KEY   = 'terminal_name';
+const OUTLET_UUID_KEY     = 'outlet_uuid';
+const OUTLET_CODE_KEY     = 'outlet_code';
+const OUTLET_NAME_KEY     = 'outlet_name';
 
 function generateUUID(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -28,7 +29,7 @@ export class TerminalService {
   constructor(private api: ApiService) {}
 
   isRegistered(): boolean {
-    return !!localStorage.getItem(TERMINAL_UUID_KEY) && !!localStorage.getItem(TERMINAL_ID_KEY);
+    return !!localStorage.getItem(TERMINAL_UUID_KEY) && !!localStorage.getItem(TERMINAL_CODE_KEY);
   }
 
   getUUID(): string {
@@ -40,94 +41,74 @@ export class TerminalService {
     return uuid;
   }
 
-  getTerminalId(): number | null {
-    const id = localStorage.getItem(TERMINAL_ID_KEY);
-    return id ? parseInt(id) : null;
-  }
+  getTerminalCode(): string  { return localStorage.getItem(TERMINAL_CODE_KEY) || ''; }
+  getTerminalName(): string  { return localStorage.getItem(TERMINAL_NAME_KEY) || ''; }
+  getOutletCode(): string    { return localStorage.getItem(OUTLET_CODE_KEY) || ''; }
+  getOutletName(): string    { return localStorage.getItem(OUTLET_NAME_KEY) || ''; }
+  getOutletUUID(): string    { return localStorage.getItem(OUTLET_UUID_KEY) || ''; }
+  getPlatform(): string      { return detectPlatform(); }
 
-  getTerminalCode(): string {
-    return localStorage.getItem(TERMINAL_CODE_KEY) || '';
-  }
+  /** Register this terminal with the local backend. */
+  async register(
+    terminalCode: string, terminalName: string,
+    outletCode: string,   outletName: string,
+  ): Promise<ApiTerminal> {
+    const terminalUUID = this.getUUID();
+    const outletUUID   = localStorage.getItem(OUTLET_UUID_KEY) || generateUUID();
 
-  getTerminalName(): string {
-    return localStorage.getItem(TERMINAL_NAME_KEY) || '';
-  }
-
-  getPlatform(): string {
-    return detectPlatform();
-  }
-
-  getCloudTerminalId(): number | null {
-    const id = localStorage.getItem(TERMINAL_CLOUD_ID_KEY);
-    return id ? parseInt(id) : null;
-  }
-
-  /** Register this terminal with the local backend, then also with the cloud. */
-  async register(terminalCode: string, terminalName: string, registeredBy?: string): Promise<ApiTerminal> {
-    const uuid     = this.getUUID();
-    const platform = detectPlatform();
-    const code     = terminalCode.trim().toUpperCase();
-    const name     = terminalName.trim();
-
-    // 1. Register with local backend
     const terminal = await this.api.registerTerminal({
-      uuid,
-      terminal_code: code,
-      terminal_name: name,
-      platform,
-      registered_by: registeredBy || null,
+      terminal_uuid: terminalUUID,
+      terminal_code: terminalCode.trim().toUpperCase(),
+      terminal_name: terminalName.trim(),
+      outlet_uuid:   outletUUID,
+      outlet_code:   outletCode.trim().toUpperCase(),
+      outlet_name:   outletName.trim(),
     });
 
-    localStorage.setItem(TERMINAL_ID_KEY,   terminal.id.toString());
+    localStorage.setItem(TERMINAL_UUID_KEY, terminal.terminal_uuid);
     localStorage.setItem(TERMINAL_CODE_KEY, terminal.terminal_code);
     localStorage.setItem(TERMINAL_NAME_KEY, terminal.terminal_name);
+    localStorage.setItem(OUTLET_UUID_KEY,   terminal.outlet_uuid);
+    localStorage.setItem(OUTLET_CODE_KEY,   terminal.outlet_code);
+    localStorage.setItem(OUTLET_NAME_KEY,   terminal.outlet_name);
 
-    // 2. Register with cloud HQ (fire and forget — offline is OK)
-    this.registerWithCloud(code, name, uuid).catch(() => {});
+    // Register with cloud HQ (fire and forget — offline is OK)
+    this.registerWithCloud(terminal).catch(() => {});
 
     return terminal;
   }
 
-  /** Register terminal in the cloud HQ database. */
-  private async registerWithCloud(code: string, name: string, uuid: string): Promise<void> {
+  private async registerWithCloud(t: ApiTerminal): Promise<void> {
     const cloudBase = resolveCloudBase();
-    const res = await fetch(`${cloudBase}/terminals/register`, {
+    await fetch(`${cloudBase}/terminals/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        terminal_code: code,
-        terminal_name: name,
-        uuid,
-        outlet_code: 'MAIN-01',
+        terminal_uuid: t.terminal_uuid,
+        terminal_code: t.terminal_code,
+        terminal_name: t.terminal_name,
+        outlet_uuid:   t.outlet_uuid,
+        outlet_code:   t.outlet_code,
+        outlet_name:   t.outlet_name,
       }),
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.id) {
-        localStorage.setItem(TERMINAL_CLOUD_ID_KEY, data.id.toString());
-      }
-    }
   }
 
-  /** Re-verify registration with cloud (on each startup when online). */
+  /** Re-verify registration with backend on startup. */
   async verifyWithCloud(): Promise<void> {
-    const uuid = localStorage.getItem(TERMINAL_UUID_KEY);
-    if (!uuid) return;
     try {
-      const terminal = await this.api.getTerminalByUuid(uuid);
-      localStorage.setItem(TERMINAL_ID_KEY,   terminal.id.toString());
-      localStorage.setItem(TERMINAL_CODE_KEY, terminal.terminal_code);
-      localStorage.setItem(TERMINAL_NAME_KEY, terminal.terminal_name);
+      const t = await this.api.getTerminalInfo();
+      localStorage.setItem(TERMINAL_UUID_KEY, t.terminal_uuid);
+      localStorage.setItem(TERMINAL_CODE_KEY, t.terminal_code);
+      localStorage.setItem(TERMINAL_NAME_KEY, t.terminal_name);
+      localStorage.setItem(OUTLET_UUID_KEY,   t.outlet_uuid);
+      localStorage.setItem(OUTLET_CODE_KEY,   t.outlet_code);
+      localStorage.setItem(OUTLET_NAME_KEY,   t.outlet_name);
     } catch {
       // offline — continue with cached values
     }
   }
 
-  /** Send heartbeat to update last_seen_at. */
-  async heartbeat(): Promise<void> {
-    const id = this.getTerminalId();
-    if (id) {
-      try { await this.api.terminalHeartbeat(id); } catch { /* offline */ }
-    }
-  }
+  /** Send heartbeat (no-op for now — endpoint removed). */
+  async heartbeat(): Promise<void> {}
 }

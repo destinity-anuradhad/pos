@@ -94,9 +94,11 @@ export interface DashboardStats {
 }
 
 export interface ApiTerminal {
-  id: number; uuid: string; terminal_code: string; terminal_name: string;
-  platform: string; is_active: boolean;
-  registered_at: string; last_seen_at: string | null; registered_by: string | null;
+  terminal_uuid: string; terminal_code: string; terminal_name: string;
+  outlet_uuid: string; outlet_code: string; outlet_name: string;
+  currency: string; vat_rate: number; timezone: string; invoice_prefix: string;
+  registered_at: string | null;
+  last_master_sync_at: string | null; last_tx_sync_at: string | null;
 }
 
 export interface ApiSyncLog {
@@ -231,8 +233,8 @@ export class ApiService {
 
   // Terminals
   getTerminals()                                             { return this.request<ApiTerminal[]>('GET',  '/terminals/'); }
-  registerTerminal(data: any)                                { return this.request<ApiTerminal>('POST',   '/terminals/', data); }
-  getTerminalByUuid(uuid: string)                            { return this.request<ApiTerminal>('GET',    `/terminals/by-uuid/${uuid}`); }
+  registerTerminal(data: any)                                { return this.request<ApiTerminal>('POST',   '/terminals/register', data); }
+  getTerminalInfo()                                          { return this.request<ApiTerminal>('GET',    '/terminals/info'); }
   updateTerminal(id: number, data: any)                      { return this.request<ApiTerminal>('PUT',    `/terminals/${id}`, data); }
   terminalHeartbeat(id: number)                              { return this.request<any>('PATCH',           `/terminals/${id}/heartbeat`); }
 

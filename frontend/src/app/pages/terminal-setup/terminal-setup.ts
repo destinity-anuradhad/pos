@@ -12,6 +12,8 @@ import { AuthService } from '../../services/auth';
 export class TerminalSetup {
   terminalCode = '';
   terminalName = '';
+  outletCode   = '';
+  outletName   = '';
   adminPin     = '';
   saving       = false;
   error        = '';
@@ -65,6 +67,8 @@ export class TerminalSetup {
 
   async save(): Promise<void> {
     this.error = '';
+    if (!this.outletCode.trim())   { this.error = 'Outlet code is required.'; return; }
+    if (!this.outletName.trim())   { this.error = 'Outlet name is required.'; return; }
     if (!this.terminalCode.trim()) { this.error = 'Terminal code is required.'; return; }
     if (!this.terminalName.trim()) { this.error = 'Terminal name is required.'; return; }
     if (this.adminPin.length < 6)  { this.error = 'Enter the 6-digit admin PIN.'; return; }
@@ -79,7 +83,7 @@ export class TerminalSetup {
         return;
       }
 
-      await this.terminal.register(this.terminalCode, this.terminalName);
+      await this.terminal.register(this.terminalCode, this.terminalName, this.outletCode, this.outletName);
       this.router.navigate(['/dashboard']);
     } catch (e: any) {
       const msg = e?.message || '';
