@@ -16,7 +16,6 @@ export class Login implements OnInit {
   staffList: StaffInfo[] = [];
   selectedStaff: StaffInfo | null = null;
   pin = '';
-  password = '';
   error = '';
   loadingStaff = true;
 
@@ -35,10 +34,18 @@ export class Login implements OnInit {
     this.cdr.detectChanges();
   }
 
+  /** Cashier = 4-digit PIN, manager/admin = 6-digit PIN */
+  get pinLength(): number {
+    return this.selectedStaff?.role === 'cashier' ? 4 : 6;
+  }
+
+  get pinDots(): boolean[] {
+    return Array.from({ length: this.pinLength }, (_, i) => i < this.pin.length);
+  }
+
   selectStaff(s: StaffInfo): void {
     this.selectedStaff = s;
     this.pin = '';
-    this.password = '';
     this.error = '';
     this.phase = 'pin';
   }
@@ -47,37 +54,32 @@ export class Login implements OnInit {
     this.phase = 'staff';
     this.selectedStaff = null;
     this.pin = '';
-    this.password = '';
     this.error = '';
   }
 
   pressDigit(d: string): void {
-    if (this.pin.length < 6) this.pin += d;
-    if (this.pin.length >= 4) this.error = '';
+    if (this.pin.length < this.pinLength) {
+      this.pin += d;
+      this.error = '';
+      if (this.pin.length === this.pinLength) this.submit();
+    }
   }
 
   pressBack(): void {
     this.pin = this.pin.slice(0, -1);
   }
 
-  get isCashier(): boolean {
-    return this.selectedStaff?.role === 'cashier';
-  }
-
   async submit(): Promise<void> {
-    if (!this.selectedStaff) return;
-    const credential = this.isCashier ? this.pin : this.password;
-    if (!credential || (this.isCashier && credential.length < 4)) return;
+    if (!this.selectedStaff || this.pin.length < this.pinLength) return;
     this.phase = 'loading';
     this.error = '';
-    const result = await this.auth.login(this.selectedStaff.username, credential, !this.isCashier);
+    const result = await this.auth.login(this.selectedStaff.username, this.pin, false);
     if (result.success) {
       this.inactivity.start();
       this.auth.redirectAfterLogin();
     } else {
-      this.error = result.error || (this.isCashier ? 'Incorrect PIN' : 'Incorrect password');
+      this.error = result.error || 'Incorrect PIN';
       this.pin = '';
-      this.password = '';
       this.phase = 'pin';
       this.cdr.detectChanges();
     }
@@ -91,9 +93,5 @@ export class Login implements OnInit {
   getRoleColor(role: string): string {
     const map: Record<string, string> = { admin: '#ef4444', manager: '#f59e0b', cashier: '#22c55e' };
     return map[role] || '#6b7280';
-  }
-
-  get pinDots(): boolean[] {
-    return Array.from({ length: 4 }, (_, i) => i < this.pin.length);
   }
 }

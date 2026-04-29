@@ -1,14 +1,14 @@
 <div class="login-page">
-  <div class="login-card">
 
-    <!-- Logo -->
+  <!-- ── Staff selection phase (centred card, unchanged) ─────────── -->
+  <div class="login-card" *ngIf="phase === 'staff' || phase === 'loading'">
+
     <div class="login-logo">
       <img src="/logo.svg" class="login-logo-img" alt="Destinity Inspire" />
       <h1>Destinity Inspire</h1>
       <span class="logo-sub">Point of Sale</span>
     </div>
 
-    <!-- Phase: staff list -->
     <div class="login-body" *ngIf="phase === 'staff'">
       <h2>Who are you?</h2>
       <p class="login-hint">Select your name to continue</p>
@@ -25,28 +25,54 @@
           <span class="staff-name">{{ s.display_name }}</span>
           <span class="staff-role">{{ getRoleLabel(s.role) }}</span>
         </button>
-
         <div class="no-staff" *ngIf="staffList.length === 0">
           <p>No staff found. Make sure the backend is running.</p>
         </div>
       </div>
     </div>
 
-    <!-- Phase: PIN entry -->
-    <div class="login-body" *ngIf="phase === 'pin'">
-      <button class="back-btn" (click)="back()">← Back</button>
+    <div class="login-body center" *ngIf="phase === 'loading'">
+      <div class="spinner lg"></div>
+      <p class="login-hint">Verifying...</p>
+    </div>
 
-      <div class="pin-header">
-        <div class="staff-avatar lg" [style.background]="getRoleColor(selectedStaff?.role || '')">
-          {{ selectedStaff?.display_name?.charAt(0)?.toUpperCase() }}
+  </div>
+
+  <!-- ── PIN / Password phase — full-screen two-column ───────────── -->
+  <div class="pin-screen" *ngIf="phase === 'pin'">
+
+    <!-- Left: branding + user info -->
+    <div class="pin-left">
+      <div class="pin-left-inner">
+        <div class="pin-brand">
+          <img src="/logo.svg" class="pin-logo-img" alt="Destinity Inspire" />
+          <div>
+            <div class="pin-brand-name">Destinity Inspire</div>
+            <div class="pin-brand-sub">Point of Sale</div>
+          </div>
         </div>
-        <h2>{{ selectedStaff?.display_name }}</h2>
-        <span class="staff-role-badge">{{ getRoleLabel(selectedStaff?.role || '') }}</span>
-      </div>
 
-      <!-- Cashier: PIN numpad -->
-      <ng-container *ngIf="isCashier">
-        <p class="login-hint">Enter your PIN</p>
+        <div class="pin-user">
+          <div class="pin-avatar" [style.background]="getRoleColor(selectedStaff?.role || '')">
+            {{ selectedStaff?.display_name?.charAt(0)?.toUpperCase() }}
+          </div>
+          <div class="pin-user-info">
+            <div class="pin-user-name">{{ selectedStaff?.display_name }}</div>
+            <div class="pin-user-role">{{ getRoleLabel(selectedStaff?.role || '') }}</div>
+          </div>
+        </div>
+
+        <p class="pin-welcome">Welcome back!<br/>Please authenticate to continue.</p>
+
+        <button class="back-btn" (click)="back()">← Switch user</button>
+      </div>
+    </div>
+
+    <!-- Right: PIN / password entry -->
+    <div class="pin-right">
+      <div class="pin-right-inner">
+
+        <h2 class="pin-title">Enter your {{ pinLength }}-digit PIN</h2>
         <div class="pin-dots">
           <div class="pin-dot" *ngFor="let filled of pinDots" [class.filled]="filled"></div>
         </div>
@@ -57,24 +83,11 @@
           <button class="num-btn" (click)="pressDigit('0')">0</button>
           <button class="num-btn del-btn" (click)="pressBack()">&#x232B;</button>
         </div>
-        <button class="btn btn-secondary login-btn" [disabled]="pin.length < 4" (click)="submit()">Unlock</button>
-      </ng-container>
+        <button class="login-btn" [disabled]="pin.length < pinLength" (click)="submit()">Unlock</button>
 
-      <!-- Manager / Admin: password input -->
-      <ng-container *ngIf="!isCashier">
-        <p class="login-hint">Enter your password</p>
-        <div class="error-msg" *ngIf="error">{{ error }}</div>
-        <input class="password-input" type="password" [(ngModel)]="password"
-               placeholder="Password" (keyup.enter)="submit()" autofocus />
-        <button class="btn btn-secondary login-btn" [disabled]="password.length < 1" (click)="submit()">Unlock</button>
-      </ng-container>
-    </div>
-
-    <!-- Phase: loading -->
-    <div class="login-body center" *ngIf="phase === 'loading'">
-      <div class="spinner lg"></div>
-      <p class="login-hint">Verifying...</p>
+      </div>
     </div>
 
   </div>
+
 </div>

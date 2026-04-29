@@ -81,14 +81,14 @@ def _seed_if_empty(engine):
         # Seed default staff separately — uses raw SQL to handle legacy 'name NOT NULL' column
         if db.query(Staff).count() == 0:
             import bcrypt as _bcrypt, uuid as _uuid
-            pw_hash  = _bcrypt.hashpw(b'admin123', _bcrypt.gensalt()).decode()
-            pin_hash = _bcrypt.hashpw(b'1234',     _bcrypt.gensalt()).decode()
+            admin_pin = _bcrypt.hashpw(b'123456', _bcrypt.gensalt()).decode()  # 6-digit
+            pin_hash  = _bcrypt.hashpw(b'1234',   _bcrypt.gensalt()).decode()  # 4-digit cashier
             try:
                 db.execute(text('''
-                    INSERT INTO staff (uuid, username, display_name, name, role, password_hash, is_active, failed_login_count)
-                    VALUES (:uuid, :username, :display_name, :display_name, :role, :password_hash, 1, 0)
+                    INSERT INTO staff (uuid, username, display_name, name, role, pin_hash, is_active, failed_login_count)
+                    VALUES (:uuid, :username, :display_name, :display_name, :role, :pin_hash, 1, 0)
                 '''), {'uuid': str(_uuid.uuid4()), 'username': 'admin', 'display_name': 'Admin',
-                       'role': 'admin', 'password_hash': pw_hash})
+                       'role': 'admin', 'pin_hash': admin_pin})
                 db.execute(text('''
                     INSERT INTO staff (uuid, username, display_name, name, role, pin_hash, is_active, failed_login_count)
                     VALUES (:uuid, :username, :display_name, :display_name, :role, :pin_hash, 1, 0)

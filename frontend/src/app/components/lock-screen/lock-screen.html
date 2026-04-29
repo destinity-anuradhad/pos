@@ -36,35 +36,17 @@
       <h2>{{ selectedStaff?.display_name }}</h2>
     </div>
 
-    <!-- Cashier: PIN numpad -->
-    <ng-container *ngIf="isCashier">
-      <p class="lock-sub">Enter PIN to unlock</p>
-      <div class="pin-dots" [class.shake]="shaking">
-        <div class="pin-dot" *ngFor="let filled of pinDots" [class.filled]="filled"></div>
-      </div>
-      <div class="error-msg" *ngIf="error">{{ error }}</div>
-      <div class="numpad">
-        <button class="num-btn" *ngFor="let d of ['1','2','3','4','5','6','7','8','9']" (click)="pressDigit(d)">{{ d }}</button>
-        <button class="num-btn empty" disabled></button>
-        <button class="num-btn" (click)="pressDigit('0')">0</button>
-        <button class="num-btn del-btn" (click)="pressBack()">&#x232B;</button>
-      </div>
-    </ng-container>
-
-    <!-- Manager / Admin: password field -->
-    <ng-container *ngIf="!isCashier">
-      <p class="lock-sub">Enter password to unlock</p>
-      <div class="error-msg" *ngIf="error">{{ error }}</div>
-      <input
-        class="password-input"
-        type="password"
-        [(ngModel)]="password"
-        placeholder="Password"
-        (keydown.enter)="submitPassword()"
-        autofocus
-      />
-      <button class="unlock-btn" (click)="submitPassword()" [disabled]="!password">Unlock</button>
-    </ng-container>
+    <p class="lock-sub">Enter your {{ pinLength }}-digit PIN to unlock</p>
+    <div class="pin-dots" [class.shake]="shaking">
+      <div class="pin-dot" *ngFor="let filled of pinDots" [class.filled]="filled"></div>
+    </div>
+    <div class="error-msg" *ngIf="error">{{ error }}</div>
+    <div class="numpad">
+      <button class="num-btn" *ngFor="let d of ['1','2','3','4','5','6','7','8','9']" (click)="pressDigit(d)">{{ d }}</button>
+      <button class="num-btn empty" disabled></button>
+      <button class="num-btn" (click)="pressDigit('0')">0</button>
+      <button class="num-btn del-btn" (click)="pressBack()">&#x232B;</button>
+    </div>
   </div>
 
 </div>

@@ -60,7 +60,7 @@ export class LockScreenComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  get isCashier(): boolean { return this.selectedStaff?.role === 'cashier'; }
+  get pinLength(): number { return this.selectedStaff?.role === 'cashier' ? 4 : 6; }
 
   selectStaff(s: StaffInfo): void {
     this.selectedStaff = s;
@@ -79,10 +79,10 @@ export class LockScreenComponent implements OnInit, OnDestroy {
   }
 
   pressDigit(d: string): void {
-    if (this.pin.length < 6) {
+    if (this.pin.length < this.pinLength) {
       this.pin += d;
-      if (this.pin.length >= 4) this.error = '';
-      if (this.pin.length === 4) this._tryUnlock();
+      this.error = '';
+      if (this.pin.length === this.pinLength) this._tryUnlock();
     }
   }
 
@@ -90,25 +90,18 @@ export class LockScreenComponent implements OnInit, OnDestroy {
     this.pin = this.pin.slice(0, -1);
   }
 
-  async submitPassword(): Promise<void> {
-    if (!this.password) return;
-    await this._tryUnlock();
-  }
-
   private async _tryUnlock(): Promise<void> {
     if (!this.selectedStaff) return;
-    const credential = this.isCashier ? this.pin : this.password;
-    const ok = await this.auth.verifyPin(this.selectedStaff.username, credential);
+    const ok = await this.auth.verifyPin(this.selectedStaff.username, this.pin);
     if (ok) {
       this.inactivity.unlock();
     } else {
       this.attempts++;
       this.pin = '';
       this.password = '';
-      const label = this.isCashier ? 'PIN' : 'Password';
       this.error = this.attempts >= 3
-        ? `Incorrect ${label} (${this.attempts} attempts)`
-        : `Incorrect ${label}`;
+        ? `Incorrect PIN (${this.attempts} attempts)`
+        : 'Incorrect PIN';
       this._shake();
     }
     this.cdr.detectChanges();
@@ -143,6 +136,6 @@ export class LockScreenComponent implements OnInit, OnDestroy {
   }
 
   get pinDots(): boolean[] {
-    return Array.from({ length: 4 }, (_, i) => i < this.pin.length);
+    return Array.from({ length: this.pinLength }, (_, i) => i < this.pin.length);
   }
 }
