@@ -2,7 +2,7 @@
 import os
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from models.models import Base, TableStatus, TableStatusTransition, SyncSettings
+from models.models import Base, TableStatus, TableStatusTransition, SyncSettings, Staff
 
 _DB_PATH = os.environ.get('DB_PATH', '.')
 _RESTAURANT_URL = f'sqlite:///{_DB_PATH}/restaurant.db'
