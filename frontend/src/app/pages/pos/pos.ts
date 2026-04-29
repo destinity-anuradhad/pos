@@ -407,7 +407,7 @@ export class Pos implements OnInit, OnDestroy {
       // 2. Record payment
       const cardLast4 = this.paymentMethod === 'card'
         ? this.card.number.replace(/\s/g, '').slice(-4) : undefined;
-      await this.api.addPayment(order.id, {
+      await this.db.addPayment(order.id, {
         payment_method: this.paymentMethod!,
         amount:   paidAmount,
         currency: this.currency,
@@ -415,7 +415,7 @@ export class Pos implements OnInit, OnDestroy {
       });
 
       // 3. Complete the order
-      const completed = await this.api.completeOrder(order.id);
+      const completed = await this.db.completeOrder(order.id);
       this.lastOrder  = { ...completed, paid_amount: paidAmount, change_amount: changeAmount };
       this.lastOrderRef = completed.terminal_order_ref || `#${completed.id}`;
       this.lastOrderId  = completed.id;

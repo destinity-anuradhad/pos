@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Web Test Results — Destinity Inspire POS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4f8;color:#1e293b}
+.header{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);color:#fff;padding:32px 40px}
+.header h1{font-size:26px;font-weight:800;margin-bottom:4px}
+.header p{color:#94a3b8;font-size:13px}
+.summary{display:flex;gap:14px;padding:24px 40px;flex-wrap:wrap}
+.stat{background:#fff;border-radius:12px;padding:18px 24px;flex:1;min-width:120px;box-shadow:0 1px 4px rgba(0,0,0,.08);text-align:center}
+.stat-n{font-size:34px;font-weight:900}
+.stat-l{font-size:12px;color:#64748b;margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.green{color:#22c55e}.red{color:#ef4444}.blue{color:#3b82f6}.amber{color:#f59e0b}
+.container{padding:0 40px 48px}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden}
+thead th{background:#f1f5f9;padding:11px 14px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.5px}
+tr{border-bottom:1px solid #f1f5f9}tr:last-child{border-bottom:none}tr:hover{background:#fafcff}
+td{padding:12px 14px;vertical-align:top}
+.num{font-weight:800;color:#64748b;white-space:nowrap;width:40px}
+.title-cell{font-weight:600;color:#1e293b;min-width:200px}
+.status-cell{text-align:center;width:80px}
+.badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700}
+.badge.pass{background:#dcfce7;color:#16a34a}
+.badge.fail{background:#fee2e2;color:#dc2626}
+.dur{color:#94a3b8;font-size:13px;white-space:nowrap;width:60px}
+.ss-cell{max-width:620px}
+.ss-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.thumb{height:100px;border-radius:8px;border:1px solid #e2e8f0;object-fit:cover;cursor:pointer;transition:transform .15s}
+.thumb:hover{transform:scale(1.06)}
+.no-ss{color:#9ca3af;font-size:12px}
+.err-box{margin-top:8px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px;font-size:11px;color:#b91c1c;font-family:monospace;white-space:pre-wrap;max-height:180px;overflow:auto}
+.mode-badge{display:inline-block;background:rgba(99,102,241,.15);color:#6366f1;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-left:8px}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🌐 Web Test Results <span class="mode-badge">LOCAL DB MODE</span></h1>
+  <p>Destinity Inspire POS &middot; Chromium &middot; IndexedDB &middot; 4/29/2026, 9:33:07 PM</p>
+</div>
+<div class="summary">
+  <div class="stat"><div class="stat-n blue">10</div><div class="stat-l">Total</div></div>
+  <div class="stat"><div class="stat-n green">10</div><div class="stat-l">Passed</div></div>
+  <div class="stat"><div class="stat-n red">0</div><div class="stat-l">Failed</div></div>
+  <div class="stat"><div class="stat-n amber">100%</div><div class="stat-l">Pass Rate</div></div>
+</div>
+<div class="container">
+  <table>
+    <thead><tr><th>#</th><th>Scenario</th><th>Status</th><th>Time</th><th>Screenshots / Error</th></tr></thead>
+    <tbody><tr>
+      <td class="num">#1</td>
+      <td class="title-cell">Admin login → Create Terminal → Logout</td>
+      <td class="status-cell"><span class="badge pass">PASS</span></td>
+      <td class="dur">4.1s</td>
+      <td class="ss-cell"><div class="ss-row"><a href="../test/screenshots/web/S1-01-staff-grid.png" target="_blank"><img src="../test/screenshots/web/S1-01-staff-grid.png" class="thumb" title="S1-01-staff-grid.png" /></a><a href="../test/screenshots/web/S1-02-pin-screen.png" target="_blank"><img src="../test/screenshots/web/S1-02-pin-screen.png" class="thumb" title="S1-02-pin-screen.png" /></a><a href="../test/screenshots/web/S1-03-terminal-setup.png" target="_blank"><img src="../test/screenshots/web/S1-03-terminal-setup.png" class="thumb" title="S1-03-terminal-setup.png" /></a><a href="../test/screenshots/web/S1-04-form-filled.png" target="_blank"><img src="../test/screenshots/web/S1-04-form-filled.png" class="thumb" title="S1-04-form-filled.png" /></a><a href="../test/screenshots/web/S1-05-dashboard.png" target="_blank"><img src="../test/screenshots/web/S1-05-dashboard.png" class="thumb" title="S1-05-dashboard.png" /></a><a href="../test/screenshots/web/S1-06-after-logout.png" target="_blank"><img src="../test/screenshots/web/S1-06-after-logout.png" class="thumb" title="S1-06-after-logout.png" /></a></div></td>
+    </tr><tr>
+      <td class="num">#2</td>
+      <td class="title-cell">Admin login → Create Categories</td>
+      <td class="status-cell"><span class="badge pass">PASS</span></td>
+      <td class="dur">5.8s</td>
+      <td class="ss-cell"><div class="ss-row"><a href="../test/screenshots/web/S2-01-categories-page.png" target="_blank"><img src="../test/screenshots/web/S2-01-categories-page.png" class="thumb" title="S2-01-categories-page.png" /></a><a href="../test/screenshots/web/S2-02-categories-created.png" target="_blank"><img src="../test/screenshots/web/S2-02-categories-created.png" class="thumb" title="S2-02-categories-created.png" /></a></div></td>
+    </tr><tr>
+      <td class="num">#3</td>
+      <td class="title-cell">Create Products</td>
+      <td class="status-cell"><span class="badge pass">PASS</span></td>
+      <td class="dur">4.0s</td>
+      <td class="ss-cell"><div class="ss-row"><a href="../test/screenshots/web/S3-01-products-page.png" target="_blank"><img src="../test/screenshots/web/S3-01-products-page.png" class="thumb" title="S3-01-products-page.png" /></a><a href="../test/screenshots/web/S3-02-products-created.png" target="_blank"><img src="../test/screenshots/web/S3-02-products-created.png" class="thumb" title="S3-02-products-created.png" /></a></div></td>
+    </tr><tr>
+      <td class="num">#4</td>
+      <td class="title-cell">Create Tables</td>
+      <td class="status-cell"><span class="badge pass">PASS</span></td>
+      <td class="dur">3.4s</td>
+      <td class="ss-cell"><div class="ss-row"><a href="../test/screenshots/web/S4-01-tables-page.png" target="_blank"><img src="../test/screenshots/web/S4-01-tables-page.png" class="thumb" title="S4-01-tables-page.png" /></a><a href="../test/screenshots/web/S4-02-tables-created.png" target="_blank"><img src="../test/screenshots/web/S4-02-tables-created.png" class="thumb" title="S4-02-tables-created.png" /></a></div></td>
+    </tr><tr>
+      <td class="num">#5</td>
+      <td class="title-cell">Place Order → Pay with Cash (Exact)</td>
+      <td class="status-cell"><span class="badge pass">PASS</span></td>
+      <td class="dur">1.9s</td>
+      <td class="ss-cell"><div class="ss-row"><a href="../test/screenshots/web/S5-1-pos.png" target="_blank"><img src="../test/screenshots/web/S5-1-pos.png" class="thumb" title="S5-1-pos.png" /></a><a href="../test/screenshots/web/S5-2-item-added.png" target="_blank"><img src="../test/screenshots/web/S5-2-item-added.png" class="thumb" title="S5-2-item-added.png" /></a><a href="../test/screenshots/web/S5-3-payment-method.png" target="_blank"><img src="../test/screenshots/web/S5-3-payment-method.png" class="thumb" title="S5-3-payment-method.png" /></a><a href="../test/screenshots/web/S5-4-cash-modal.png" target="_blank"><img src="../test/screenshots/web/S5-4-cash-modal.png" class="thumb" title="S5-4-cash-modal.png" /></a><a href="../test/screenshots/web/S5-5-cash-amount.png" target="_blank"><img src="../test/screenshots/web/S5-5-cash-amount.png" class="thumb" title="S5-5-cash-amount.png" /></a><a href="../test/screenshots/web/S5-6-receipt.png" target="_blank"><img src="../test/screenshots/web/S5-6-receipt.png" class="thumb" title="S5-6-receipt.png" /></a></div></td>
+    </tr><tr>
+      <td class="num">#6</td>
+      <td class="title-cell">Place Order → Pay with Cash (LKR 5000)</td>
+      <td class="status-cell"><span class="badge pass">PASS</span></td>
+      <td class="dur">2.0s</td>
+      <td class="ss-cell"><div class="ss-row"><a href="../test/screenshots/web/S6-1-pos.png" target="_blank"><img src="../test/screenshots/web/S6-1-pos.png" class="thumb" title="S6-1-pos.png" /></a><a href="../test/screenshots/web/S6-2-item-added.png" target="_blank"><img src="../test/screenshots/web/S6-2-item-added.png" class="thumb" title="S6-2-item-added.png" /></a><a href="../test/screenshots/web/S6-3-payment-method.png" target="_blank"><img src="../test/screenshots/web/S6-3-payment-method.png" class="thumb" title="S6-3-payment-method.png" /></a><a href="../test/screenshots/web/S6-4-cash-modal.png" target="_blank"><img src="../test/screenshots/web/S6-4-cash-modal.png" class="thumb" title="S6-4-cash-modal.png" /></a><a href="../test/screenshots/web/S6-5-cash-amount.png" target="_blank"><img src="../test/screenshots/web/S6-5-cash-amount.png" class="thumb" title="S6-5-cash-amount.png" /></a><a href="../test/screenshots/web/S6-6-receipt.png" target="_blank"><img src="../test/screenshots/web/S6-6-receipt.png" class="thumb" title="S6-6-receipt.png" /></a></div></td>
+    </tr><tr>
+      <td class="num">#7</td>
+      <td class="title-cell">Place Order → Pay with Card</td>
+      <td class="status-cell"><span class="badge pass">PASS</span></td>
+      <td class="dur">2.2s</td>
+      <td class="ss-cell"><div class="ss-row"><a href="../test/screenshots/web/S7-1-pos.png" target="_blank"><img src="../test/screenshots/web/S7-1-pos.png" class="thumb" title="S7-1-pos.png" /></a><a href="../test/screenshots/web/S7-2-item-added.png" target="_blank"><img src="../test/screenshots/web/S7-2-item-added.png" class="thumb" title="S7-2-item-added.png" /></a><a href="../test/screenshots/web/S7-3-payment-method.png" target="_blank"><img src="../test/screenshots/web/S7-3-payment-method.png" class="thumb" title="S7-3-payment-method.png" /></a><a href="../test/screenshots/web/S7-4-card-modal.png" target="_blank"><img src="../test/screenshots/web/S7-4-card-modal.png" class="thumb" title="S7-4-card-modal.png" /></a><a href="../test/screenshots/web/S7-5-card-filled.png" target="_blank"><img src="../test/screenshots/web/S7-5-card-filled.png" class="thumb" title="S7-5-card-filled.png" /></a><a href="../test/screenshots/web/S7-6-receipt.png" target="_blank"><img src="../test/screenshots/web/S7-6-receipt.png" class="thumb" title="S7-6-receipt.png" /></a></div></td>
+    </tr><tr>
+      <td class="num">#8</td>
+      <td class="title-cell">Sync page → Check Log (local mode)</td>
+      <td class="status-cell"><span class="badge pass">PASS</span></td>
+      <td class="dur">11.1s</td>
+      <td class="ss-cell"><div class="ss-row"><a href="../test/screenshots/web/S8-01-sync-page.png" target="_blank"><img src="../test/screenshots/web/S8-01-sync-page.png" class="thumb" title="S8-01-sync-page.png" /></a><a href="../test/screenshots/web/S8-02-master-push.png" target="_blank"><img src="../test/screenshots/web/S8-02-master-push.png" class="thumb" title="S8-02-master-push.png" /></a><a href="../test/screenshots/web/S8-03-tx-push.png" target="_blank"><img src="../test/screenshots/web/S8-03-tx-push.png" class="thumb" title="S8-03-tx-push.png" /></a><a href="../test/screenshots/web/S8-04-final.png" target="_blank"><img src="../test/screenshots/web/S8-04-final.png" class="thumb" title="S8-04-final.png" /></a></div></td>
+    </tr><tr>
+      <td class="num">#9</td>
+      <td class="title-cell">Logout Admin → Login as Cashier</td>
+      <td class="status-cell"><span class="badge pass">PASS</span></td>
+      <td class="dur">1.9s</td>
+      <td class="ss-cell"><div class="ss-row"><a href="../test/screenshots/web/S9-01-staff-grid.png" target="_blank"><img src="../test/screenshots/web/S9-01-staff-grid.png" class="thumb" title="S9-01-staff-grid.png" /></a><a href="../test/screenshots/web/S9-02-cashier-pin.png" target="_blank"><img src="../test/screenshots/web/S9-02-cashier-pin.png" class="thumb" title="S9-02-cashier-pin.png" /></a><a href="../test/screenshots/web/S9-03-cashier-logged-in.png" target="_blank"><img src="../test/screenshots/web/S9-03-cashier-logged-in.png" class="thumb" title="S9-03-cashier-logged-in.png" /></a></div></td>
+    </tr><tr>
+      <td class="num">#10</td>
+      <td class="title-cell">Cashier: Cash Exact / Cash 5000 / Card</td>
+      <td class="status-cell"><span class="badge pass">PASS</span></td>
+      <td class="dur">11.7s</td>
+      <td class="ss-cell"><div class="ss-row"><a href="../test/screenshots/web/S10a-1-pos.png" target="_blank"><img src="../test/screenshots/web/S10a-1-pos.png" class="thumb" title="S10a-1-pos.png" /></a><a href="../test/screenshots/web/S10a-2-item-added.png" target="_blank"><img src="../test/screenshots/web/S10a-2-item-added.png" class="thumb" title="S10a-2-item-added.png" /></a><a href="../test/screenshots/web/S10a-3-payment-method.png" target="_blank"><img src="../test/screenshots/web/S10a-3-payment-method.png" class="thumb" title="S10a-3-payment-method.png" /></a><a href="../test/screenshots/web/S10a-4-cash-modal.png" target="_blank"><img src="../test/screenshots/web/S10a-4-cash-modal.png" class="thumb" title="S10a-4-cash-modal.png" /></a><a href="../test/screenshots/web/S10a-5-cash-amount.png" target="_blank"><img src="../test/screenshots/web/S10a-5-cash-amount.png" class="thumb" title="S10a-5-cash-amount.png" /></a><a href="../test/screenshots/web/S10a-6-receipt.png" target="_blank"><img src="../test/screenshots/web/S10a-6-receipt.png" class="thumb" title="S10a-6-receipt.png" /></a><a href="../test/screenshots/web/S10b-1-pos.png" target="_blank"><img src="../test/screenshots/web/S10b-1-pos.png" class="thumb" title="S10b-1-pos.png" /></a><a href="../test/screenshots/web/S10b-2-item-added.png" target="_blank"><img src="../test/screenshots/web/S10b-2-item-added.png" class="thumb" title="S10b-2-item-added.png" /></a><a href="../test/screenshots/web/S10b-3-payment-method.png" target="_blank"><img src="../test/screenshots/web/S10b-3-payment-method.png" class="thumb" title="S10b-3-payment-method.png" /></a><a href="../test/screenshots/web/S10b-4-cash-modal.png" target="_blank"><img src="../test/screenshots/web/S10b-4-cash-modal.png" class="thumb" title="S10b-4-cash-modal.png" /></a><a href="../test/screenshots/web/S10b-5-cash-amount.png" target="_blank"><img src="../test/screenshots/web/S10b-5-cash-amount.png" class="thumb" title="S10b-5-cash-amount.png" /></a><a href="../test/screenshots/web/S10b-6-receipt.png" target="_blank"><img src="../test/screenshots/web/S10b-6-receipt.png" class="thumb" title="S10b-6-receipt.png" /></a><a href="../test/screenshots/web/S10c-1-pos.png" target="_blank"><img src="../test/screenshots/web/S10c-1-pos.png" class="thumb" title="S10c-1-pos.png" /></a><a href="../test/screenshots/web/S10c-2-item-added.png" target="_blank"><img src="../test/screenshots/web/S10c-2-item-added.png" class="thumb" title="S10c-2-item-added.png" /></a><a href="../test/screenshots/web/S10c-3-payment-method.png" target="_blank"><img src="../test/screenshots/web/S10c-3-payment-method.png" class="thumb" title="S10c-3-payment-method.png" /></a><a href="../test/screenshots/web/S10c-4-card-modal.png" target="_blank"><img src="../test/screenshots/web/S10c-4-card-modal.png" class="thumb" title="S10c-4-card-modal.png" /></a><a href="../test/screenshots/web/S10c-5-card-filled.png" target="_blank"><img src="../test/screenshots/web/S10c-5-card-filled.png" class="thumb" title="S10c-5-card-filled.png" /></a><a href="../test/screenshots/web/S10c-6-receipt.png" target="_blank"><img src="../test/screenshots/web/S10c-6-receipt.png" class="thumb" title="S10c-6-receipt.png" /></a><a href="../test/screenshots/web/S10d-after-sync-nav.png" target="_blank"><img src="../test/screenshots/web/S10d-after-sync-nav.png" class="thumb" title="S10d-after-sync-nav.png" /></a></div></td>
+    </tr></tbody>
+  </table>
+</div>
+</body>
+</html>

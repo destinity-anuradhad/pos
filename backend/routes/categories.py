@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 
 from models.models import Category, Product
-from utils import db_session
+from utils import db_session, as_iso
 from auth_utils import require_auth
 
 categories_bp = Blueprint('categories', __name__)
@@ -23,8 +23,8 @@ def _cat_dict(c: Category) -> dict:
         'icon': c.icon,
         'sort_order': c.sort_order,
         'is_visible': c.is_visible,
-        'updated_at': c.updated_at.isoformat() if c.updated_at else None,
-        'synced_at': c.synced_at.isoformat() if c.synced_at else None,
+        'updated_at': as_iso(c.updated_at),
+        'synced_at': as_iso(c.synced_at),
     }
 
 

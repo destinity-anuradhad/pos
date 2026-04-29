@@ -195,6 +195,7 @@ class Product(Base):
     track_stock = Column(Boolean, default=False, nullable=False)
     stock_quantity = Column(Float, default=0, nullable=False)
     is_available = Column(Boolean, default=True, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
     updated_at = Column(String(50), nullable=True)
     synced_at = Column(String(50), nullable=True)
 

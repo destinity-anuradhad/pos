@@ -13,6 +13,37 @@ protocol.registerSchemesAsPrivileged([
 let backendProcess = null;
 let mainWindow     = null;
 
+// ── Terminal registration persistence ─────────────────────────────
+// Stored in userData so it survives reinstalls (same dir as restaurant.db)
+function getTerminalFile() {
+  return path.join(app.getPath('userData'), 'terminal.json');
+}
+
+ipcMain.on('terminal:getFilePath', event => {
+  event.returnValue = getTerminalFile();
+});
+
+ipcMain.on('terminal:restore', event => {
+  const fs = require('fs');
+  const f = getTerminalFile();
+  try {
+    event.returnValue = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null;
+  } catch {
+    event.returnValue = null;
+  }
+});
+
+ipcMain.handle('terminal:save', (event, data) => {
+  const fs = require('fs');
+  fs.writeFileSync(getTerminalFile(), JSON.stringify(data), 'utf8');
+});
+
+ipcMain.handle('terminal:clear', () => {
+  const fs = require('fs');
+  const f = getTerminalFile();
+  if (fs.existsSync(f)) fs.unlinkSync(f);
+});
+
 // ── Start Flask backend ───────────────────────────────────────────
 function startBackend() {
   // In packaged app, backend lives in resources/backend; in dev it's ../backend
@@ -137,7 +168,8 @@ function startStaticServer(distDir) {
         res.writeHead(404); res.end('Not found');
       }
     });
-    server.listen(0, '127.0.0.1', () => {
+    // Fixed port so localStorage (origin-scoped) persists across restarts
+    server.listen(8001, '127.0.0.1', () => {
       staticServerPort = server.address().port;
       console.log(`Static file server on http://127.0.0.1:${staticServerPort}`);
       resolve(staticServerPort);

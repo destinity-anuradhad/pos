@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 
 from models.models import Setting, SyncSettings
-from utils import db_session
+from utils import db_session, as_iso
 from auth_utils import require_auth
 
 settings_bp = Blueprint('settings', __name__)
@@ -21,7 +21,7 @@ def _setting_dict(s: Setting, mask_secret: bool = True) -> dict:
         'key': s.key,
         'value': _MASKED if (s.is_secret and mask_secret) else s.value,
         'is_secret': s.is_secret,
-        'updated_at': s.updated_at.isoformat() if s.updated_at else None,
+        'updated_at': as_iso(s.updated_at),
     }
 
 
@@ -31,8 +31,8 @@ def _sync_settings_dict(s: SyncSettings) -> dict:
         'sync_interval_minutes': s.sync_interval_minutes,
         'auto_sync_enabled': s.auto_sync_enabled,
         'cloud_base_url': s.cloud_base_url,
-        'last_master_sync_at': s.last_master_sync_at.isoformat() if s.last_master_sync_at else None,
-        'last_tx_sync_at': s.last_tx_sync_at.isoformat() if s.last_tx_sync_at else None,
+        'last_master_sync_at': as_iso(s.last_master_sync_at),
+        'last_tx_sync_at': as_iso(s.last_tx_sync_at),
     }
 
 

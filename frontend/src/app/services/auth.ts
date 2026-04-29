@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
+import { LocalDbService } from './local-db.service';
+import { NativeDbService } from './native-db.service';
 
 export interface StaffSession {
   staffId: number;
@@ -10,7 +12,6 @@ export interface StaffSession {
   token: string;
 }
 
-// Staff info for the login screen (no sensitive data)
 export interface StaffInfo {
   id: number;
   uuid: string;
@@ -19,21 +20,43 @@ export interface StaffInfo {
   role: string;
 }
 
+export function isWebPlatform(): boolean {
+  const ua = navigator.userAgent.toLowerCase();
+  const hasElectron  = typeof (window as any).electronAPI !== 'undefined' || ua.includes('electron');
+  const hasCapacitor = typeof (window as any).Capacitor !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
+  return !hasElectron && !hasCapacitor;
+}
+
+/** True on Android/iOS Capacitor native (NOT Electron, NOT plain browser) */
+export function isCapacitorNative(): boolean {
+  return typeof (window as any).Capacitor !== 'undefined' &&
+    !!(window as any).Capacitor?.isNativePlatform?.();
+}
+
+/** True whenever local offline storage should be used (web browser OR Capacitor native). */
+export function useLocalDb(): boolean {
+  const ua = navigator.userAgent.toLowerCase();
+  const hasElectron = typeof (window as any).electronAPI !== 'undefined' || ua.includes('electron');
+  return !hasElectron; // web OR mobile — anything that's not Electron uses local DB
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  // Token stored ONLY in memory — never written to localStorage
   private _session: StaffSession | null = null;
   private _session$ = new BehaviorSubject<StaffSession | null>(null);
 
   session$ = this._session$.asObservable();
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private localDb: LocalDbService, private nativeDb: NativeDbService) {}
+
+  private get _localDb(): LocalDbService | NativeDbService {
+    return isCapacitorNative() ? this.nativeDb : this.localDb;
+  }
 
   get session(): StaffSession | null { return this._session; }
 
   isLoggedIn(): boolean {
     if (!this._session) return false;
-    // Check token not expired
     return Date.now() / 1000 < this._session.exp;
   }
 
@@ -46,12 +69,14 @@ export class AuthService {
     if (!role) return false;
     if (role === 'admin')   return true;
     if (role === 'manager') return feature !== 'staff';
-    // cashier: only pos/orders/dashboard
     return false;
   }
 
-  /** Fetch list of active staff for login screen */
+  /** Fetch list of active staff for the login screen */
   async getStaffList(): Promise<StaffInfo[]> {
+    if (useLocalDb()) {
+      return this._localDb.getStaffList();
+    }
     try {
       const apiUrl = this._getApiUrl();
       const res = await fetch(`${apiUrl}/auth/staff`);
@@ -62,8 +87,11 @@ export class AuthService {
     }
   }
 
-  /** Login with username + PIN (cashier) or username + password (manager/admin). */
+  /** Login with username + PIN (cashier) or username + password (manager/admin) */
   async login(username: string, credential: string, isPassword = false): Promise<{ success: boolean; error?: string }> {
+    if (useLocalDb()) {
+      return this._localLogin(username, credential);
+    }
     try {
       const apiUrl = this._getApiUrl();
       const body: any = { username };
@@ -82,7 +110,6 @@ export class AuthService {
     }
   }
 
-  /** Re-verify PIN (used by lock screen to unlock) */
   async verifyPin(username: string, pin: string): Promise<boolean> {
     const result = await this.login(username, pin, false);
     return result.success;
@@ -100,6 +127,19 @@ export class AuthService {
 
   getToken(): string | null {
     return this._session?.token ?? null;
+  }
+
+  // ── Web (local IndexedDB) auth ─────────────────────────────────────────────
+
+  private async _localLogin(username: string, pin: string): Promise<{ success: boolean; error?: string }> {
+    const result = await this._localDb.login(username, pin);
+    if (!result.success || !result.staff) return { success: false, error: result.error || 'Login failed' };
+    const s = result.staff;
+    // Create a web-local "token": header.payload.sig  (payload is base64 JSON)
+    const payload = btoa(JSON.stringify({ sub: s.id, name: s.display_name, role: s.role, exp: Math.floor(Date.now() / 1000) + 8 * 3600 }));
+    const token = `web.${payload}.local`;
+    this._setSession(token, s.display_name, s.role);
+    return { success: true };
   }
 
   private _setSession(token: string, name: string, role: string): void {
@@ -123,9 +163,9 @@ export class AuthService {
   private _getApiUrl(): string {
     const stored = localStorage.getItem('api_url');
     if (stored) return stored;
-    const isElectron = !!(window as any).electronAPI?.isElectron;
+    const isElectron  = !!(window as any).electronAPI?.isElectron;
     const isCapacitor = !!(window as any).Capacitor?.isNativePlatform?.();
-    if (isElectron) return 'http://localhost:8000/api';
+    if (isElectron)  return 'http://localhost:8000/api';
     if (isCapacitor) return 'http://192.168.137.1:8000/api';
     return 'http://localhost:8000/api';
   }

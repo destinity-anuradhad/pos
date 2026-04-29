@@ -21,31 +21,31 @@
       <div class="status-icon">📦</div>
       <div class="status-body">
         <div class="status-label">Last Master Data Sync</div>
-        <div class="status-time">{{ formatDate(state?.lastMasterSync || null) }}</div>
-        <div class="status-ago" *ngIf="state?.lastMasterSync">{{ timeSince(state.lastMasterSync || null) }}</div>
+        <div class="status-time">{{ formatDate(state.lastMasterSync || null) }}</div>
+        <div class="status-ago" *ngIf="state.lastMasterSync">{{ timeSince(state.lastMasterSync || null) }}</div>
       </div>
     </div>
     <div class="status-card">
       <div class="status-icon">🔄</div>
       <div class="status-body">
         <div class="status-label">Last Transaction Sync</div>
-        <div class="status-time">{{ formatDate(state?.lastTransactionSync || null) }}</div>
-        <div class="status-ago" *ngIf="state?.lastTransactionSync">{{ timeSince(state.lastTransactionSync || null) }}</div>
+        <div class="status-time">{{ formatDate(state.lastTransactionSync || null) }}</div>
+        <div class="status-ago" *ngIf="state.lastTransactionSync">{{ timeSince(state.lastTransactionSync || null) }}</div>
       </div>
     </div>
-    <div class="status-card" [class.warn]="(state?.pendingOrderCount || 0) > 0">
+    <div class="status-card" [class.warn]="(state.pendingOrderCount || 0) > 0">
       <div class="status-icon">⏳</div>
       <div class="status-body">
         <div class="status-label">Pending Orders</div>
-        <div class="status-time">{{ state?.pendingOrderCount || 0 }} orders</div>
+        <div class="status-time">{{ state.pendingOrderCount || 0 }} orders</div>
         <div class="status-ago">waiting to sync to cloud</div>
       </div>
     </div>
-    <div class="status-card" [class.warn]="(state?.pendingMasterCount || 0) > 0">
+    <div class="status-card" [class.warn]="(state.pendingMasterCount || 0) > 0">
       <div class="status-icon">📝</div>
       <div class="status-body">
         <div class="status-label">Pending Master Changes</div>
-        <div class="status-time">{{ state?.pendingMasterCount || 0 }} records</div>
+        <div class="status-time">{{ state.pendingMasterCount || 0 }} records</div>
         <div class="status-ago">products / categories / tables not yet pushed</div>
       </div>
     </div>

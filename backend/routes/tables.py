@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 
 from models.models import RestaurantTable, TableStatus
-from utils import db_session
+from utils import db_session, as_iso
 from auth_utils import require_auth
 
 tables_bp = Blueprint('tables', __name__)
@@ -26,8 +26,8 @@ def _table_dict(t: RestaurantTable, status: TableStatus = None) -> dict:
         'status_label': status.label if status else None,
         'status_color': status.color if status else None,
         'is_active': t.is_active,
-        'updated_at': t.updated_at.isoformat() if t.updated_at else None,
-        'synced_at': t.synced_at.isoformat() if t.synced_at else None,
+        'updated_at': as_iso(t.updated_at),
+        'synced_at': as_iso(t.synced_at),
     }
 
 

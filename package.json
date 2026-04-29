@@ -5,7 +5,7 @@
   "scripts": {
     "frontend": "cd frontend && ng serve",
     "electron": "cd electron && electron .",
-    "backend": "cd backend && python -m uvicorn main:app --reload --port 8000",
+    "backend": "cd backend && python main.py",
     "build:web": "cd frontend && ng build --configuration production",
     "build:win": "npm run build:web && cd electron && npm run build-win",
     "build:linux": "npm run build:web && cd electron && npm run build-linux",
@@ -21,6 +21,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@capacitor-community/sqlite": "^8.1.0",
     "@capacitor-mlkit/barcode-scanning": "^8.0.1",
     "@capacitor/android": "^8.3.1",
     "@capacitor/cli": "^8.3.1",

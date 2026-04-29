@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 
 from models.models import Staff
-from utils import db_session
+from utils import db_session, as_iso
 from auth_utils import require_auth, hash_pin
 
 staff_bp = Blueprint('staff', __name__)
@@ -24,8 +24,8 @@ def _staff_dict(s: Staff) -> dict:
         'role': s.role,
         'is_active': s.is_active,
         'failed_login_count': s.failed_login_count,
-        'locked_until': s.locked_until.isoformat() if s.locked_until else None,
-        'updated_at': s.updated_at.isoformat() if s.updated_at else None,
+        'locked_until': as_iso(s.locked_until),
+        'updated_at': as_iso(s.updated_at),
     }
 
 

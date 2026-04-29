@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 
 from models.models import Order, OrderItem, Payment, TerminalInfo, RestaurantTable
-from utils import db_session
+from utils import db_session, as_iso
 from auth_utils import require_auth
 
 orders_bp = Blueprint('orders', __name__)
@@ -26,7 +26,7 @@ def _payment_dict(p: Payment) -> dict:
         'card_brand': p.card_brand,
         'transaction_ref': p.transaction_ref,
         'status': p.status,
-        'paid_at': p.paid_at.isoformat() if p.paid_at else None,
+        'paid_at': as_iso(p.paid_at),
     }
 
 
@@ -46,7 +46,7 @@ def _item_dict(i: OrderItem) -> dict:
         'vat_amount': i.vat_amount,
         'line_total': i.line_total,
         'notes': i.notes,
-        'created_at': i.created_at.isoformat() if i.created_at else None,
+        'created_at': as_iso(i.created_at),
     }
 
 
@@ -73,8 +73,8 @@ def _order_dict(o: Order, items=None, payments=None, table_name=None) -> dict:
         'void_reason': o.void_reason,
         'voided_by_staff_id': o.voided_by_staff_id,
         'notes': o.notes,
-        'order_created_at': o.order_created_at.isoformat() if o.order_created_at else None,
-        'updated_at': o.updated_at.isoformat() if o.updated_at else None,
+        'order_created_at': as_iso(o.order_created_at),
+        'updated_at': as_iso(o.updated_at),
         'sync_status': o.sync_status,
         'receipt_printed': o.receipt_printed,
         'items': [_item_dict(i) for i in (items or [])],

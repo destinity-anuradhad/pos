@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 
 from models.models import TerminalInfo
-from utils import db_session
+from utils import db_session, as_iso
 from auth_utils import require_auth
 
 terminals_bp = Blueprint('terminals', __name__)
@@ -26,7 +26,7 @@ def _terminal_dict(t: TerminalInfo) -> dict:
         'vat_rate': t.vat_rate,
         'timezone': t.timezone,
         'invoice_prefix': t.invoice_prefix,
-        'registered_at': t.registered_at if isinstance(t.registered_at, str) else (t.registered_at.isoformat() if t.registered_at else None),
+        'registered_at': as_iso(t.registered_at),
         'last_master_sync_at': t.last_master_sync_at,
         'last_tx_sync_at': t.last_tx_sync_at,
     }

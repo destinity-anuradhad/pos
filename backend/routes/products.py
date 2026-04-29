@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 
 from models.models import Product, Category
-from utils import db_session
+from utils import db_session, as_iso
 from auth_utils import require_auth
 
 products_bp = Blueprint('products', __name__)
@@ -31,8 +31,8 @@ def _product_dict(p: Product) -> dict:
         'track_stock': p.track_stock,
         'stock_quantity': p.stock_quantity,
         'is_available': p.is_available,
-        'updated_at': p.updated_at.isoformat() if p.updated_at else None,
-        'synced_at': p.synced_at.isoformat() if p.synced_at else None,
+        'updated_at': as_iso(p.updated_at),
+        'synced_at': as_iso(p.synced_at),
     }
 
 
@@ -109,7 +109,8 @@ def create_product():
             track_stock=bool(data.get('track_stock', False)),
             stock_quantity=float(data.get('stock_quantity', 0)),
             is_available=True,
-            updated_at=datetime.now(timezone.utc),
+            is_active=True,
+            updated_at=_now_iso(),
         )
         db.add(p)
         db.commit()
@@ -157,7 +158,7 @@ def update_product(id):
         if 'is_available' in data:
             p.is_available = bool(data['is_available'])
 
-        p.updated_at = datetime.now(timezone.utc)
+        p.updated_at = _now_iso()
         db.commit()
         db.refresh(p)
         return jsonify(_product_dict(p)), 200
@@ -179,7 +180,7 @@ def delete_product(id):
 
         # Soft delete
         p.is_available = False
-        p.updated_at = datetime.now(timezone.utc)
+        p.updated_at = _now_iso()
         db.commit()
         return jsonify({'message': 'Product deactivated'}), 200
     except Exception as e:

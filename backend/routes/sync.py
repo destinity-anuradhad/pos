@@ -8,7 +8,7 @@ from models.models import (
     Staff, Order, OrderItem, Payment,
     SyncLog, Customer,
 )
-from utils import db_session
+from utils import db_session, as_iso
 from auth_utils import require_auth
 
 sync_bp = Blueprint('sync', __name__)
@@ -29,8 +29,8 @@ def _cat_dict(c: Category) -> dict:
         'icon': c.icon,
         'sort_order': c.sort_order,
         'is_visible': c.is_visible,
-        'updated_at': c.updated_at.isoformat() if c.updated_at else None,
-        'synced_at': c.synced_at.isoformat() if c.synced_at else None,
+        'updated_at': as_iso(c.updated_at),
+        'synced_at': as_iso(c.synced_at),
     }
 
 
@@ -51,8 +51,8 @@ def _product_dict(p: Product) -> dict:
         'track_stock': p.track_stock,
         'stock_quantity': p.stock_quantity,
         'is_available': p.is_available,
-        'updated_at': p.updated_at.isoformat() if p.updated_at else None,
-        'synced_at': p.synced_at.isoformat() if p.synced_at else None,
+        'updated_at': as_iso(p.updated_at),
+        'synced_at': as_iso(p.synced_at),
     }
 
 
@@ -67,8 +67,8 @@ def _table_dict(t: RestaurantTable, status: TableStatus = None) -> dict:
         'status_code': status.code if status else None,
         'status_label': status.label if status else None,
         'is_active': t.is_active,
-        'updated_at': t.updated_at.isoformat() if t.updated_at else None,
-        'synced_at': t.synced_at.isoformat() if t.synced_at else None,
+        'updated_at': as_iso(t.updated_at),
+        'synced_at': as_iso(t.synced_at),
     }
 
 
@@ -80,7 +80,7 @@ def _staff_dict(s: Staff) -> dict:
         'display_name': s.display_name,
         'role': s.role,
         'is_active': s.is_active,
-        'updated_at': s.updated_at.isoformat() if s.updated_at else None,
+        'updated_at': as_iso(s.updated_at),
     }
 
 
@@ -93,8 +93,8 @@ def _customer_dict(c: Customer) -> dict:
         'loyalty_card_no': c.loyalty_card_no,
         'loyalty_points': c.loyalty_points,
         'notes': c.notes,
-        'updated_at': c.updated_at.isoformat() if c.updated_at else None,
-        'synced_at': c.synced_at.isoformat() if c.synced_at else None,
+        'updated_at': as_iso(c.updated_at),
+        'synced_at': as_iso(c.synced_at),
         'sync_status': c.sync_status,
     }
 
@@ -111,7 +111,7 @@ def _payment_dict(p: Payment) -> dict:
         'card_brand': p.card_brand,
         'transaction_ref': p.transaction_ref,
         'status': p.status,
-        'paid_at': p.paid_at.isoformat() if p.paid_at else None,
+        'paid_at': as_iso(p.paid_at),
     }
 
 
@@ -131,7 +131,7 @@ def _item_dict(i: OrderItem) -> dict:
         'vat_amount': i.vat_amount,
         'line_total': i.line_total,
         'notes': i.notes,
-        'created_at': i.created_at.isoformat() if i.created_at else None,
+        'created_at': as_iso(i.created_at),
     }
 
 
@@ -158,8 +158,8 @@ def _order_dict_full(o: Order, db) -> dict:
         'status': o.status,
         'void_reason': o.void_reason,
         'notes': o.notes,
-        'order_created_at': o.order_created_at.isoformat() if o.order_created_at else None,
-        'updated_at': o.updated_at.isoformat() if o.updated_at else None,
+        'order_created_at': as_iso(o.order_created_at),
+        'updated_at': as_iso(o.updated_at),
         'sync_status': o.sync_status,
         'items': [_item_dict(i) for i in items],
         'payments': [_payment_dict(p) for p in payments],
@@ -175,8 +175,8 @@ def _sync_log_dict(s: SyncLog) -> dict:
         'records_affected': s.records_affected,
         'duration_ms': s.duration_ms,
         'error_message': s.error_message,
-        'started_at': s.started_at.isoformat() if s.started_at else None,
-        'finished_at': s.finished_at.isoformat() if s.finished_at else None,
+        'started_at': as_iso(s.started_at),
+        'finished_at': as_iso(s.finished_at),
     }
 
 
@@ -206,6 +206,53 @@ def pull():
             'timestamp': _now_iso(),
         }), 200
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+# ── Pending master (local unsynced master data) ──────────────────────────────
+
+@sync_bp.route('/pending-master', methods=['GET'])
+def pending_master():
+    db = db_session()
+    try:
+        cats   = db.query(Category).filter(Category.synced_at == None).all()
+        prods  = db.query(Product).filter(Product.synced_at == None).all()
+        tables = db.query(RestaurantTable).filter(RestaurantTable.synced_at == None).all()
+        return jsonify({
+            'categories': [_cat_dict(c) for c in cats],
+            'products':   [_product_dict(p) for p in prods],
+            'tables':     [_table_dict(t) for t in tables],
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+@sync_bp.route('/mark-master-synced', methods=['POST'])
+def mark_master_synced():
+    data = request.get_json(silent=True) or {}
+    db = db_session()
+    try:
+        now = _now_iso()
+        for cid in (data.get('category_ids') or []):
+            c = db.query(Category).filter(Category.id == cid).first()
+            if c:
+                c.synced_at = now
+        for pid in (data.get('product_ids') or []):
+            p = db.query(Product).filter(Product.id == pid).first()
+            if p:
+                p.synced_at = now
+        for tid in (data.get('table_ids') or []):
+            t = db.query(RestaurantTable).filter(RestaurantTable.id == tid).first()
+            if t:
+                t.synced_at = now
+        db.commit()
+        return jsonify({'ok': True}), 200
+    except Exception as e:
+        db.rollback()
         return jsonify({'error': str(e)}), 500
     finally:
         db.close()

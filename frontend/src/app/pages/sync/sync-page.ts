@@ -1,7 +1,9 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { SyncService, SyncState } from '../../services/sync';
 import { ApiService, ApiSyncLog, SyncSettings } from '../../services/api';
+import { DatabaseService } from '../../services/database';
 import { TerminalService } from '../../services/terminal';
+import { useLocalDb } from '../../services/auth';
 
 @Component({
   selector: 'app-sync-page',
@@ -10,7 +12,14 @@ import { TerminalService } from '../../services/terminal';
   styleUrls: ['./sync-page.scss']
 })
 export class SyncPage implements OnInit {
-  state!: SyncState;
+  state: SyncState = {
+    lastMasterSync: null,
+    lastTransactionSync: null,
+    pendingOrderCount: 0,
+    pendingMasterCount: 0,
+    isSyncing: false,
+    lastError: null,
+  };
   logs: ApiSyncLog[] = [];
   settings: SyncSettings | null = null;
 
@@ -36,6 +45,7 @@ export class SyncPage implements OnInit {
   constructor(
     private sync: SyncService,
     private api: ApiService,
+    private db: DatabaseService,
     private terminal: TerminalService,
     private cdr: ChangeDetectorRef
   ) {
@@ -54,10 +64,9 @@ export class SyncPage implements OnInit {
     this.cdr.detectChanges();
   }
 
-  /** Count orders and master records in local SQLite that still need to sync to cloud */
   private async loadPendingCount(): Promise<void> {
     try {
-      const orders = await this.api.getOrders(0, 500);
+      const orders = await this.db.getOrders(0, 500);
       this.state.pendingOrderCount = orders.filter(
         o => o.sync_status === 'pending' || o.sync_status === 'failed'
       ).length;
@@ -68,15 +77,15 @@ export class SyncPage implements OnInit {
 
   async loadLogs(): Promise<void> {
     try {
-      this.logs = await this.api.getSyncLog(this.terminalId || undefined);
+      this.logs = await this.db.getSyncLog() as ApiSyncLog[];
     } catch { this.logs = []; }
   }
 
   async loadSettings(): Promise<void> {
     try {
-      this.settings    = await this.api.getSyncSettings();
-      this.editInterval = this.settings.sync_interval_minutes;
-      this.editAutoSync = this.settings.auto_sync_enabled;
+      this.settings     = await this.db.getSyncSettings();
+      this.editInterval = this.settings!.sync_interval_minutes;
+      this.editAutoSync = this.settings!.auto_sync_enabled;
     } catch {}
   }
 
@@ -131,10 +140,15 @@ export class SyncPage implements OnInit {
   async saveSettings(): Promise<void> {
     this.savingSettings = true;
     try {
-      await this.api.updateSyncSettings({
-        sync_interval_minutes: this.editInterval,
-        auto_sync_enabled:     this.editAutoSync,
-      });
+      if (useLocalDb()) {
+        await this.db.updateSetting('sync_interval_minutes', String(this.editInterval));
+        await this.db.updateSetting('auto_sync_enabled', String(this.editAutoSync));
+      } else {
+        await this.api.updateSyncSettings({
+          sync_interval_minutes: this.editInterval,
+          auto_sync_enabled:     this.editAutoSync,
+        });
+      }
       await this.sync.startAutoSync();
       await this.loadSettings();
     } catch {}
