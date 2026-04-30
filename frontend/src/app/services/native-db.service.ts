@@ -538,7 +538,17 @@ export class NativeDbService {
     const currency = data.currency || await this.getSetting('currency') || 'LKR';
     const orderUuid = uuid();
     const now = nowIso();
-    const subtotal  = data.subtotal ?? (data.items ?? []).reduce((s: number, i: any) => s + i.line_total, 0);
+
+    // Compute per-item totals defensively (caller may omit line_total/vat_amount)
+    let subtotal = 0;
+    const itemRows = (data.items ?? []).map((item: any) => {
+      const lineTotal  = item.line_total ?? (item.unit_price ?? 0) * (item.quantity ?? 1);
+      const vatAmount  = item.vat_amount ?? (item.vat_rate ?? 0) / 100 * lineTotal;
+      subtotal += lineTotal;
+      return { ...item, line_total: lineTotal, vat_amount: vatAmount, discount_amount: item.discount_amount ?? 0 };
+    });
+    if (data.subtotal !== undefined) subtotal = data.subtotal; // caller override
+
     const discount  = data.discount_amount ?? 0;
     const svcCharge = data.service_charge ?? 0;
     const taxAmt    = data.tax_amount ?? 0;
@@ -557,10 +567,10 @@ export class NativeDbService {
       [orderUuid, data.staff_id ?? null, data.table_id ?? null, hasPayment ? 'completed' : 'pending', subtotal, discount, svcCharge, taxAmt, total, paid, change, currency, data.notes ?? null, now, now, 'pending', invNo, data.terminal_order_ref ?? null]
     );
 
-    for (const item of (data.items ?? [])) {
+    for (const item of itemRows) {
       await run(
         `INSERT INTO order_items (uuid,order_id,product_id,product_name,product_sku,quantity,unit_price,discount_amount,vat_rate,vat_amount,line_total,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [uuid(), orderId, item.product_id ?? null, item.product_name, item.product_sku ?? null, item.quantity, item.unit_price, item.discount_amount ?? 0, item.vat_rate ?? 0, item.vat_amount ?? 0, item.line_total, item.notes ?? null]
+        [uuid(), orderId, item.product_id ?? null, item.product_name, item.product_sku ?? null, item.quantity, item.unit_price, item.discount_amount, item.vat_rate ?? 0, item.vat_amount, item.line_total, item.notes ?? null]
       );
     }
 

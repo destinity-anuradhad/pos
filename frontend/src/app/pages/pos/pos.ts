@@ -22,7 +22,7 @@ interface CardDetails {
   styleUrls: ['./pos.scss']
 })
 export class Pos implements OnInit, OnDestroy {
-  isMobile = typeof (window as any).Capacitor !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.();
+  isMobile = true; // camera button shown on all platforms — scanWithCamera() handles BarcodeDetector (Chromium/Electron) and html5-qrcode fallback automatically
 
   tables: ApiTable[] = [];
   products: ApiProduct[] = [];
