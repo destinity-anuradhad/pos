@@ -108,6 +108,7 @@ def _migrate_db():
     else:
         # PostgreSQL: use raw psycopg2 connection in autocommit mode so that DDL
         # commits immediately, bypassing PgBouncer transaction-pooling issues.
+        import sys
         raw = engine.raw_connection()
         try:
             raw.autocommit = True
@@ -116,8 +117,11 @@ def _migrate_db():
                     sql = f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {pg_type}'
                     try:
                         cur.execute(sql)
-                    except Exception:
-                        pass  # column already exists or benign error
+                        print(f'[migrate] OK: {table}.{column}', flush=True)
+                    except Exception as e:
+                        print(f'[migrate] ERR {table}.{column}: {e}', file=sys.stderr, flush=True)
+        except Exception as e:
+            print(f'[migrate] FATAL: {e}', file=sys.stderr, flush=True)
         finally:
             raw.close()
 
