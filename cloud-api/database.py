@@ -106,47 +106,43 @@ def _migrate_db():
                 except Exception:
                     conn.rollback()
     else:
-        # PostgreSQL: use raw psycopg2 connection in autocommit mode so that DDL
-        # commits immediately, bypassing PgBouncer transaction-pooling issues.
+        # PostgreSQL: create a separate engine configured with AUTOCOMMIT so that
+        # ALTER TABLE DDL commits immediately without needing explicit commit calls.
+        # This avoids PgBouncer transaction-pooling issues and SQLAlchemy transaction state.
         import sys
-        raw = engine.raw_connection()
+        migration_engine = create_engine(
+            DATABASE_URL,
+            pool_size=1, max_overflow=0, pool_pre_ping=True,
+            isolation_level='AUTOCOMMIT',
+        )
         try:
-            raw.autocommit = True
-            with raw.cursor() as cur:
-                # Debug: show which DB we're connected to
-                cur.execute("SELECT current_database(), current_user")
-                db_info = cur.fetchone()
-                print(f'[migrate] raw_conn DB: {db_info[0]}, user: {db_info[1]}', flush=True)
-
-                # Debug: show actual columns before migration
-                cur.execute(
+            with migration_engine.connect() as conn:
+                # Debug: show cols before migration
+                before = [r[0] for r in conn.execute(text(
                     "SELECT column_name FROM information_schema.columns "
-                    "WHERE table_schema = 'public' AND table_name = 'outlets' "
+                    "WHERE table_schema='public' AND table_name='outlets' "
                     "ORDER BY ordinal_position"
-                )
-                existing = [r[0] for r in cur.fetchall()]
-                print(f'[migrate] outlets cols before: {existing}', flush=True)
+                )).fetchall()]
+                print(f'[migrate] outlets before: {before}', flush=True)
 
                 for table, column, pg_type, sqlite_type in migrations:
                     sql = f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {pg_type}'
                     try:
-                        cur.execute(sql)
+                        conn.execute(text(sql))
                         print(f'[migrate] OK: {table}.{column}', flush=True)
                     except Exception as e:
                         print(f'[migrate] ERR {table}.{column}: {e}', file=sys.stderr, flush=True)
 
-                # Debug: verify outlets.uuid was actually added
-                cur.execute(
+                after = [r[0] for r in conn.execute(text(
                     "SELECT column_name FROM information_schema.columns "
-                    "WHERE table_schema = 'public' AND table_name = 'outlets' "
+                    "WHERE table_schema='public' AND table_name='outlets' "
                     "ORDER BY ordinal_position"
-                )
-                after = [r[0] for r in cur.fetchall()]
-                print(f'[migrate] outlets cols after: {after}', flush=True)
+                )).fetchall()]
+                print(f'[migrate] outlets after: {after}', flush=True)
         except Exception as e:
             print(f'[migrate] FATAL: {e}', file=sys.stderr, flush=True)
         finally:
-            raw.close()
+            migration_engine.dispose()
 
 
 def _seed_if_empty():
