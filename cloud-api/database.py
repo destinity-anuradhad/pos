@@ -228,6 +228,21 @@ def _migrate_db():
                     "ORDER BY ordinal_position"
                 )).fetchall()]
                 print(f'[migrate] outlets after: {after}', flush=True)
+
+                # Fix NOT NULL columns on old tables that have no DEFAULT
+                # These ALTER COLUMN statements add a DEFAULT so new INSERTs that omit
+                # the column don't violate NOT NULL constraints.
+                nullable_fixes = [
+                    'ALTER TABLE order_items ALTER COLUMN subtotal SET DEFAULT 0',
+                    'ALTER TABLE order_items ALTER COLUMN unit_price SET DEFAULT 0',
+                    'ALTER TABLE order_items ALTER COLUMN quantity SET DEFAULT 1',
+                ]
+                for sql in nullable_fixes:
+                    try:
+                        conn.execute(text(sql))
+                        print(f'[migrate] FIX: {sql[:60]}', flush=True)
+                    except Exception as e:
+                        print(f'[migrate] FIX-ERR: {e}', file=sys.stderr, flush=True)
         except Exception as e:
             print(f'[migrate] FATAL: {e}', file=sys.stderr, flush=True)
         finally:
