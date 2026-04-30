@@ -198,7 +198,6 @@ def _migrate_db():
         # PostgreSQL: create a separate engine configured with AUTOCOMMIT so that
         # ALTER TABLE DDL commits immediately without needing explicit commit calls.
         # This avoids PgBouncer transaction-pooling issues and SQLAlchemy transaction state.
-        import sys
         migration_engine = create_engine(
             DATABASE_URL,
             pool_size=1, max_overflow=0, pool_pre_ping=True,
@@ -206,32 +205,14 @@ def _migrate_db():
         )
         try:
             with migration_engine.connect() as conn:
-                # Debug: show cols before migration
-                before = [r[0] for r in conn.execute(text(
-                    "SELECT column_name FROM information_schema.columns "
-                    "WHERE table_schema='public' AND table_name='outlets' "
-                    "ORDER BY ordinal_position"
-                )).fetchall()]
-                print(f'[migrate] outlets before: {before}', flush=True)
-
                 for table, column, pg_type, sqlite_type in migrations:
                     sql = f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {pg_type}'
                     try:
                         conn.execute(text(sql))
-                        print(f'[migrate] OK: {table}.{column}', flush=True)
-                    except Exception as e:
-                        print(f'[migrate] ERR {table}.{column}: {e}', file=sys.stderr, flush=True)
+                    except Exception:
+                        pass  # column already exists or benign error
 
-                after = [r[0] for r in conn.execute(text(
-                    "SELECT column_name FROM information_schema.columns "
-                    "WHERE table_schema='public' AND table_name='outlets' "
-                    "ORDER BY ordinal_position"
-                )).fetchall()]
-                print(f'[migrate] outlets after: {after}', flush=True)
-
-                # Fix NOT NULL columns on old tables that have no DEFAULT
-                # These ALTER COLUMN statements add a DEFAULT so new INSERTs that omit
-                # the column don't violate NOT NULL constraints.
+                # Fix legacy NOT NULL columns that have no DEFAULT so new INSERTs work
                 nullable_fixes = [
                     'ALTER TABLE order_items ALTER COLUMN subtotal SET DEFAULT 0',
                     'ALTER TABLE order_items ALTER COLUMN unit_price SET DEFAULT 0',
@@ -240,9 +221,8 @@ def _migrate_db():
                 for sql in nullable_fixes:
                     try:
                         conn.execute(text(sql))
-                        print(f'[migrate] FIX: {sql[:60]}', flush=True)
-                    except Exception as e:
-                        print(f'[migrate] FIX-ERR: {e}', file=sys.stderr, flush=True)
+                    except Exception:
+                        pass
         except Exception as e:
             print(f'[migrate] FATAL: {e}', file=sys.stderr, flush=True)
         finally:
