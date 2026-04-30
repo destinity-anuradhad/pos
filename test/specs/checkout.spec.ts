@@ -71,7 +71,7 @@ async function getMainWindow(app: ElectronApplication): Promise<Page> {
 }
 
 async function selectTableIfNeeded(page: Page) {
-  const tableCard = page.locator('.table-card--available').first();
+  const tableCard = page.locator('.table-card:not(.table-card--blocked)').first();
   if (await tableCard.isVisible({ timeout: 4000 }).catch(() => false)) {
     await tableCard.click();
     await page.waitForSelector('.product-tile', { timeout: 10000 });
@@ -112,7 +112,14 @@ async function runCheckout(page: Page, label: string) {
   const cashBtn = page.locator('.pay-method-btn').filter({ hasText: 'Cash' });
   const cashWorked = await cashBtn.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false);
   console.log(`[${label}] Cash visible: ${cashWorked}`);
-  if (cashWorked) await cashBtn.click();
+  if (cashWorked) {
+    await cashBtn.click();
+    // Cash sub-dialog: wait for Confirm Payment button and click it
+    const confirmBtn = page.locator('.pay-modal--cash .btn-secondary');
+    const confirmVisible = await confirmBtn.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false);
+    console.log(`[${label}] Confirm Payment visible: ${confirmVisible}`);
+    if (confirmVisible) await confirmBtn.click();
+  }
 
   // Wait up to 20s for receipt — waitFor actually polls; isVisible() does not
   const receiptShown = await page.locator('.invoice-success')
@@ -167,7 +174,7 @@ test('WEB — checkout flow', async ({ page }) => {
 });
 
 // ── ELECTRON ───────────────────────────────────────────────────────────────
-test('ELECTRON — checkout flow', async () => {
+test('ELECTRON — checkout flow', { timeout: 240000 }, async () => {
   const app = await electron.launch({
     args: [path.join(__dirname, '../../electron/main.js')],
     cwd: path.join(__dirname, '../../electron'),

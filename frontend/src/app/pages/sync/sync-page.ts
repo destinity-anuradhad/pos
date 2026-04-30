@@ -1,6 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { SyncService, SyncState } from '../../services/sync';
-import { ApiService, ApiSyncLog, SyncSettings } from '../../services/api';
+import { ApiService, ApiSyncLog, SyncSettings, resolveCloudBase } from '../../services/api';
 import { DatabaseService } from '../../services/database';
 import { TerminalService } from '../../services/terminal';
 import { useLocalDb } from '../../services/auth';
@@ -40,7 +40,10 @@ export class SyncPage implements OnInit {
   adminError = '';
   editInterval = 10;
   editAutoSync = true;
+  editCloudUrl = '';
   savingSettings = false;
+
+  get cloudUrlConfigured(): boolean { return !!resolveCloudBase(); }
 
   constructor(
     private sync: SyncService,
@@ -86,7 +89,10 @@ export class SyncPage implements OnInit {
       this.settings     = await this.db.getSyncSettings();
       this.editInterval = this.settings!.sync_interval_minutes;
       this.editAutoSync = this.settings!.auto_sync_enabled;
-    } catch {}
+      this.editCloudUrl = this.settings!.cloud_base_url || localStorage.getItem('cloud_api_url') || '';
+    } catch {
+      this.editCloudUrl = localStorage.getItem('cloud_api_url') || '';
+    }
   }
 
   /** Pull master data from cloud → local */
@@ -140,9 +146,14 @@ export class SyncPage implements OnInit {
   async saveSettings(): Promise<void> {
     this.savingSettings = true;
     try {
+      // Cloud URL is always saved to localStorage (used by SyncService at runtime)
+      const trimmedUrl = this.editCloudUrl.trim().replace(/\/$/, '');
+      localStorage.setItem('cloud_api_url', trimmedUrl);
+
       if (useLocalDb()) {
         await this.db.updateSetting('sync_interval_minutes', String(this.editInterval));
         await this.db.updateSetting('auto_sync_enabled', String(this.editAutoSync));
+        await this.db.updateSetting('cloud_api_url', trimmedUrl);
       } else {
         await this.api.updateSyncSettings({
           sync_interval_minutes: this.editInterval,

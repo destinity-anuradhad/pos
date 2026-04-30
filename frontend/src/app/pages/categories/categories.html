@@ -35,7 +35,7 @@
   </div>
 
   <!-- Add / Edit Modal -->
-  <div class="modal-overlay" *ngIf="showForm" (click)="showForm=false">
+  <div class="modal-overlay" *ngIf="showForm">
     <div class="modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>{{ editingId ? 'Edit Category' : 'Add Category' }}</h3>

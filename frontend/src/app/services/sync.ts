@@ -24,7 +24,7 @@ const PENDING_ORDERS_KEY    = 'pending_orders';
 @Injectable({ providedIn: 'root' })
 export class SyncService implements OnDestroy {
   private intervalHandle: any = null;
-  private cloudBase = resolveCloudBase();
+  private get cloudBase(): string { return resolveCloudBase(); }
 
   private state: SyncState = {
     lastMasterSync: null, lastTransactionSync: null,
@@ -178,7 +178,13 @@ export class SyncService implements OnDestroy {
       }
 
       const terminalCode = this.terminal.getTerminalCode();
-      await this.cloudRequest('POST', '/sync/master/push', { terminal_code: terminalCode, categories: cats, products: prods, tables });
+      await this.cloudRequest('POST', '/sync/master/push', {
+        terminal_code: terminalCode,
+        terminal_uuid: this.terminal.getUUID(),
+        outlet_uuid:   this.terminal.getOutletUUID(),
+        outlet_code:   this.terminal.getOutletCode(),
+        categories: cats, products: prods, tables,
+      });
 
       if (useLocalDb()) {
         await this._sdb.markMasterSynced({
@@ -259,56 +265,80 @@ export class SyncService implements OnDestroy {
       const terminalCode = this.terminal.getTerminalCode();
       const payload = {
         terminal_code: terminalCode,
+        terminal_uuid: this.terminal.getUUID(),
+        outlet_uuid:   this.terminal.getOutletUUID(),
+        outlet_code:   this.terminal.getOutletCode(),
         orders: pending.map(o => ({
+          uuid:               o.uuid,
           terminal_order_ref: o.terminal_order_ref,
           table_id:           o.table_id,
           currency:           o.currency,
+          subtotal:           o.subtotal,
+          tax_amount:         o.tax_amount,
           total_amount:       o.total_amount,
+          paid_amount:        o.paid_amount,
+          change_amount:      o.change_amount,
           status:             o.status,
-          payment_method:     o.payments?.[0]?.payment_method ?? null,
-          items:              (o.items || []).map((i: any) => ({
-            product_id: i.product_id, product_name: i.product_name,
-            quantity: i.quantity, unit_price: i.unit_price, line_total: i.line_total,
+          order_created_at:   o.order_created_at,
+          notes:              o.notes,
+          items: (o.items || []).map((i: any) => ({
+            uuid:         i.uuid,
+            product_id:   i.product_id,
+            product_uuid: i.product_uuid,
+            product_name: i.product_name,
+            product_sku:  i.product_sku,
+            quantity:     i.quantity,
+            unit_price:   i.unit_price,
+            vat_rate:     i.vat_rate,
+            vat_amount:   i.vat_amount,
+            line_total:   i.line_total,
+          })),
+          payments: (o.payments || []).map((p: any) => ({
+            uuid:            p.uuid,
+            payment_method:  p.payment_method,
+            amount:          p.amount,
+            currency:        p.currency,
+            card_last4:      p.card_last4,
+            card_brand:      p.card_brand,
+            transaction_ref: p.transaction_ref,
+            status:          p.status,
+            paid_at:         p.paid_at,
           })),
         })),
       };
 
       const result = await this.cloudRequest<any>('POST', '/sync/push', payload);
-      const hqIds: Record<number, string> = {};
 
+      // Backend returns {upserted, results: [{terminal_order_ref, hq_order_id}], timestamp}
+      const syncedCount = result.upserted ?? result.synced ?? 0;
+      const resultMap: Record<string, number> = {};
       if (result.results?.length) {
         for (const r of result.results) {
-          if (r.status === 'synced' || r.status === 'already_synced') {
-            const local = pending.find(o => o.terminal_order_ref === r.terminal_order_ref);
-            if (local) {
-              hqIds[local.id] = r.hq_order_id;
-              if (useLocalDb()) {
-                await this._sdb.markOrdersSynced([local.id], hqIds);
-              } else {
-                try { await this.api.request('PATCH', `/orders/${local.id}/hq-id`, { hq_order_id: r.hq_order_id }); } catch {}
-              }
-            }
-          }
+          if (r.terminal_order_ref) resultMap[r.terminal_order_ref] = r.hq_order_id;
         }
-      } else if ((result.synced || 0) > 0) {
-        // Old-format response: mark all submitted as synced
+      }
+
+      if (syncedCount > 0 || result.results?.length) {
         const ids = pending.map((o: any) => o.id);
+        const hqIds: Record<number, string> = {};
+        for (const o of pending) {
+          if (resultMap[o.terminal_order_ref]) hqIds[o.id] = String(resultMap[o.terminal_order_ref]);
+        }
         if (useLocalDb()) {
-          await this._sdb.markOrdersSynced(ids, {});
+          await this._sdb.markOrdersSynced(ids, hqIds);
         } else {
-          for (const o of pending) {
-            try { await this.api.request('PATCH', `/orders/${o.id}/hq-id`, { hq_order_id: null }); } catch {}
-          }
+          // Mark synced via local backend
+          await this.api.request('POST', '/sync/mark-orders-synced', { order_ids: ids }).catch(() => {});
         }
       }
 
       this.state.lastTransactionSync = new Date().toISOString();
-      this.state.pendingOrderCount   = useLocalDb() ? (await this._sdb.getPendingOrders()).length : result.errors || 0;
+      this.state.pendingOrderCount   = useLocalDb() ? (await this._sdb.getPendingOrders()).length : 0;
       this.state.lastError           = null;
       this.saveState();
 
-      if (logId) await this._sdb.updateSyncLog(logId, { status: 'success', records_affected: result.synced || pending.length, finished_at: new Date().toISOString() });
-      return { success: true, synced: result.synced || 0 };
+      if (logId) await this._sdb.updateSyncLog(logId, { status: 'success', records_affected: syncedCount, finished_at: new Date().toISOString() });
+      return { success: true, synced: syncedCount };
     } catch (e: any) {
       this.state.lastError = e?.message || 'Transaction sync failed';
       if (logId) await this._sdb.updateSyncLog(logId, { status: 'failed', error_message: this.state.lastError, finished_at: new Date().toISOString() });
@@ -346,6 +376,7 @@ export class SyncService implements OnDestroy {
   // ── Cloud HTTP helper ──────────────────────────────────────────────────────
 
   private async cloudRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
+    if (!this.cloudBase) throw new Error('Cloud URL not configured. Set it in Sync → Admin Settings.');
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20000);
     try {
@@ -355,7 +386,10 @@ export class SyncService implements OnDestroy {
         body: body !== undefined ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
-      if (!res.ok) throw new Error(`Cloud API ${res.status}: ${path}`);
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Cloud API ${res.status}: ${path}${text ? ' — ' + text.slice(0, 120) : ''}`);
+      }
       return res.json();
     } finally {
       clearTimeout(timer);

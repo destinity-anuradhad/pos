@@ -269,6 +269,7 @@ def push():
     try:
         now = datetime.now(timezone.utc)
         upserted = 0
+        results_list = []
 
         for od in orders_data:
             order_uuid = od.get('uuid')
@@ -342,9 +343,175 @@ def push():
                     db.add(p)
 
             upserted += 1
+            results_list.append({
+                'terminal_order_ref': od.get('terminal_order_ref'),
+                'hq_order_id': o.id,
+                'status': 'synced',
+            })
 
         db.commit()
-        return jsonify({'upserted': upserted, 'timestamp': _now_iso()}), 200
+        return jsonify({
+            'upserted': upserted,
+            'synced': upserted,
+            'results': results_list,
+            'timestamp': _now_iso(),
+        }), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+# ── Apply master data (Electron local backend receives pulled cloud data) ─────
+
+@sync_bp.route('/apply-master', methods=['POST'])
+def apply_master():
+    """Electron calls this on its LOCAL backend after pulling master data from cloud."""
+    data = request.get_json(silent=True) or {}
+    db = db_session()
+    try:
+        now = _now_iso()
+        affected = 0
+
+        for cat_data in (data.get('categories') or []):
+            c = db.query(Category).filter(Category.uuid == cat_data.get('uuid')).first() if cat_data.get('uuid') else None
+            if c:
+                c.name = cat_data.get('name', c.name)
+                c.color = cat_data.get('color', c.color)
+                c.icon = cat_data.get('icon', c.icon)
+                c.sort_order = cat_data.get('sort_order', c.sort_order)
+                c.is_visible = cat_data.get('is_visible', c.is_visible)
+                c.synced_at = now
+            else:
+                c = Category(
+                    uuid=cat_data.get('uuid') or str(uuid.uuid4()),
+                    name=cat_data.get('name', ''),
+                    color=cat_data.get('color'),
+                    icon=cat_data.get('icon'),
+                    sort_order=cat_data.get('sort_order', 0),
+                    is_visible=cat_data.get('is_visible', True),
+                    synced_at=now,
+                )
+                db.add(c)
+            affected += 1
+
+        for prod_data in (data.get('products') or []):
+            p = db.query(Product).filter(Product.uuid == prod_data.get('uuid')).first() if prod_data.get('uuid') else None
+            if p:
+                p.name = prod_data.get('name', p.name)
+                p.price_lkr = prod_data.get('price_lkr', p.price_lkr)
+                p.price_usd = prod_data.get('price_usd', p.price_usd)
+                p.vat_rate = prod_data.get('vat_rate', p.vat_rate)
+                p.is_available = prod_data.get('is_available', p.is_available)
+                p.synced_at = now
+            else:
+                p = Product(
+                    uuid=prod_data.get('uuid') or str(uuid.uuid4()),
+                    name=prod_data.get('name', ''),
+                    sku=prod_data.get('sku'),
+                    barcode=prod_data.get('barcode'),
+                    price_lkr=prod_data.get('price_lkr', 0),
+                    price_usd=prod_data.get('price_usd', 0),
+                    vat_rate=prod_data.get('vat_rate', 0),
+                    unit=prod_data.get('unit', 'pcs'),
+                    track_stock=prod_data.get('track_stock', False),
+                    stock_quantity=prod_data.get('stock_quantity', -1),
+                    is_available=prod_data.get('is_available', True),
+                    category_id=prod_data.get('category_id'),
+                    synced_at=now,
+                )
+                db.add(p)
+            affected += 1
+
+        db.commit()
+        return jsonify({'ok': True, 'affected': affected}), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+# ── Master push (terminal → cloud HQ) ────────────────────────────────────────
+
+@sync_bp.route('/master/push', methods=['POST'])
+def master_push():
+    """Receive master data changes pushed from a terminal to cloud HQ."""
+    data = request.get_json(silent=True) or {}
+    db = db_session()
+    try:
+        now = _now_iso()
+        affected = 0
+
+        for cat_data in (data.get('categories') or []):
+            cat_uuid = cat_data.get('uuid')
+            c = db.query(Category).filter(Category.uuid == cat_uuid).first() if cat_uuid else None
+            if c:
+                c.name = cat_data.get('name', c.name)
+                c.synced_at = now
+            else:
+                c = Category(
+                    uuid=cat_uuid or str(uuid.uuid4()),
+                    name=cat_data.get('name', ''),
+                    color=cat_data.get('color'),
+                    icon=cat_data.get('icon'),
+                    sort_order=cat_data.get('sort_order', 0),
+                    is_visible=cat_data.get('is_visible', True),
+                    synced_at=now,
+                )
+                db.add(c)
+            affected += 1
+
+        for prod_data in (data.get('products') or []):
+            prod_uuid = prod_data.get('uuid')
+            p = db.query(Product).filter(Product.uuid == prod_uuid).first() if prod_uuid else None
+            if p:
+                p.name = prod_data.get('name', p.name)
+                p.price_lkr = prod_data.get('price_lkr', p.price_lkr)
+                p.synced_at = now
+            else:
+                p = Product(
+                    uuid=prod_uuid or str(uuid.uuid4()),
+                    name=prod_data.get('name', ''),
+                    price_lkr=prod_data.get('price_lkr', 0),
+                    price_usd=prod_data.get('price_usd', 0),
+                    vat_rate=prod_data.get('vat_rate', 0),
+                    unit=prod_data.get('unit', 'pcs'),
+                    track_stock=prod_data.get('track_stock', False),
+                    stock_quantity=prod_data.get('stock_quantity', -1),
+                    is_available=prod_data.get('is_available', True),
+                    synced_at=now,
+                )
+                db.add(p)
+            affected += 1
+
+        db.commit()
+        return jsonify({'ok': True, 'affected': affected, 'timestamp': now}), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+# ── Mark orders synced (local backend — after cloud push completes) ────────────
+
+@sync_bp.route('/mark-orders-synced', methods=['POST'])
+def mark_orders_synced():
+    """Mark local orders as synced after a successful cloud push."""
+    data = request.get_json(silent=True) or {}
+    order_ids = data.get('order_ids') or []
+    db = db_session()
+    try:
+        now = _now_iso()
+        for oid in order_ids:
+            o = db.query(Order).filter(Order.id == oid).first()
+            if o:
+                o.sync_status = 'synced'
+                o.synced_at = now
+        db.commit()
+        return jsonify({'ok': True, 'marked': len(order_ids)}), 200
     except Exception as e:
         db.rollback()
         return jsonify({'error': str(e)}), 500

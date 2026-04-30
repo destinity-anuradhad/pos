@@ -240,6 +240,22 @@
   width: 80px;
   outline: none;
   &:focus { border-color: #3b82f6; }
+
+  &--url {
+    width: 360px;
+    font-size: 0.82rem;
+    font-family: monospace;
+  }
+}
+
+.cloud-url-warn {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: #ca8a04;
 }
 
 .admin-checkbox {

@@ -137,10 +137,9 @@ function resolveLocalBase(): string {
   return LOCAL_API;
 }
 
-/** Cloud API base (used by SyncService only) */
+/** Cloud API base (used by SyncService only). Returns '' when not configured. */
 export function resolveCloudBase(): string {
-  const stored = localStorage.getItem('cloud_api_url');
-  return stored || 'http://localhost:8001/api';
+  return localStorage.getItem('cloud_api_url') || '';
 }
 
 // ── ApiService (talks to LOCAL backend) ──────────────────────────────────────

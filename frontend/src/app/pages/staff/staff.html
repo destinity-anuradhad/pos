@@ -52,7 +52,7 @@
   </div>
 
   <!-- Add/Edit Modal -->
-  <div class="modal-overlay" *ngIf="showForm" (click)="showForm=false" appModal>
+  <div class="modal-overlay" *ngIf="showForm" appModal>
     <div class="modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>{{ editingId ? 'Edit Staff' : 'Add Staff' }}</h3>

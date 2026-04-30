@@ -7,7 +7,10 @@
     "test": "npx playwright test --config playwright.config.ts",
     "test:web": "npx playwright test --config playwright.config.ts -g WEB",
     "test:electron": "npx playwright test --config playwright.config.ts -g ELECTRON",
-    "test:parity": "npx playwright test --config playwright.config.ts -g PARITY"
+    "test:parity": "npx playwright test --config playwright.config.ts -g PARITY",
+    "test:barcode": "npx playwright test --config playwright.config.ts barcode-scan.spec.ts",
+    "test:camera": "npx playwright test --config playwright.config.ts camera-live-scan.spec.ts",
+    "test:product-camera": "npx playwright test --config playwright.config.ts product-camera-scan.spec.ts"
   },
   "keywords": [],
   "author": "",

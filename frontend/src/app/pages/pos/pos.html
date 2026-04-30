@@ -44,7 +44,7 @@
     </div>
 
     <!-- Add Table Modal -->
-    <div class="modal-overlay" *ngIf="showAddTable" (click)="showAddTable = false">
+    <div class="modal-overlay" *ngIf="showAddTable">
       <div class="modal-box" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <h2>New Table</h2>
@@ -287,7 +287,7 @@
 
 
   <!-- ── Payment Method Modal ──────────────────────────────────── -->
-  <div appModal class="pay-overlay" *ngIf="paymentModal === 'method'" (click)="closePaymentModal()">
+  <div appModal class="pay-overlay" *ngIf="paymentModal === 'method'">
     <div class="pay-modal" (click)="$event.stopPropagation()">
       <div class="pay-modal-header">
         <h3>Select Payment Method</h3>
@@ -313,7 +313,7 @@
   </div>
 
   <!-- ── Cash Tendered Modal ───────────────────────────────────── -->
-  <div appModal class="pay-overlay" *ngIf="paymentModal === 'cash'" (click)="closePaymentModal()">
+  <div appModal class="pay-overlay" *ngIf="paymentModal === 'cash'">
     <div class="pay-modal pay-modal--cash" (click)="$event.stopPropagation()">
       <div class="pay-modal-header">
         <h3>Cash Payment</h3>
@@ -356,7 +356,7 @@
   </div>
 
   <!-- ── Card Details Modal ────────────────────────────────────── -->
-  <div appModal class="pay-overlay" *ngIf="paymentModal === 'card'" (click)="closePaymentModal()">
+  <div appModal class="pay-overlay" *ngIf="paymentModal === 'card'">
     <div class="pay-modal pay-modal--card" (click)="$event.stopPropagation()">
       <div class="pay-modal-header">
         <h3>Card Details</h3>

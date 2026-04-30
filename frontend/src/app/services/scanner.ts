@@ -12,7 +12,11 @@ export class ScannerService {
   private scannerElementId = 'qr-scanner-container';
   private boundHandleKey = this.handleKey.bind(this); // saved reference for proper removeEventListener
 
-  constructor(private zone: NgZone) {}
+  constructor(private zone: NgZone) {
+    // Test/debug hook: allows Playwright tests to inject a scan result directly.
+    // Usage: window.__scanner.emitScan('1234567890')
+    (window as any).__scanner = this;
+  }
 
   get isNative(): boolean {
     return typeof (window as any).Capacitor !== 'undefined' &&
@@ -44,7 +48,7 @@ export class ScannerService {
     } else if (e.key.length === 1) {
       this.buffer += e.key;
       clearTimeout(this.bufferTimeout);
-      this.bufferTimeout = setTimeout(() => { this.buffer = ''; }, 100);
+      this.bufferTimeout = setTimeout(() => { this.buffer = ''; }, 200);
     }
   }
 
@@ -96,7 +100,11 @@ export class ScannerService {
     container.innerHTML = '';
     overlay.style.display = 'flex';
 
-    const BarcodeDetectorCtor = (window as any).BarcodeDetector;
+    // BarcodeDetector: use whenever available (Electron, Chromium 88+, and Playwright's bundled Chromium).
+    // Previous reports of it returning [] on Windows were browser-specific; Playwright's Chromium works fine.
+    // Fall back to html5-qrcode only on browsers where BarcodeDetector is absent (Firefox, Safari, old Chrome).
+    const BarcodeDetectorCtor = (window as any).BarcodeDetector ?? null;
+
     if (BarcodeDetectorCtor) {
       await this._scanWithNativeDetector(overlay, container, BarcodeDetectorCtor);
     } else {
@@ -110,6 +118,7 @@ export class ScannerService {
   ): Promise<void> {
     let stream: MediaStream | null = null;
     let rafId: number | null = null;
+    let consecutiveErrors = 0;
 
     const stop = () => {
       if (rafId !== null) cancelAnimationFrame(rafId);
@@ -154,13 +163,14 @@ export class ScannerService {
           if (video.readyState >= 2) {
             try {
               const barcodes: any[] = await detector.detect(video);
+              consecutiveErrors = 0;
               if (barcodes.length > 0) {
                 const code = barcodes[0].rawValue;
                 stop();
                 this.zone.run(() => this.scanResult$.next(code));
                 return;
               }
-            } catch (_) {}
+            } catch { consecutiveErrors++; }
           }
         }
         rafId = requestAnimationFrame(scan);
@@ -177,55 +187,113 @@ export class ScannerService {
     }
   }
 
-  // ── html5-qrcode fallback (mobile / older browsers) ──────────────
+  // ── Quagga2.decodeSingle (full frame, full resolution) ────────────────────
+  // Full-frame at max resolution + halfSample:false gives Quagga2 the best chance
+  // to locate and decode barcodes from a wide-angle webcam.
   private async _scanWithHtml5Qrcode(overlay: HTMLElement): Promise<void> {
-    const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+    const Quagga = (await import('@ericblade/quagga2')).default;
+    const { Html5Qrcode } = await import('html5-qrcode');
 
     const container = document.getElementById(this.scannerElementId);
     if (container) container.innerHTML = '';
 
-    const formats = [
-      Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.EAN_13,
-      Html5QrcodeSupportedFormats.EAN_8,   Html5QrcodeSupportedFormats.CODE_128,
-      Html5QrcodeSupportedFormats.CODE_39, Html5QrcodeSupportedFormats.UPC_A,
-      Html5QrcodeSupportedFormats.UPC_E,   Html5QrcodeSupportedFormats.ITF,
-    ];
+    // ── Camera device ──────────────────────────────────────────────────
+    const devices = await Html5Qrcode.getCameras().catch(() => [] as any[]);
+    console.log('[Scanner] cameras found:', devices.length,
+      devices.map((d: any) => `"${d.label}"`).join(', '));
+    const preferredCam = devices.find((d: any) => /back|rear|environment/i.test(d.label)) || devices[0];
+    const facingMode = this.isNative ? 'environment' : 'user';
 
-    const html5Qrcode = new Html5Qrcode(this.scannerElementId, { formatsToSupport: formats, verbose: false });
+    const hint = document.getElementById('scanner-hint');
+    if (hint) hint.textContent = 'Hold barcode in front of camera — 20–40 cm away, keep it steady';
 
-    const closeScanner = async () => {
-      try { if (html5Qrcode.isScanning) await html5Qrcode.stop(); } catch (_) {}
-      try { html5Qrcode.clear(); } catch (_) {}
-      overlay.style.display = 'none';
-    };
-
-    const closeBtn = document.getElementById('scanner-close');
-    if (closeBtn) closeBtn.onclick = () => closeScanner();
-
-    const qrboxFn = (vw: number, vh: number) => {
-      const size = Math.min(Math.round(Math.min(vw, vh) * 0.8), 360);
-      return { width: size, height: size };
-    };
-
+    // ── Get camera stream ─────────────────────────────────────────────
+    let stream: MediaStream;
     try {
-      const devices = await Html5Qrcode.getCameras().catch(() => [] as any[]);
-      const constraint = devices.length > 0
-        ? { deviceId: { exact: (devices.find((d: any) => /back|rear|environment/i.test(d.label)) || devices[0]).id } }
-        : { facingMode: 'user' };
-
-      await html5Qrcode.start(
-        constraint,
-        { fps: 20, qrbox: qrboxFn, aspectRatio: 1.0 },
-        (decodedText: string) => { this.zone.run(() => this.scanResult$.next(decodedText)); closeScanner(); },
-        () => {}
-      );
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: preferredCam?.id
+          ? { deviceId: { exact: preferredCam.id }, width: { ideal: 1280 }, height: { ideal: 720 } }
+          : { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
     } catch (err: any) {
-      closeScanner();
+      overlay.style.display = 'none';
       const msg = err?.message || String(err);
       alert(msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('denied')
         ? 'Camera permission denied. Please allow camera access and try again.'
         : 'Could not start camera: ' + msg);
+      return;
     }
+
+    // ── Video (shown to user) ─────────────────────────────────────────
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.muted = true;
+    video.setAttribute('playsinline', '');
+    video.style.cssText = 'width:100%;height:auto;display:block;max-height:320px;object-fit:cover;';
+    if (container) container.appendChild(video);
+    await video.play();
+
+    // ── Canvas for frame capture ──────────────────────────────────────
+    const scanCanvas = document.createElement('canvas');
+    const sCtx = scanCanvas.getContext('2d')!;
+
+    let stopped = false;
+    const stop = () => {
+      if (stopped) return;
+      stopped = true;
+      stream.getTracks().forEach(t => t.stop());
+      overlay.style.display = 'none';
+    };
+    const closeBtn = document.getElementById('scanner-close');
+    if (closeBtn) closeBtn.onclick = () => stop();
+
+    console.log('[Scanner] Quagga2.decodeSingle loop started');
+    let firstLog = false;
+
+    const detect = async (): Promise<void> => {
+      while (!stopped) {
+        await new Promise(r => setTimeout(r, 250)); // ~4 fps
+        if (stopped || video.readyState < 2) continue;
+
+        const vw = video.videoWidth; const vh = video.videoHeight;
+        if (!vw || !vh) continue;
+
+        // Full frame capture
+        scanCanvas.width = vw; scanCanvas.height = vh;
+        sCtx.drawImage(video, 0, 0, vw, vh);
+
+        if (!firstLog) {
+          firstLog = true;
+          console.log('[Scanner] first frame captured:', vw + '×' + vh);
+        }
+
+        const dataURL = scanCanvas.toDataURL('image/jpeg', 0.92);
+
+        await new Promise<void>(resolve => {
+          Quagga.decodeSingle({
+            src: dataURL,
+            numOfWorkers: 0,
+            inputStream: { size: vh },  // size = height; Quagga scales to this
+            decoder: {
+              readers: ['ean_reader','ean_8_reader','code_128_reader','code_39_reader',
+                        'upc_reader','upc_e_reader','i2of5_reader','codabar_reader'],
+            },
+            locate: true,
+            locator: { patchSize: 'medium', halfSample: false },
+          }, (result: any) => {
+            if (result?.codeResult?.code && !stopped) {
+              const code = result.codeResult.code;
+              console.log('[Scanner] ✅ Barcode detected:', code, '| format:', result.codeResult.format);
+              stop();
+              this.zone.run(() => this.scanResult$.next(code));
+            }
+            resolve();
+          });
+        });
+      }
+    };
+
+    detect().catch(() => {});
   }
 
   emitScan(code: string): void {

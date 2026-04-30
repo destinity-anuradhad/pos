@@ -123,6 +123,11 @@
 
     <div class="admin-form" *ngIf="isAdmin">
       <div class="admin-row">
+        <label>Cloud API URL</label>
+        <input type="url" [(ngModel)]="editCloudUrl" class="admin-input admin-input--url"
+               placeholder="https://your-app.up.railway.app/api" />
+      </div>
+      <div class="admin-row">
         <label>Sync interval (minutes)</label>
         <input type="number" [(ngModel)]="editInterval" min="1" max="1440" class="admin-input" />
       </div>
@@ -133,6 +138,9 @@
       <button class="save-settings-btn" (click)="saveSettings()" [disabled]="savingSettings">
         {{ savingSettings ? 'Saving...' : 'Save Settings' }}
       </button>
+    </div>
+    <div class="cloud-url-warn" *ngIf="!cloudUrlConfigured">
+      ⚠ Cloud URL not set — sync is disabled until you unlock admin and enter the cloud API URL above.
     </div>
   </div>
 

@@ -56,16 +56,17 @@ async function seedSession(page: Page) {
   const terminals: any[] = res?.ok ? await res.json() : [];
   const terminal = terminals[0];
 
-  await page.evaluate(({ t, api }) => {
-    localStorage.setItem('pos_auth',  'true');
-    localStorage.setItem('api_url',   api);
+  await page.evaluate(({ t, api, cloud }) => {
+    localStorage.setItem('pos_auth',       'true');
+    localStorage.setItem('api_url',        api);
+    localStorage.setItem('cloud_api_url',  cloud);
     if (t) {
       localStorage.setItem('terminal_id',   String(t.id));
       localStorage.setItem('terminal_code', t.terminal_code);
       localStorage.setItem('terminal_uuid', t.uuid);
       localStorage.setItem('terminal_name', t.terminal_name);
     }
-  }, { t: terminal, api: LOCAL_API });
+  }, { t: terminal, api: LOCAL_API, cloud: CLOUD_API });
 }
 
 /** Create a pending order via the local API */
