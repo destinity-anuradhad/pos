@@ -172,6 +172,7 @@ def _migrate_db():
         ('order_items',       'vat_amount',              'NUMERIC(14,2) DEFAULT 0', 'REAL DEFAULT 0'),
         ('order_items',       'line_total',              'NUMERIC(14,2) DEFAULT 0', 'REAL DEFAULT 0'),
         ('order_items',       'notes',                   'VARCHAR(500)',        'TEXT'),
+        ('order_items',       'created_at',              'TIMESTAMPTZ',        'TEXT'),
         # payments (was previously embedded in orders, now separate table)
         ('payments',          'uuid',                    'VARCHAR(100)',        'TEXT'),
         ('payments',          'card_last4',              'VARCHAR(4)',          'TEXT'),
