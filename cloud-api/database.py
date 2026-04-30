@@ -142,6 +142,7 @@ def _migrate_db():
         ('orders',            'uuid',                    'VARCHAR(100)',        'TEXT'),
         ('orders',            'outlet_id',               'BIGINT',             'INTEGER'),
         ('orders',            'terminal_id',             'BIGINT',             'INTEGER'),
+        ('orders',            'created_by_staff_id',     'BIGINT',             'INTEGER'),
         ('orders',            'customer_id',             'BIGINT',             'INTEGER'),
         ('orders',            'table_uuid',              'VARCHAR(100)',        'TEXT'),
         ('orders',            'table_name',              'VARCHAR(100)',        'TEXT'),
