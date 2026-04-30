@@ -113,6 +113,11 @@ def _migrate_db():
         try:
             raw.autocommit = True
             with raw.cursor() as cur:
+                # Debug: show which DB we're connected to
+                cur.execute("SELECT current_database(), current_user")
+                db_info = cur.fetchone()
+                print(f'[migrate] raw_conn DB: {db_info[0]}, user: {db_info[1]}', flush=True)
+
                 # Debug: show actual columns before migration
                 cur.execute(
                     "SELECT column_name FROM information_schema.columns "

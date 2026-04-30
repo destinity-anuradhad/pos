@@ -71,15 +71,17 @@ def debug_schema():
     from database import engine
     from sqlalchemy import text
     with engine.connect() as conn:
+        db_name = conn.execute(text("SELECT current_database(), current_user")).fetchone()
         cols_outlets = [r[0] for r in conn.execute(text(
             "SELECT column_name FROM information_schema.columns "
-            "WHERE table_name='outlets' ORDER BY ordinal_position"
+            "WHERE table_schema='public' AND table_name='outlets' ORDER BY ordinal_position"
         )).fetchall()]
         cols_terminals = [r[0] for r in conn.execute(text(
             "SELECT column_name FROM information_schema.columns "
-            "WHERE table_name='terminals' ORDER BY ordinal_position"
+            "WHERE table_schema='public' AND table_name='terminals' ORDER BY ordinal_position"
         )).fetchall()]
     return jsonify({
+        'db': db_name[0], 'user': db_name[1],
         'outlets_columns': cols_outlets,
         'terminals_columns': cols_terminals,
     })
