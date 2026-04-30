@@ -65,6 +65,26 @@ def health():
     return jsonify({'status': 'ok'})
 
 
+@app.get('/debug/schema')
+def debug_schema():
+    """Temporary: check what columns exist in outlets and terminals tables."""
+    from database import engine
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        cols_outlets = [r[0] for r in conn.execute(text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name='outlets' ORDER BY ordinal_position"
+        )).fetchall()]
+        cols_terminals = [r[0] for r in conn.execute(text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name='terminals' ORDER BY ordinal_position"
+        )).fetchall()]
+    return jsonify({
+        'outlets_columns': cols_outlets,
+        'terminals_columns': cols_terminals,
+    })
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8001))
     app.run(host='0.0.0.0', port=port, debug=False)
