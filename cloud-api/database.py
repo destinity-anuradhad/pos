@@ -163,6 +163,20 @@ def _migrate_db():
         ('orders',            'order_created_at',        'TIMESTAMPTZ',        'TEXT'),
         ('orders',            'synced_at',               'TIMESTAMPTZ',        'TEXT'),
         ('orders',            'updated_at',              'TIMESTAMPTZ',        'TEXT'),
+        # order_items (was previously called items or similar)
+        ('order_items',       'uuid',                    'VARCHAR(100)',        'TEXT'),
+        ('order_items',       'product_uuid',            'VARCHAR(100)',        'TEXT'),
+        ('order_items',       'product_sku',             'VARCHAR(100)',        'TEXT'),
+        ('order_items',       'discount_amount',         'NUMERIC(14,2) DEFAULT 0', 'REAL DEFAULT 0'),
+        ('order_items',       'vat_rate',                'NUMERIC(5,2) DEFAULT 0', 'REAL DEFAULT 0'),
+        ('order_items',       'vat_amount',              'NUMERIC(14,2) DEFAULT 0', 'REAL DEFAULT 0'),
+        ('order_items',       'line_total',              'NUMERIC(14,2) DEFAULT 0', 'REAL DEFAULT 0'),
+        ('order_items',       'notes',                   'VARCHAR(500)',        'TEXT'),
+        # payments (was previously embedded in orders, now separate table)
+        ('payments',          'uuid',                    'VARCHAR(100)',        'TEXT'),
+        ('payments',          'card_last4',              'VARCHAR(4)',          'TEXT'),
+        ('payments',          'card_brand',              'VARCHAR(20)',         'TEXT'),
+        ('payments',          'transaction_ref',         'VARCHAR(200)',        'TEXT'),
         # sync_logs
         ('sync_logs',         'outlet_id',               'BIGINT',             'INTEGER'),
         ('sync_logs',         'terminal_id',             'BIGINT',             'INTEGER'),
