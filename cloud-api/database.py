@@ -113,6 +113,15 @@ def _migrate_db():
         try:
             raw.autocommit = True
             with raw.cursor() as cur:
+                # Debug: show actual columns before migration
+                cur.execute(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'outlets' "
+                    "ORDER BY ordinal_position"
+                )
+                existing = [r[0] for r in cur.fetchall()]
+                print(f'[migrate] outlets cols before: {existing}', flush=True)
+
                 for table, column, pg_type, sqlite_type in migrations:
                     sql = f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {pg_type}'
                     try:
@@ -120,6 +129,15 @@ def _migrate_db():
                         print(f'[migrate] OK: {table}.{column}', flush=True)
                     except Exception as e:
                         print(f'[migrate] ERR {table}.{column}: {e}', file=sys.stderr, flush=True)
+
+                # Debug: verify outlets.uuid was actually added
+                cur.execute(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'outlets' "
+                    "ORDER BY ordinal_position"
+                )
+                after = [r[0] for r in cur.fetchall()]
+                print(f'[migrate] outlets cols after: {after}', flush=True)
         except Exception as e:
             print(f'[migrate] FATAL: {e}', file=sys.stderr, flush=True)
         finally:
