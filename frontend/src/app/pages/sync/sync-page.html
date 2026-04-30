@@ -138,6 +138,11 @@
       <button class="save-settings-btn" (click)="saveSettings()" [disabled]="savingSettings">
         {{ savingSettings ? 'Saving...' : 'Save Settings' }}
       </button>
+      <div class="danger-zone">
+        <button class="reset-terminal-btn" (click)="resetTerminal()" [disabled]="resettingTerminal">
+          {{ resettingTerminal ? 'Resetting...' : 'Reset Terminal Registration' }}
+        </button>
+      </div>
     </div>
     <div class="cloud-url-warn" *ngIf="!cloudUrlConfigured">
       ⚠ Cloud URL not set — sync is disabled until you unlock admin and enter the cloud API URL above.

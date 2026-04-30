@@ -1,4 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Router } from '@angular/router';
 import { SyncService, SyncState } from '../../services/sync';
 import { ApiService, ApiSyncLog, SyncSettings, resolveCloudBase } from '../../services/api';
 import { DatabaseService } from '../../services/database';
@@ -42,6 +43,7 @@ export class SyncPage implements OnInit {
   editAutoSync = true;
   editCloudUrl = '';
   savingSettings = false;
+  resettingTerminal = false;
 
   get cloudUrlConfigured(): boolean { return !!resolveCloudBase(); }
 
@@ -50,6 +52,7 @@ export class SyncPage implements OnInit {
     private api: ApiService,
     private db: DatabaseService,
     private terminal: TerminalService,
+    private router: Router,
     private cdr: ChangeDetectorRef
   ) {
     this.terminalCode = terminal.getTerminalCode();
@@ -165,6 +168,17 @@ export class SyncPage implements OnInit {
     } catch {}
     this.savingSettings = false;
     this.cdr.detectChanges();
+  }
+
+  async resetTerminal(): Promise<void> {
+    if (!confirm('Reset terminal registration? The app will return to the setup screen.')) return;
+    this.resettingTerminal = true;
+    try {
+      await this.terminal.reset();
+    } finally {
+      this.resettingTerminal = false;
+    }
+    this.router.navigate(['/terminal-setup']);
   }
 
   formatDate(iso: string | null): string {

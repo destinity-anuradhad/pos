@@ -138,4 +138,25 @@ export class TerminalService {
   }
 
   async heartbeat(): Promise<void> {}
+
+  async reset(): Promise<void> {
+    // Clear localStorage
+    [TERMINAL_UUID_KEY, TERMINAL_CODE_KEY, TERMINAL_NAME_KEY,
+     OUTLET_UUID_KEY, OUTLET_CODE_KEY, OUTLET_NAME_KEY].forEach(k => localStorage.removeItem(k));
+
+    // Clear backend DB record
+    try {
+      if (useLocalDb()) {
+        await this._db.clearTerminal();
+      } else {
+        await this.api.deleteTerminalInfo();
+      }
+    } catch { /* ignore if already gone */ }
+
+    // Clear Electron terminal.json
+    const electronAPI = (window as any).electronAPI;
+    if (electronAPI?.clearTerminal) {
+      try { await electronAPI.clearTerminal(); } catch {}
+    }
+  }
 }

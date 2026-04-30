@@ -266,6 +266,10 @@ export class LocalDbService {
     return this._toApiTerminal(t as LTerminal & { id: number });
   }
 
+  async clearTerminal(): Promise<void> {
+    await this.db.terminals.clear();
+  }
+
   private _toApiTerminal(t: LTerminal & { id: number }): ApiTerminal {
     return { terminal_uuid: t.uuid, terminal_code: t.terminal_code, terminal_name: t.terminal_name, outlet_uuid: t.outlet_uuid, outlet_code: t.outlet_code, outlet_name: t.outlet_name, currency: t.currency, vat_rate: t.vat_rate, timezone: t.timezone, invoice_prefix: t.invoice_prefix, registered_at: t.registered_at, last_master_sync_at: null, last_tx_sync_at: null };
   }

@@ -14,7 +14,6 @@ const routes: Routes = [
   },
   {
     path: 'terminal-setup',
-    canActivate: [authGuard],
     loadChildren: () => import('./pages/terminal-setup/terminal-setup-module').then(m => m.TerminalSetupModule)
   },
   {

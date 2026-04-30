@@ -332,6 +332,40 @@ def add_payment(id):
         db.close()
 
 
+@orders_bp.route('/stats', methods=['GET'])
+def order_stats():
+    db = db_session()
+    try:
+        from datetime import date
+        today = date.today().isoformat()
+        completed = db.query(Order).filter(
+            Order.status == 'completed',
+            Order.order_created_at >= today
+        ).all()
+        sales_lkr = sum(o.total_amount for o in completed if o.currency == 'LKR')
+        sales_usd = sum(o.total_amount for o in completed if o.currency == 'USD')
+        order_count = len(completed)
+        avg_order_lkr = (sales_lkr / order_count) if order_count > 0 else 0
+
+        active_tables = db.query(RestaurantTable).join(
+            RestaurantTable.table_status
+        ).filter(
+            RestaurantTable.is_active == True
+        ).count()
+
+        return jsonify({
+            'sales_lkr': round(sales_lkr, 2),
+            'sales_usd': round(sales_usd, 2),
+            'order_count': order_count,
+            'active_tables': active_tables,
+            'avg_order_lkr': round(avg_order_lkr, 2),
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
 @orders_bp.route('/pending-sync', methods=['GET'])
 def pending_sync():
     db = db_session()

@@ -234,6 +234,7 @@ export class ApiService {
   getTerminals()                                             { return this.request<ApiTerminal[]>('GET',  '/terminals/'); }
   registerTerminal(data: any)                                { return this.request<ApiTerminal>('POST',   '/terminals/register', data); }
   getTerminalInfo()                                          { return this.request<ApiTerminal>('GET',    '/terminals/info'); }
+  deleteTerminalInfo()                                       { return this.request<any>('DELETE',          '/terminals/info'); }
   updateTerminal(id: number, data: any)                      { return this.request<ApiTerminal>('PUT',    `/terminals/${id}`, data); }
   terminalHeartbeat(id: number)                              { return this.request<any>('PATCH',           `/terminals/${id}/heartbeat`); }
 

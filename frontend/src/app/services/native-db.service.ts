@@ -7,6 +7,7 @@
  */
 import { Injectable } from '@angular/core';
 import { CapacitorSQLite } from '@capacitor-community/sqlite';
+import { isCapacitorNative } from './auth';
 import {
   ApiProduct, ApiCategory, ApiOrder, ApiOrderItem, ApiPayment,
   ApiTable, ApiTableStatus, ApiStaff, ApiTerminal, ApiSyncLog, DashboardStats,
@@ -201,7 +202,7 @@ CREATE TABLE IF NOT EXISTS sync_log (
 export class NativeDbService {
   private _initPromise: Promise<void> | null = null;
 
-  constructor() { this._initPromise = this._init(); }
+  constructor() { if (isCapacitorNative()) this._initPromise = this._init(); }
 
   private _ensureReady(): Promise<void> {
     if (!this._initPromise) this._initPromise = this._init();
@@ -368,6 +369,11 @@ export class NativeDbService {
     const rows = await q('SELECT * FROM terminals LIMIT 1');
     if (!rows.length) throw new Error('No terminal registered');
     return this._toApiTerminal(rows[0]);
+  }
+
+  async clearTerminal(): Promise<void> {
+    await this._ensureReady();
+    await run('DELETE FROM terminals', []);
   }
 
   private _toApiTerminal(r: any): ApiTerminal {
