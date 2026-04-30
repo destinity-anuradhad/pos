@@ -105,7 +105,10 @@ export class SyncService implements OnDestroy {
       : null;
 
     try {
-      const res = await this.cloudRequest<any>('GET', '/sync/pull');
+      const outletUuid   = this.terminal.getOutletUUID();
+      const terminalUuid = this.terminal.getUUID();
+      const pullPath = `/sync/pull?outlet_uuid=${encodeURIComponent(outletUuid || '')}&terminal_uuid=${encodeURIComponent(terminalUuid || '')}`;
+      const res = await this.cloudRequest<any>('GET', pullPath);
 
       // Cache in localStorage for offline fallback
       if (res.categories)     localStorage.setItem(CACHED_CATEGORIES_KEY, JSON.stringify(res.categories));
@@ -184,6 +187,9 @@ export class SyncService implements OnDestroy {
         outlet_uuid:   this.terminal.getOutletUUID(),
         outlet_code:   this.terminal.getOutletCode(),
         categories: cats, products: prods, tables,
+      }).catch((e: any) => {
+        // Cloud may not support master push — log and continue
+        console.warn('[sync] master/push skipped:', e?.message);
       });
 
       if (useLocalDb()) {

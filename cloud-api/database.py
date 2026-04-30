@@ -96,22 +96,29 @@ def _migrate_db():
         ('orders',            'tax_invoice_no',          'VARCHAR(50)',         'TEXT'),
         ('orders',            'notes',                   'TEXT',               'TEXT'),
     ]
-    with engine.connect() as conn:
-        is_pg = not _is_sqlite
-        for table, column, pg_type, sqlite_type in migrations:
-            col_type = pg_type if is_pg else sqlite_type
-            if is_pg:
-                sql = f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {col_type}'
-            else:
-                sql = f'ALTER TABLE {table} ADD COLUMN {column} {col_type}'
-            try:
-                conn.execute(text(sql))
-                conn.commit()
-            except Exception:
-                conn.rollback()  # column already exists (SQLite) or other benign error
+    if _is_sqlite:
+        with engine.connect() as conn:
+            for table, column, pg_type, sqlite_type in migrations:
+                sql = f'ALTER TABLE {table} ADD COLUMN {column} {sqlite_type}'
+                try:
+                    conn.execute(text(sql))
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
+    else:
+        # PostgreSQL: DDL must run in AUTOCOMMIT mode so PgBouncer (transaction-pooling)
+        # doesn't silently discard the transaction, and each statement is atomic.
+        with engine.connect().execution_options(isolation_level='AUTOCOMMIT') as conn:
+            for table, column, pg_type, sqlite_type in migrations:
+                sql = f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {pg_type}'
+                try:
+                    conn.execute(text(sql))
+                except Exception:
+                    pass  # column already exists or benign error
 
 
 def _seed_if_empty():
+    import uuid as _uuid
     db = SessionLocal()
     try:
         if db.query(Outlet).count() == 0:
@@ -126,8 +133,21 @@ def _seed_if_empty():
             )
             db.add(default_outlet)
             db.commit()
+        else:
+            # Backfill uuid for any existing outlets that have NULL uuid
+            try:
+                db.execute(text("UPDATE outlets SET uuid = gen_random_uuid()::text WHERE uuid IS NULL"))
+                db.commit()
+            except Exception:
+                try:
+                    # Fallback: update one by one with Python uuid
+                    from models.models import Outlet as _Outlet
+                    for o in db.query(_Outlet).filter(_Outlet.uuid == None).all():  # noqa: E711
+                        o.uuid = str(_uuid.uuid4())
+                    db.commit()
+                except Exception:
+                    db.rollback()
     except Exception:
         db.rollback()
-        # Don't crash the app if seeding fails — DB may have existing data
     finally:
         db.close()
