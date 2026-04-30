@@ -106,15 +106,20 @@ def _migrate_db():
                 except Exception:
                     conn.rollback()
     else:
-        # PostgreSQL: DDL must run in AUTOCOMMIT mode so PgBouncer (transaction-pooling)
-        # doesn't silently discard the transaction, and each statement is atomic.
-        with engine.connect().execution_options(isolation_level='AUTOCOMMIT') as conn:
-            for table, column, pg_type, sqlite_type in migrations:
-                sql = f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {pg_type}'
-                try:
-                    conn.execute(text(sql))
-                except Exception:
-                    pass  # column already exists or benign error
+        # PostgreSQL: use raw psycopg2 connection in autocommit mode so that DDL
+        # commits immediately, bypassing PgBouncer transaction-pooling issues.
+        raw = engine.raw_connection()
+        try:
+            raw.autocommit = True
+            with raw.cursor() as cur:
+                for table, column, pg_type, sqlite_type in migrations:
+                    sql = f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {pg_type}'
+                    try:
+                        cur.execute(sql)
+                    except Exception:
+                        pass  # column already exists or benign error
+        finally:
+            raw.close()
 
 
 def _seed_if_empty():
