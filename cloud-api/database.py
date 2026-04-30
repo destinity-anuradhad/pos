@@ -94,6 +94,7 @@ def _migrate_db():
         ('products',          'description',             'TEXT',               'TEXT'),
         ('products',          'barcode',                 'VARCHAR(100)',        'TEXT'),
         ('products',          'image_url',               'VARCHAR(500)',        'TEXT'),
+        ('products',          'default_price_lkr',       'NUMERIC(14,2) DEFAULT 0', 'REAL DEFAULT 0'),
         ('products',          'default_price_usd',       'NUMERIC(14,2) DEFAULT 0', 'REAL DEFAULT 0'),
         ('products',          'default_cost',            'NUMERIC(14,2)',       'REAL'),
         ('products',          'vat_rate_override',       'NUMERIC(5,2)',        'REAL'),
