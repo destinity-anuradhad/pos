@@ -90,6 +90,7 @@ def _migrate_db():
         ('categories',        'updated_at',              'TIMESTAMPTZ',        'TEXT'),
         # products
         ('products',          'uuid',                    'VARCHAR(100)',        'TEXT'),
+        ('products',          'sku',                     'VARCHAR(100)',        'TEXT'),
         ('products',          'description',             'TEXT',               'TEXT'),
         ('products',          'barcode',                 'VARCHAR(100)',        'TEXT'),
         ('products',          'image_url',               'VARCHAR(500)',        'TEXT'),
